@@ -23,7 +23,7 @@
     "deploy-bsc": "npx hardhat migrate --network bsc --verify --confirmations 2",
     "deploy-polygon": "npx hardhat migrate --network polygon --verify --confirmations 10",
     "deploy-avalanche": "npx hardhat migrate --network avalanche --verify --confirmations 5",
-    "generate-types": "TYPECHAIN_FORCE=true npx hardhat typechain && npx hardhat gobind",
+    "generate-types": "TYPECHAIN_FORCE=true npx hardhat typechain",
     "generate-docs": "npx hardhat markup",
     "lint-fix": "npm run lint-sol-fix && npm run lint-ts-fix && npm run lint-json-fix",
     "lint-json-fix": "prettier --write \"./**/*.json\"",
@@ -39,9 +39,8 @@
     "typechain": "^8.3.1"
   },
   "devDependencies": {
-    "@solarity/hardhat-gobind": "^1.0.5",
     "@solarity/hardhat-markup": "^1.0.2",
-    "@solarity/hardhat-migrate": "^1.5.9",
+    "@solarity/hardhat-migrate": "2.0.0-alpha.14",
     "@metamask/eth-sig-util": "^7.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.4",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",

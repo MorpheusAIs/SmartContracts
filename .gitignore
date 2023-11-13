@@ -10,3 +10,10 @@ coverage
 
 # Typechain generated files
 generated-types
+
+# Migration files
+.storage.json
+
+# IDE files
+.idea
+.vscode

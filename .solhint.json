@@ -9,6 +9,7 @@
     "func-visibility": "off",
     "max-states-count": "off",
     "not-rely-on-time": "off",
-    "compiler-version": "off"
+    "compiler-version": "off",
+    "no-inline-assembly": "off"
   }
 }

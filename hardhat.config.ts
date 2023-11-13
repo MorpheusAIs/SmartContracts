@@ -1,19 +1,18 @@
-import "@nomiclabs/hardhat-web3";
-import "@nomiclabs/hardhat-truffle5";
-import "@nomicfoundation/hardhat-ethers";
-import "@nomicfoundation/hardhat-chai-matchers";
-import "@solarity/hardhat-migrate";
-import "@solarity/hardhat-gobind";
-import "@solarity/hardhat-markup";
-import "@typechain/hardhat";
-import "hardhat-contract-sizer";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
-import "tsconfig-paths/register";
+import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomicfoundation/hardhat-ethers';
+import '@nomiclabs/hardhat-truffle5';
+import '@nomiclabs/hardhat-web3';
+import '@solarity/hardhat-markup';
+import '@solarity/hardhat-migrate';
+import '@typechain/hardhat';
+import 'hardhat-contract-sizer';
+import 'hardhat-gas-reporter';
+import 'solidity-coverage';
+import 'tsconfig-paths/register';
 
-import { HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig } from 'hardhat/config';
 
-import * as dotenv from "dotenv";
+import * as dotenv from 'dotenv';
 dotenv.config();
 
 function privateKey() {
@@ -23,21 +22,21 @@ function privateKey() {
 function typechainTarget() {
   const target = process.env.TYPECHAIN_TARGET;
 
-  return target === "" || target === undefined ? "ethers-v6" : target;
+  return target === '' || target === undefined ? 'ethers-v6' : target;
 }
 
 function forceTypechain() {
-  return process.env.TYPECHAIN_FORCE === "false";
+  return process.env.TYPECHAIN_FORCE === 'false';
 }
 
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      initialDate: "1970-01-01T00:00:00Z",
+      initialDate: '1970-01-01T00:00:00Z',
     },
     localhost: {
-      url: "http://127.0.0.1:8545",
-      initialDate: "1970-01-01T00:00:00Z",
+      url: 'http://127.0.0.1:8545',
+      initialDate: '1970-01-01T00:00:00Z',
       gasMultiplier: 1.2,
     },
     goerli: {
@@ -51,7 +50,7 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
     },
     chapel: {
-      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
       accounts: privateKey(),
       gasMultiplier: 1.2,
       timeout: 60000,
@@ -67,7 +66,7 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
     },
     bsc: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: 'https://bsc-dataseed.binance.org/',
       accounts: privateKey(),
       gasMultiplier: 1.2,
     },
@@ -89,13 +88,13 @@ const config: HardhatUserConfig = {
     },
   },
   solidity: {
-    version: "0.8.20",
+    version: '0.8.20',
     settings: {
       optimizer: {
         enabled: true,
         runs: 200,
       },
-      evmVersion: "paris",
+      evmVersion: 'paris',
     },
   },
   etherscan: {
@@ -112,7 +111,7 @@ const config: HardhatUserConfig = {
     },
   },
   migrate: {
-    pathToMigrations: "./deploy/",
+    pathToMigrations: './deploy/',
   },
   mocha: {
     timeout: 1000000,
@@ -120,17 +119,17 @@ const config: HardhatUserConfig = {
   contractSizer: {
     alphaSort: false,
     disambiguatePaths: false,
-    runOnCompile: true,
+    runOnCompile: false,
     strict: false,
   },
   gasReporter: {
-    currency: "USD",
+    currency: 'USD',
     gasPrice: 50,
     enabled: false,
     coinmarketcap: `${process.env.COINMARKETCAP_KEY}`,
   },
   typechain: {
-    outDir: `generated-types/${typechainTarget().split("-")[0]}`,
+    outDir: `generated-types/${typechainTarget().split('-')[0]}`,
     target: typechainTarget(),
     alwaysGenerateOverloads: true,
     discriminateTypes: true,

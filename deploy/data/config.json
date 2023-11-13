@@ -1,0 +1,25 @@
+{
+  "cap": "1000000000000000000000000",
+  "pools": [
+    {
+      "payoutStart": 1699644123,
+      "decreaseInterval": 60,
+      "withdrawLockPeriod": 10,
+      "initialReward": "100000000000000000",
+      "rewardDecrease": "10000000000000000",
+      "minimalStake": "1000000000000000000",
+      "isPublic": true
+    },
+    {
+      "payoutStart": 1699644123,
+      "decreaseInterval": 60,
+      "withdrawLockPeriod": 1,
+      "initialReward": "100000000000000000",
+      "rewardDecrease": "10000000000000000",
+      "minimalStake": "1000000000000000000",
+      "isPublic": false,
+      "whitelistedUsers": ["0x901F2d23823730fb7F2356920e0E273EFdCdFe17"],
+      "amounts": ["1"]
+    }
+  ]
+}
