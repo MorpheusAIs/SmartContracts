@@ -31,22 +31,24 @@
     "lint-sol-fix": "prettier --write \"contracts/**/*.sol\""
   },
   "dependencies": {
-    "@solarity/solidity-lib": "2.5.9",
     "@openzeppelin/contracts": "4.9.2",
     "@openzeppelin/contracts-upgradeable": "4.9.2",
+    "@solarity/solidity-lib": "2.5.9",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "dotenv": "^10.0.0",
     "hardhat": "^2.17.4",
     "typechain": "^8.3.1"
   },
   "devDependencies": {
-    "@solarity/hardhat-markup": "^1.0.2",
-    "@solarity/hardhat-migrate": "2.0.0-alpha.14",
     "@metamask/eth-sig-util": "^7.0.0",
-    "@nomicfoundation/hardhat-ethers": "^3.0.4",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
+    "@nomicfoundation/hardhat-ethers": "^3.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.9",
     "@nomiclabs/hardhat-truffle5": "^2.0.7",
     "@nomiclabs/hardhat-web3": "^2.0.0",
+    "@solarity/hardhat-markup": "^1.0.2",
+    "@solarity/hardhat-migrate": "2.0.0-alpha.14",
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.0.0",
     "@typechain/truffle-v5": "^8.0.6",
