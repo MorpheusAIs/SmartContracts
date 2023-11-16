@@ -1,4 +1,5 @@
 import { Distribution, IDistribution } from '@/generated-types/ethers';
+import { StETHMock } from '@/generated-types/ethers/contracts/mock/tokens/StETHMock';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
@@ -13,11 +14,16 @@ describe('LinearDistributionIntervalDecrease', () => {
   const reverter = new Reverter();
 
   let distribution: Distribution;
-  let mocAddress: string = ZERO_ADDR;
-  let swap: string = ZERO_ADDR;
+  let moc: StETHMock;
+  let swap: string;
 
   before(async () => {
     await setTime(oneHour * 2);
+
+    const StETHMockFactory = await ethers.getContractFactory('StETHMock');
+    moc = await StETHMockFactory.deploy();
+
+    swap = await (await ethers.getSigners())[0].getAddress();
 
     const libFactory = await ethers.getContractFactory('LinearDistributionIntervalDecrease');
     const lib = await libFactory.deploy();
@@ -29,7 +35,7 @@ describe('LinearDistributionIntervalDecrease', () => {
     });
 
     distribution = await distributionFactory.deploy();
-    await distribution.Distribution_init(mocAddress, swap, []);
+    await distribution.Distribution_init(await moc.getAddress(), await moc.getAddress(), swap, []);
 
     await reverter.snapshot();
   });

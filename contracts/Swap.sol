@@ -23,17 +23,20 @@ contract Swap {
         IERC20(stEthAddress_).approve(uniswapRouterAddress_, type(uint256).max);
     }
 
-    function swapStETHToMor(uint256 amountIn_, uint256 amountOutMin_) external returns (uint256) {
+    function swapStETHToMor(uint256 amountIn_, uint256 amountOutMin_) external {
         stEth.transferFrom(msg.sender, address(this), amountIn_);
 
-        uint256[] memory amounts = uniswapRouter.swapExactTokensForTokens(
+        uniswapRouter.swapExactTokensForTokens(
             amountIn_,
             amountOutMin_,
             path,
             msg.sender,
             block.timestamp
         );
+    }
 
+    function getAmountsOut(uint256 amountIn_) public view returns (uint256) {
+        uint256[] memory amounts = uniswapRouter.getAmountsOut(amountIn_, path);
         return amounts[1];
     }
 }

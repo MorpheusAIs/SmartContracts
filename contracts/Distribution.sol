@@ -8,6 +8,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 import {IDistribution} from "./interfaces/IDistribution.sol";
+import {Swap} from "./Swap.sol";
 import {MOR} from "./tokens/MOR.sol";
 
 contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
@@ -18,6 +19,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     address public rewardToken;
     address public investToken;
+    address public swap;
 
     // Pool storage
     Pool[] public pools;
@@ -25,6 +27,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     // User storage
     mapping(address => mapping(uint256 => UserData)) public usersData;
+
+    // Total rewards storage
+    uint256 public totalETHStaked;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -40,6 +45,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     function Distribution_init(
         address rewardToken_,
         address investToken_,
+        address swap_,
         Pool[] calldata poolsInfo_
     ) external initializer {
         __Ownable_init();
@@ -49,8 +55,11 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             createPool(poolsInfo_[i]);
         }
 
+        IERC20(investToken_).approve(swap_, type(uint256).max);
+
         rewardToken = rewardToken_;
         investToken = investToken_;
+        swap = swap_;
     }
 
     /**********************************************************************************************/
@@ -172,6 +181,24 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
+    function burnOverplus(uint256 amountOutMin_) external onlyOwner {
+        uint256 overplus_ = overplus();
+        require(overplus_ > 0, "DS: nothing to burn");
+
+        Swap(swap).swapStETHToMor(overplus_, amountOutMin_);
+
+        MOR(rewardToken).burn(MOR(rewardToken).balanceOf(address(this)));
+    }
+
+    function overplus() public view returns (uint256) {
+        uint256 currentETHBalance = IERC20(investToken).balanceOf(address(this));
+        if (currentETHBalance <= totalETHStaked) {
+            return 0;
+        }
+
+        return currentETHBalance - totalETHStaked;
+    }
+
     function getCurrentUserReward(uint256 poolId_, address user_) external view returns (uint256) {
         if (!_poolExists(poolId_)) {
             return 0;
@@ -197,6 +224,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         if (pool.isPublic) {
             require(userData.invested + amount_ >= pool.minimalStake, "DS: amount too low");
+
+            totalETHStaked += amount_;
 
             IERC20(investToken).safeTransferFrom(_msgSender(), address(this), amount_);
         }
@@ -250,6 +279,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         MOR(rewardToken).mint(user_, pendingRewards_);
         if (pool.isPublic) {
+            totalETHStaked -= amount_;
             IERC20(investToken).safeTransfer(user_, amount_);
         }
     }

@@ -35,6 +35,7 @@ interface IDistribution {
     function Distribution_init(
         address rewardToken_,
         address investToken_,
+        address swap_,
         Pool[] calldata poolsInfo_
     ) external;
 }
