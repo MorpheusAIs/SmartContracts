@@ -6,11 +6,15 @@ import { readFileSync } from 'fs';
 export type Config = {
   cap: number;
   pools?: PoolInitInfo[];
+  swap?: {
+    stEth: string;
+    uniswapV2Router: string;
+  };
 };
 
 export type PoolInitInfo = IDistribution.PoolStruct & {
-  whitelistedUsers?: string[];
-  amounts?: BigNumberish[];
+  whitelistedUsers: string[];
+  amounts: BigNumberish[];
 };
 
 export function parseConfig(configPath: string = 'deploy/data/config.json'): Config {
@@ -24,15 +28,21 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
     validatePools(config.pools);
   }
 
+  if (config.swap != undefined) {
+    if (config.swap.stEth == undefined) {
+      nonZeroAddr(config.swap.stEth, 'swap.stEth');
+    }
+
+    if (config.swap.uniswapV2Router == undefined) {
+      nonZeroAddr(config.swap.uniswapV2Router, 'swap.uniswapV2Router');
+    }
+  }
+
   return config;
 }
 
 function nonNumber(value: BigNumberish) {
   return !(typeof value === 'number' || typeof value === 'bigint' || typeof BigInt(value) === 'bigint');
-}
-
-function toNumber(value: BigNumberish) {
-  return BigInt(value);
 }
 
 function nonZeroAddr(filedDataRaw: string | undefined, filedName: string) {
