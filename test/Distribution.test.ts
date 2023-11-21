@@ -15,6 +15,7 @@ import { Reverter } from '@/test/helpers/reverter';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
+import { _getDefaultSwapParams } from './Swap.test';
 import { getCurrentBlockTime, setNextTime, setTime } from './helpers/block-helper';
 
 const oneHour = 3600;
@@ -85,8 +86,15 @@ describe('Distribution', () => {
     const UniswapV2RouterMockFactory = await ethers.getContractFactory('UniswapV2RouterMock');
     uniswapV2Router = await UniswapV2RouterMockFactory.deploy();
 
+    const QuoterMockFactory = await ethers.getContractFactory('QuoterMock');
+    const quoter = await QuoterMockFactory.deploy();
+
     const Swap = await ethers.getContractFactory('Swap');
-    swap = await Swap.deploy(uniswapV2Router, await investToken.getAddress(), await rewardToken.getAddress());
+    swap = await Swap.deploy(
+      uniswapV2Router,
+      quoter,
+      _getDefaultSwapParams(await investToken.getAddress(), await rewardToken.getAddress())
+    );
 
     distribution = distributionFactory.attach(await distributionProxy.getAddress()) as Distribution;
 
