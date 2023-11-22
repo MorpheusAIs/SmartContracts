@@ -3,11 +3,14 @@ import {
   DistributionV2,
   Distribution__factory,
   IDistribution,
+  IQuoter,
+  IQuoter__factory,
+  ISwapRouter,
+  ISwapRouter__factory,
   LinearDistributionIntervalDecrease,
   MOR,
   StETHMock,
   Swap,
-  UniswapV2RouterMock,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
@@ -15,7 +18,7 @@ import { Reverter } from '@/test/helpers/reverter';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { _getDefaultSwapParams } from './Swap.test';
+import { _getDefaultSwapParams } from './fork/Swap.fork.test';
 import { getCurrentBlockTime, setNextTime, setTime } from './helpers/block-helper';
 
 const oneHour = 3600;
@@ -37,7 +40,11 @@ describe('Distribution', () => {
 
   let rewardToken: MOR;
   let investToken: StETHMock;
-  let uniswapV2Router: UniswapV2RouterMock;
+
+  const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
+  const quoterAddress = ZERO_ADDR;
+  let swapRouter: ISwapRouter;
+
   let swap: Swap;
 
   // @dev: should be called before other pool creation
@@ -83,16 +90,13 @@ describe('Distribution', () => {
     const IStETHMockFactory = await ethers.getContractFactory('StETHMock');
     investToken = await IStETHMockFactory.deploy();
 
-    const UniswapV2RouterMockFactory = await ethers.getContractFactory('UniswapV2RouterMock');
-    uniswapV2Router = await UniswapV2RouterMockFactory.deploy();
-
-    const QuoterMockFactory = await ethers.getContractFactory('QuoterMock');
-    const quoter = await QuoterMockFactory.deploy();
+    const swapRouterMock = await ethers.getContractFactory('SwapRouterMock');
+    swapRouter = (await swapRouterMock.deploy()) as unknown as ISwapRouter;
 
     const Swap = await ethers.getContractFactory('Swap');
     swap = await Swap.deploy(
-      uniswapV2Router,
-      quoter,
+      swapRouter,
+      quoterAddress,
       _getDefaultSwapParams(await investToken.getAddress(), await rewardToken.getAddress())
     );
 
@@ -1398,20 +1402,16 @@ describe('Distribution', () => {
   });
 
   describe('#burnOverplus', () => {
-    const investToRewardRatio = 2;
-
     beforeEach(async () => {
       await investToken.mint(OWNER, wei(100));
       await _getRewardTokenFromPool(wei(100), OWNER);
+      await rewardToken.transfer(swapRouter, wei(20));
 
-      await investToken.approve(await uniswapV2Router.getAddress(), wei(5));
-      await uniswapV2Router.setReserve(await investToken.getAddress(), wei(5));
+      await investToken.approve(await swapRouter.getAddress(), wei(5));
 
-      await rewardToken.approve(await uniswapV2Router.getAddress(), wei(10));
-      await uniswapV2Router.setReserve(await rewardToken.getAddress(), wei(10));
+      await rewardToken.approve(await swapRouter.getAddress(), wei(10));
 
       await investToken.approve(swap.getAddress(), wei(10));
-      await uniswapV2Router.enablePair(await investToken.getAddress(), await rewardToken.getAddress());
 
       const pool = _getDefaultPool();
 
@@ -1440,7 +1440,7 @@ describe('Distribution', () => {
       expect(tx).to.changeTokenBalance(investToken, distribution, wei(-1));
 
       const rewardTokenTotalSupplyAfter = await rewardToken.totalSupply();
-      expect(rewardTokenTotalSupplyAfter).to.eq(rewardTokenTotalSupplyBefore - wei(2));
+      expect(rewardTokenTotalSupplyAfter).to.eq(rewardTokenTotalSupplyBefore - wei(1));
     });
   });
 });

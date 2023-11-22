@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.20;
 
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {IQuoter} from "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 contract Swap {
-    address public immutable swapRouter;
-    address public immutable quoter;
-
     struct SwapParams {
         address tokenIn;
         address tokenOut;
         uint24 fee;
         uint160 sqrtPriceLimitX96;
     }
+
+    address public immutable swapRouter;
+    address public immutable quoter;
 
     SwapParams public params;
 
