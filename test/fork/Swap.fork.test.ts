@@ -9,18 +9,19 @@ import {
   StETHMock__factory,
   Swap,
 } from '@/generated-types/ethers';
+import { ISwap } from '@/generated-types/ethers/contracts/Swap';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
 import { _getDefaultPool } from '../Distribution.test';
-import { getCurrentBlockTime } from '../helpers/block-helper';
 import { Reverter } from '../helpers/reverter';
 
 describe('Swap', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
+  let SECOND: SignerWithAddress;
 
   let swap: Swap;
 
@@ -39,9 +40,6 @@ describe('Swap', () => {
   let stETH: StETHMock;
   let mor: MOR;
 
-  let fee = 10000;
-  let sqrtPriceLimitX96ts = 0;
-
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
       {
@@ -52,6 +50,7 @@ describe('Swap', () => {
     ]);
 
     OWNER = await ethers.getImpersonatedSigner(richAddress);
+    [SECOND] = await ethers.getSigners();
 
     swapRouter = ISwapRouter__factory.connect(swapRouterAddress, OWNER);
     quoter = IQuoter__factory.connect(quoterAddress, OWNER);
@@ -78,8 +77,8 @@ describe('Swap', () => {
   });
 
   describe('constructor', () => {
-    it('should set swapRouter', async () => {
-      expect(await swap.swapRouter()).to.equal(await swapRouter.getAddress());
+    it('should set router', async () => {
+      expect(await swap.router()).to.equal(await swapRouter.getAddress());
     });
 
     it('should set quoter', async () => {
@@ -101,19 +100,9 @@ describe('Swap', () => {
     });
   });
 
-  describe('#getEstimatedMorForStETH', () => {
-    beforeEach('setup', async () => {
-      await stETH.approve(await swap.getAddress(), wei(5));
-    });
-
-    it('should return correct amount', async () => {
-      expect(await swap.getEstimatedMorForStETH.staticCall(wei(1))).to.be.closeTo(daiToWethRatio, wei(1, 13));
-    });
-  });
-
   describe('#editParams', () => {
     it('should edit params', async () => {
-      const newParams: Swap.SwapParamsStruct = {
+      const newParams: ISwap.SwapParamsStruct = {
         tokenIn: await stETH.getAddress(),
         tokenOut: ZERO_ADDR,
         fee: 1,
@@ -134,7 +123,7 @@ describe('Swap', () => {
       expect(await stETH.allowance(swap, swapRouter)).to.equal(ethers.MaxUint256);
       expect(await mor.allowance(swap, swapRouter)).to.equal(0);
 
-      const newParams: Swap.SwapParamsStruct = {
+      const newParams: ISwap.SwapParamsStruct = {
         tokenIn: mor,
         tokenOut: ZERO_ADDR,
         fee: 1,
@@ -146,20 +135,11 @@ describe('Swap', () => {
       expect(await stETH.allowance(swap, swapRouter)).to.equal(0);
       expect(await mor.allowance(swap, swapRouter)).to.equal(ethers.MaxUint256);
     });
-  });
 
-  describe('#getExactInputSingleParams', () => {
-    it('should return correct params', async () => {
-      const params = await swap.getExactInputSingleParams(wei(2), wei(1));
-
-      expect(params.tokenIn).to.equal(await stETH.getAddress());
-      expect(params.tokenOut).to.equal(await mor.getAddress());
-      expect(params.fee).to.equal(fee);
-      expect(params.recipient).to.equal(await OWNER.getAddress());
-      expect(params.deadline).to.equal(await getCurrentBlockTime());
-      expect(params.amountIn).to.equal(wei(2));
-      expect(params.amountOutMinimum).to.equal(wei(1));
-      expect(params.sqrtPriceLimitX96).to.equal(sqrtPriceLimitX96ts);
+    it('should revert if caller is not owner', async () => {
+      await expect(swap.connect(SECOND).editParams(_getDefaultSwapParams(ZERO_ADDR, ZERO_ADDR))).to.be.revertedWith(
+        'Ownable: caller is not the owner'
+      );
     });
   });
 
@@ -170,7 +150,8 @@ describe('Swap', () => {
 
     it('should swap tokens', async () => {
       const amount = wei(0.0001);
-      const tx = await swap.swapStETHForMor(amount, wei(0));
+
+      const tx = await swap.swap(amount, wei(0));
 
       expect(tx).to.changeTokenBalance(mor, OWNER, amount);
       expect(tx).to.changeTokenBalance(stETH, OWNER, -amount * daiToWethRatio);
@@ -178,7 +159,7 @@ describe('Swap', () => {
   });
 });
 
-export const _getDefaultSwapParams = (tokenIn: string, tokenOut: string): Swap.SwapParamsStruct => {
+export const _getDefaultSwapParams = (tokenIn: string, tokenOut: string): ISwap.SwapParamsStruct => {
   return {
     tokenIn: tokenIn,
     tokenOut: tokenOut,

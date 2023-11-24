@@ -185,7 +185,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: nothing to burn");
 
-        Swap(swap).swapStETHForMor(overplus_, amountOutMin_);
+        Swap(swap).swap(overplus_, amountOutMin_);
 
         MOR(rewardToken).burn(MOR(rewardToken).balanceOf(address(this)));
     }
