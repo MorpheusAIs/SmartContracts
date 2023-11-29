@@ -256,11 +256,17 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 invested_ = userData.invested;
         require(invested_ > 0, "DS: user isn't staked");
 
-        if (amount_ > invested_) {
-            amount_ = invested_;
-        }
-        uint256 newInvested_ = invested_ - amount_;
         if (pool.isPublic) {
+            uint256 totalTokensAmount_ = IERC20(investToken).balanceOf(address(this));
+
+            if (amount_ > totalTokensAmount_) {
+                amount_ = totalTokensAmount_;
+            }
+            if (amount_ > invested_) {
+                amount_ = invested_;
+            }
+
+            uint256 newInvested_ = invested_ - amount_;
             require(
                 block.timestamp < pool.payoutStart ||
                     block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
@@ -282,7 +288,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         // Update user data
         userData.rate = currentPoolRate_;
-        userData.invested = newInvested_;
+        userData.invested -= amount_;
 
         _mintUserReaward(user_, pendingRewards_, poolId_);
 

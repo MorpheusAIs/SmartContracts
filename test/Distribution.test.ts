@@ -1186,6 +1186,37 @@ describe('Distribution', () => {
       expect(userData.invested).to.eq(wei(0));
       expect(userData.pendingRewards).to.eq(0);
     });
+    it('should correctly withdraw, when not enough tokens', async () => {
+      await distribution.stake(poolId, wei(10));
+      await distribution.connect(SECOND).stake(poolId, wei(10));
+      expect(await investToken.balanceOf(distribution)).to.eq(wei(20));
+
+      await setNextTime(oneDay + oneDay);
+      await investToken.setTotalPooledEther(wei(0.8, 25));
+      expect(await investToken.balanceOf(distribution)).to.eq(wei(16));
+
+      let tx = await distribution.withdraw(poolId, wei(999));
+      await expect(tx).to.changeTokenBalance(investToken, ownerAddress, wei(10));
+      let userData = await distribution.usersData(ownerAddress, poolId);
+      expect(userData.invested).to.eq(wei(0));
+      expect(await investToken.balanceOf(distribution)).to.eq(wei(6));
+
+      tx = await distribution.connect(SECOND).withdraw(poolId, wei(999));
+      await expect(tx).to.changeTokenBalance(investToken, secondAddress, wei(6));
+      userData = await distribution.usersData(secondAddress, poolId);
+      expect(userData.invested).to.eq(wei(4));
+      expect(await investToken.balanceOf(distribution)).to.eq(wei(0));
+    });
+    it('should not revert if no money', async () => {
+      await distribution.stake(poolId, wei(10));
+
+      await investToken.setTotalPooledEther(wei(0.0001, 25));
+
+      await distribution.withdraw(poolId, wei(10));
+
+      const tx = await distribution.withdraw(poolId, wei(1));
+      expect(tx).to.changeTokenBalance(investToken, ownerAddress, wei(0));
+    });
     it("should revert if user didn't stake", async () => {
       await expect(distribution.withdraw(poolId, 1)).to.be.revertedWith("DS: user isn't staked");
     });
@@ -1490,7 +1521,7 @@ describe('Distribution', () => {
       expect(overplus).to.eq(wei(1));
 
       const tx = await distribution.burnOverplus(0);
-      expect(tx).to.changeTokenBalance(investToken, distribution, wei(-1));
+      await expect(tx).to.changeTokenBalance(investToken, distribution, wei(-1));
 
       const rewardTokenTotalSupplyAfter = await rewardToken.totalSupply();
       expect(rewardTokenTotalSupplyAfter).to.eq(rewardTokenTotalSupplyBefore - wei(1));
