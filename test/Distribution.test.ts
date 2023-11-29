@@ -1207,15 +1207,14 @@ describe('Distribution', () => {
       expect(userData.invested).to.eq(wei(4));
       expect(await investToken.balanceOf(distribution)).to.eq(wei(0));
     });
-    it('should not revert if no money', async () => {
+    it('should revert if trying to withdraw zero', async () => {
       await distribution.stake(poolId, wei(10));
 
       await investToken.setTotalPooledEther(wei(0.0001, 25));
 
       await distribution.withdraw(poolId, wei(10));
 
-      const tx = await distribution.withdraw(poolId, wei(1));
-      expect(tx).to.changeTokenBalance(investToken, ownerAddress, wei(0));
+      await expect(distribution.withdraw(poolId, 0)).to.be.revertedWith('DS: invalid withdraw amount');
     });
     it("should revert if user didn't stake", async () => {
       await expect(distribution.withdraw(poolId, 1)).to.be.revertedWith("DS: user isn't staked");

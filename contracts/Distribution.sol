@@ -274,7 +274,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             );
 
             require(
-                newInvested_ >= pool.minimalStake || newInvested_ == 0,
+                amount_ > 0 && (newInvested_ >= pool.minimalStake || newInvested_ == 0),
                 "DS: invalid withdraw amount"
             );
         }
