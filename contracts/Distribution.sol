@@ -261,7 +261,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 newInvested_ = invested_ - amount_;
         if (pool.isPublic) {
             require(
-                block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
+                block.timestamp < pool.payoutStart ||
+                    block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
                 "DS: pool withdraw is locked"
             );
 
