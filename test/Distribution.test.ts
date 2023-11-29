@@ -54,7 +54,7 @@ describe('Distribution', () => {
       rewardDecrease: amount,
       payoutStart: (await getCurrentBlockTime()) + 2,
       decreaseInterval: 1,
-      withdrawLockPeriod: 1,
+      withdrawLockPeriod: 0,
       isPublic: true,
       minimalStake: 0,
     };
@@ -1134,19 +1134,16 @@ describe('Distribution', () => {
       expect(userData.invested).to.eq(wei(2));
       expect(userData.pendingRewards).to.eq(0);
     });
-    it('should correctly withdraw, when pool is no started', async () => {
+    it('should revert if pool is haven`t started', async () => {
       let userData;
 
       await setNextTime(oneHour * 2);
       await distribution.connect(OWNER).stake(poolId, wei(4));
 
       await setNextTime(oneHour * 3);
-      await distribution.connect(OWNER).withdraw(poolId, wei(4));
-
-      expect(await investToken.balanceOf(ownerAddress)).to.eq(wei(1000));
-      expect(await rewardToken.balanceOf(ownerAddress)).to.eq(0);
-      userData = await distribution.usersData(ownerAddress, poolId);
-      expect(userData.invested).to.eq(wei(0));
+      await expect(distribution.connect(OWNER).withdraw(poolId, wei(2))).to.be.revertedWith(
+        'DS: pool withdraw is locked'
+      );
     });
     it("should revert if user didn't stake", async () => {
       await expect(distribution.withdraw(poolId, 1)).to.be.revertedWith("DS: user isn't staked");
@@ -1154,8 +1151,10 @@ describe('Distribution', () => {
     it("should revert if pool isn't found", async () => {
       await expect(distribution.withdraw(111, 1)).to.be.revertedWith("DS: pool doesn't exist");
     });
-    it("should revert if `withdrawLockPeriod` didn't pass", async () => {
+    it("should revert if `minimalStake` didn't pass", async () => {
       await distribution.stake(poolId, wei(1));
+
+      await setNextTime(oneDay + oneDay * 2);
 
       await expect(distribution.withdraw(poolId, wei(0.99))).to.be.revertedWith('DS: invalid withdraw amount');
     });
@@ -1163,6 +1162,11 @@ describe('Distribution', () => {
       const pool = { ..._getDefaultPool(), isPublic: false };
       await distribution.createPool(pool);
       await expect(distribution.withdraw(1, wei(1))).to.be.revertedWith("DS: pool isn't public");
+    });
+    it("should revert if `withdrawLockPeriod` didn't pass", async () => {
+      await distribution.stake(poolId, wei(1));
+
+      await expect(distribution.withdraw(poolId, wei(0.99))).to.be.revertedWith('DS: pool withdraw is locked');
     });
   });
 
