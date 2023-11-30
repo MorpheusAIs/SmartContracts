@@ -55,6 +55,7 @@ describe('Distribution', () => {
       payoutStart: (await getCurrentBlockTime()) + 2,
       decreaseInterval: 1,
       withdrawLockPeriod: 0,
+      claimLockPeriod: 0,
       isPublic: true,
       minimalStake: 0,
     };
@@ -199,6 +200,12 @@ describe('Distribution', () => {
         pool.decreaseInterval = 0;
 
         await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid reward decrease');
+      });
+      it('if `withdrawLockPeriod < claimLockPeriod`', async () => {
+        const pool = _getDefaultPool();
+        pool.withdrawLockPeriod = 0;
+
+        await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid lock periods');
       });
     });
 
@@ -1318,6 +1325,7 @@ describe('Distribution', () => {
         payoutStart: oneDay,
         decreaseInterval: oneDay,
         withdrawLockPeriod: 1,
+        claimLockPeriod: 1,
         initialReward: wei(14400),
         rewardDecrease: wei(2.468994701),
         minimalStake: wei(0.1),
@@ -1464,6 +1472,7 @@ export const _getDefaultPool = (): IDistribution.PoolStruct => {
     payoutStart: oneDay,
     decreaseInterval: oneDay,
     withdrawLockPeriod: 12 * oneHour,
+    claimLockPeriod: 12 * oneHour,
     initialReward: wei(100),
     rewardDecrease: wei(2),
     minimalStake: wei(0.1),

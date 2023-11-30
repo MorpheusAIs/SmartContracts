@@ -107,6 +107,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _validatePool(Pool calldata pool_) internal pure {
+        require(pool_.withdrawLockPeriod >= pool_.claimLockPeriod, "DS: invalid lock periods");
+
         if (pool_.rewardDecrease > 0) {
             require(pool_.decreaseInterval > 0, "DS: invalid reward decrease");
         }
@@ -155,7 +157,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         require(userData.invested > 0, "DS: user isn't staked");
         require(
-            block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
+            block.timestamp > pool.payoutStart + pool.claimLockPeriod,
             "DS: pool claim is locked"
         );
 

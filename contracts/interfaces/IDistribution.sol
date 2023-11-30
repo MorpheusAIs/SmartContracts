@@ -6,6 +6,7 @@ interface IDistribution {
         uint128 payoutStart;
         uint128 decreaseInterval;
         uint128 withdrawLockPeriod;
+        uint128 claimLockPeriod;
         bool isPublic;
         uint256 initialReward;
         uint256 rewardDecrease;
