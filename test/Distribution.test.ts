@@ -47,8 +47,21 @@ describe('Distribution', () => {
 
   let swap: Swap;
 
+  async function _getNextPoolId() {
+    let poolId = 0;
+
+    while (true) {
+      try {
+        await distribution.pools(poolId);
+        poolId++;
+      } catch (e) {
+        return poolId;
+      }
+    }
+  }
   // @dev: should be called before other pool creation
   async function _getRewardTokenFromPool(amount: bigint, user: SignerWithAddress) {
+    const poolId = await _getNextPoolId();
     const pool: IDistribution.PoolStruct = {
       initialReward: amount,
       rewardDecrease: amount,
@@ -61,8 +74,8 @@ describe('Distribution', () => {
     };
 
     await distribution.createPool(pool);
-    await distribution.connect(user).stake(0, wei(1));
-    await distribution.connect(user).withdraw(0, wei(1));
+    await distribution.connect(user).stake(poolId, wei(1));
+    await distribution.connect(user).withdraw(poolId, wei(1));
   }
 
   before(async () => {
@@ -949,6 +962,27 @@ describe('Distribution', () => {
       userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.invested).to.eq(wei(1));
       expect(userData.pendingRewards).to.eq(0);
+    });
+    it('should save reward to pending reward if cannot mint reward token', async () => {
+      const amountToMintMaximum = (await rewardToken.cap()) - (await rewardToken.totalSupply());
+
+      await _getRewardTokenFromPool(amountToMintMaximum - wei(1), OWNER);
+
+      await distribution.stake(poolId, wei(10));
+
+      await setNextTime(oneDay + oneDay);
+
+      let tx = await distribution.claim(poolId, OWNER);
+      expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(1));
+      let userData = await distribution.usersData(OWNER, poolId);
+      expect(userData.pendingRewards).to.equal(wei(99));
+
+      await setNextTime(oneDay + oneDay * 2);
+
+      tx = await distribution.claim(poolId, OWNER);
+      expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(0));
+      userData = await distribution.usersData(OWNER, poolId);
+      expect(userData.pendingRewards).to.equal(wei(197));
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.claim(1, SECOND)).to.be.revertedWith("DS: pool doesn't exist");

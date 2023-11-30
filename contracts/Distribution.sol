@@ -171,10 +171,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         // Update user data
         userData.rate = currentPoolRate_;
-        userData.pendingRewards = 0;
 
         // Transfer rewards
-        MOR(rewardToken).mint(user_, pendingRewards_);
+        _mintUserReaward(user_, pendingRewards_, poolId_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
@@ -284,12 +283,24 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update user data
         userData.rate = currentPoolRate_;
         userData.invested = newInvested_;
-        userData.pendingRewards = 0;
 
-        MOR(rewardToken).mint(user_, pendingRewards_);
+        _mintUserReaward(user_, pendingRewards_, poolId_);
+
         if (pool.isPublic) {
             totalETHStaked -= amount_;
             IERC20(investToken).safeTransfer(user_, amount_);
+        }
+    }
+
+    function _mintUserReaward(address user_, uint256 amount_, uint256 poolId_) internal {
+        uint256 maximumAmountToMint_ = MOR(rewardToken).cap() - MOR(rewardToken).totalSupply();
+
+        uint256 amountToMint_ = amount_ > maximumAmountToMint_ ? maximumAmountToMint_ : amount_;
+
+        usersData[user_][poolId_].pendingRewards = amount_ - amountToMint_;
+
+        if (amountToMint_ > 0) {
+            MOR(rewardToken).mint(user_, amountToMint_);
         }
     }
 
