@@ -284,6 +284,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update user data
         userData.rate = currentPoolRate_;
         userData.invested = newInvested_;
+        userData.pendingRewards = 0;
 
         MOR(rewardToken).mint(user_, pendingRewards_);
         if (pool.isPublic) {

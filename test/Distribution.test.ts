@@ -1054,6 +1054,7 @@ describe('Distribution', () => {
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(0));
+      expect(userData.pendingRewards).to.eq(0);
       expect(await distribution.totalETHStaked()).to.eq(wei(1));
 
       // Claim after 3 days
@@ -1101,6 +1102,7 @@ describe('Distribution', () => {
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(58.8), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(4));
+      expect(userData.pendingRewards).to.eq(0);
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
@@ -1125,6 +1127,7 @@ describe('Distribution', () => {
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(100 + 39.2 + 48 + 47), wei(0.001));
       userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.invested).to.eq(wei(2));
+      expect(userData.pendingRewards).to.eq(0);
 
       // Claim after 5 days
       await setNextTime(oneDay + oneDay * 5);
@@ -1154,6 +1157,7 @@ describe('Distribution', () => {
       expect(await rewardToken.balanceOf(ownerAddress)).to.eq(0);
       userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(0));
+      expect(userData.pendingRewards).to.eq(0);
     });
     it("should revert if user didn't stake", async () => {
       await expect(distribution.withdraw(poolId, 1)).to.be.revertedWith("DS: user isn't staked");
