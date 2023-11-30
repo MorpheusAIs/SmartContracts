@@ -3,9 +3,10 @@ import {
   ERC1967Proxy__factory,
   MOR__factory,
   StETHMock__factory,
+  SwapRouterMock__factory,
   Swap__factory,
-  UniswapV2RouterMock__factory,
 } from '@/generated-types/ethers';
+import { ISwap } from '@/generated-types/ethers/contracts/Swap';
 import { Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
 
@@ -13,17 +14,17 @@ module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
 
   let stETH: string;
-  let uniswapV2Router: string;
-  if (config.swap) {
-    stETH = config.swap.stEth;
-    uniswapV2Router = config.swap.uniswapV2Router;
+  let swapRouter: string;
+  if (config.swapAddresses) {
+    stETH = config.swapAddresses.stEth;
+    swapRouter = config.swapAddresses.swapRouter;
   } else {
     // deploy mock
     const stETHMock = await deployer.deploy(StETHMock__factory);
     stETH = await stETHMock.getAddress();
 
-    const uniswapV2RouterMock = await deployer.deploy(UniswapV2RouterMock__factory);
-    uniswapV2Router = await uniswapV2RouterMock.getAddress();
+    const swapRouterMock = await deployer.deploy(SwapRouterMock__factory);
+    swapRouter = await swapRouterMock.getAddress();
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
@@ -32,7 +33,13 @@ module.exports = async function (deployer: Deployer) {
 
   const MOR = await deployer.deploy(MOR__factory, [distribution, config.cap]);
 
-  const swap = await deployer.deploy(Swap__factory, [uniswapV2Router, stETH, MOR]);
+  const swapParams: ISwap.SwapParamsStruct = {
+    tokenIn: stETH,
+    tokenOut: MOR.address,
+    fee: config.swapParams.fee,
+    sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
+  };
+  const swap = await deployer.deploy(Swap__factory, [swapRouter, swapParams]);
 
   await distribution.Distribution_init(MOR, stETH, swap, config.pools || []);
 
@@ -47,5 +54,10 @@ module.exports = async function (deployer: Deployer) {
     }
   }
 
-  Reporter.reportContracts(['MOR', MOR.address], ['StETH', stETH], ['Distribution', await distribution.getAddress()]);
+  Reporter.reportContracts(
+    ['MOR', MOR.address],
+    ['StETH', stETH],
+    ['Distribution', await distribution.getAddress()],
+    ['Swap', await swap.getAddress()]
+  );
 };

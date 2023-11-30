@@ -1,18 +1,23 @@
-import { IDistribution } from '@/generated-types/ethers';
+import { IDistribution, Swap } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
+import { _getDefaultSwapParams } from '@/test/fork/Swap.fork.test';
 import { BigNumberish } from 'ethers';
 import { readFileSync } from 'fs';
 
 export type Config = {
   cap: number;
   pools?: PoolInitInfo[];
-  swap?: {
+  swapAddresses?: {
     stEth: string;
-    uniswapV2Router: string;
+    swapRouter: string;
+  };
+  swapParams: {
+    fee: string;
+    sqrtPriceLimitX96: string;
   };
 };
 
-export type PoolInitInfo = IDistribution.PoolStruct & {
+type PoolInitInfo = IDistribution.PoolStruct & {
   whitelistedUsers: string[];
   amounts: BigNumberish[];
 };
@@ -28,14 +33,22 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
     validatePools(config.pools);
   }
 
-  if (config.swap != undefined) {
-    if (config.swap.stEth == undefined) {
-      nonZeroAddr(config.swap.stEth, 'swap.stEth');
+  if (config.swapAddresses != undefined) {
+    if (config.swapAddresses.stEth == undefined) {
+      nonZeroAddr(config.swapAddresses.stEth, 'swapAddresses.stEth');
     }
 
-    if (config.swap.uniswapV2Router == undefined) {
-      nonZeroAddr(config.swap.uniswapV2Router, 'swap.uniswapV2Router');
+    if (config.swapAddresses.swapRouter == undefined) {
+      nonZeroAddr(config.swapAddresses.swapRouter, 'swapAddresses.swapRouter');
     }
+  }
+
+  if (
+    config.swapParams == undefined ||
+    nonNumber(config.swapParams.fee) ||
+    nonNumber(config.swapParams.sqrtPriceLimitX96)
+  ) {
+    throw new Error('Invalid `swapParams`');
   }
 
   return config;
@@ -65,6 +78,7 @@ function validatePools(pools: PoolInitInfo[]) {
       nonNumber(pool.payoutStart) ||
       nonNumber(pool.decreaseInterval) ||
       nonNumber(pool.withdrawLockPeriod) ||
+      nonNumber(pool.claimLockPeriod) ||
       typeof pool.isPublic !== 'boolean' ||
       nonNumber(pool.initialReward) ||
       nonNumber(pool.rewardDecrease) ||

@@ -1,6 +1,4 @@
 import {
-  IQuoter,
-  IQuoter__factory,
   ISwapRouter,
   ISwapRouter__factory,
   MOR,
@@ -26,7 +24,6 @@ describe('Swap', () => {
   let swap: Swap;
 
   const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
-  const quoterAddress = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6';
 
   const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
   const weth9Address = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
@@ -35,7 +32,6 @@ describe('Swap', () => {
   const richAddress = '0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8';
 
   let swapRouter: ISwapRouter;
-  let quoter: IQuoter;
 
   let stETH: StETHMock;
   let mor: MOR;
@@ -53,17 +49,12 @@ describe('Swap', () => {
     [SECOND] = await ethers.getSigners();
 
     swapRouter = ISwapRouter__factory.connect(swapRouterAddress, OWNER);
-    quoter = IQuoter__factory.connect(quoterAddress, OWNER);
 
     stETH = StETHMock__factory.connect(daiAddress, OWNER);
     mor = MOR__factory.connect(weth9Address, OWNER);
 
     const Swap = await ethers.getContractFactory('Swap', OWNER);
-    swap = await Swap.deploy(
-      swapRouter,
-      quoter,
-      _getDefaultSwapParams(await stETH.getAddress(), await mor.getAddress())
-    );
+    swap = await Swap.deploy(swapRouter, _getDefaultSwapParams(await stETH.getAddress(), await mor.getAddress()));
 
     await reverter.snapshot();
   });
@@ -79,10 +70,6 @@ describe('Swap', () => {
   describe('constructor', () => {
     it('should set router', async () => {
       expect(await swap.router()).to.equal(await swapRouter.getAddress());
-    });
-
-    it('should set quoter', async () => {
-      expect(await swap.quoter()).to.equal(await quoter.getAddress());
     });
 
     it('should set params', async () => {

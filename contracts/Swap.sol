@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IQuoter} from "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
@@ -11,13 +10,11 @@ import {ISwap} from "./interfaces/ISwap.sol";
 
 contract Swap is ISwap, Ownable {
     address public immutable router;
-    address public immutable quoter;
 
     SwapParams public params;
 
-    constructor(address router_, address quoter_, SwapParams memory params_) Ownable() {
+    constructor(address router_, SwapParams memory params_) Ownable() {
         router = router_;
-        quoter = quoter_;
 
         editParams(params_);
     }

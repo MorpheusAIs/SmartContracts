@@ -3,10 +3,7 @@ import {
   DistributionV2,
   Distribution__factory,
   IDistribution,
-  IQuoter,
-  IQuoter__factory,
   ISwapRouter,
-  ISwapRouter__factory,
   LinearDistributionIntervalDecrease,
   MOR,
   StETHMock,
@@ -40,9 +37,6 @@ describe('Distribution', () => {
 
   let rewardToken: MOR;
   let investToken: StETHMock;
-
-  const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
-  const quoterAddress = ZERO_ADDR;
   let swapRouter: ISwapRouter;
 
   let swap: Swap;
@@ -110,7 +104,6 @@ describe('Distribution', () => {
     const Swap = await ethers.getContractFactory('Swap');
     swap = await Swap.deploy(
       swapRouter,
-      quoterAddress,
       _getDefaultSwapParams(await investToken.getAddress(), await rewardToken.getAddress())
     );
 
