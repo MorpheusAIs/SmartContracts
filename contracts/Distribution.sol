@@ -7,13 +7,13 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
+
 import {IDistribution} from "./interfaces/IDistribution.sol";
-import {Swap} from "./Swap.sol";
-import {MOR} from "./tokens/MOR.sol";
+import {ISwap} from "./interfaces/ISwap.sol";
+import {IMOR} from "./interfaces/IMOR.sol";
 
 contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
-    using SafeERC20 for MOR;
 
     bool public isNotUpgradeable;
 
@@ -28,8 +28,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     // User storage
     mapping(address => mapping(uint256 => UserData)) public usersData;
 
-    // Total rewards storage
-    uint256 public totalETHStaked;
+    // Total invested storage
+    uint256 public totalInvestedInPublicPools;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -50,6 +50,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     ) external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
+
+        require(IMOR(rewardToken_).supportsInterface(type(IMOR).interfaceId), "DS: invalid reward token");
+        require(ISwap(swap_).supportsInterface(type(ISwap).interfaceId), "DS: invalid swap contract");
 
         for (uint256 i = 0; i < poolsInfo_.length; i++) {
             createPool(poolsInfo_[i]);
@@ -85,14 +88,11 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         pools[poolId_] = pool_;
     }
 
-    function getPeriodReward(
-        uint256 poolId_,
-        uint128 startTime_,
-        uint128 endTime_
-    ) public view returns (uint256) {
+    function getPeriodReward(uint256 poolId_, uint128 startTime_, uint128 endTime_) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
             return 0;
         }
+
         Pool storage pool = pools[poolId_];
 
         return
@@ -107,8 +107,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _validatePool(Pool calldata pool_) internal pure {
-        require(pool_.withdrawLockPeriod >= pool_.claimLockPeriod, "DS: invalid lock periods");
-
         if (pool_.rewardDecrease > 0) {
             require(pool_.decreaseInterval > 0, "DS: invalid reward decrease");
         }
@@ -135,7 +133,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
             if (invested_ < amount_) {
                 _stake(user_, poolId_, amount_ - invested_, currentPoolRate_);
-            } else {
+            } else if (invested_ > amount_) {
                 _withdraw(user_, poolId_, invested_ - amount_, currentPoolRate_);
             }
         }
@@ -156,10 +154,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         UserData storage userData = usersData[user_][poolId_];
 
         require(userData.invested > 0, "DS: user isn't staked");
-        require(
-            block.timestamp > pool.payoutStart + pool.claimLockPeriod,
-            "DS: pool claim is locked"
-        );
+        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
@@ -173,31 +168,14 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.rate = currentPoolRate_;
 
         // Transfer rewards
-        _mintUserReaward(user_, pendingRewards_, poolId_);
+        uint256 mintedAmount_ = _mintUserRewards(user_, pendingRewards_);
+        userData.pendingRewards = pendingRewards_ - mintedAmount_;
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
         require(pools[poolId_].isPublic, "DS: pool isn't public");
 
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
-    }
-
-    function burnOverplus(uint256 amountOutMin_) external onlyOwner {
-        uint256 overplus_ = overplus();
-        require(overplus_ > 0, "DS: nothing to burn");
-
-        Swap(swap).swap(overplus_, amountOutMin_);
-
-        MOR(rewardToken).burn(MOR(rewardToken).balanceOf(address(this)));
-    }
-
-    function overplus() public view returns (uint256) {
-        uint256 currentETHBalance = IERC20(investToken).balanceOf(address(this));
-        if (currentETHBalance <= totalETHStaked) {
-            return 0;
-        }
-
-        return currentETHBalance - totalETHStaked;
     }
 
     function getCurrentUserReward(uint256 poolId_, address user_) external view returns (uint256) {
@@ -211,12 +189,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return _getCurrentUserReward(currentPoolRate_, userData);
     }
 
-    function _stake(
-        address user_,
-        uint256 poolId_,
-        uint256 amount_,
-        uint256 currentPoolRate_
-    ) internal {
+    function _stake(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
         require(amount_ > 0, "DS: nothing to stake");
 
         Pool storage pool = pools[poolId_];
@@ -224,11 +197,16 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         UserData storage userData = usersData[user_][poolId_];
 
         if (pool.isPublic) {
+            // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
+            uint256 balanceBefore_ = IERC20(investToken).balanceOf(address(this));
+            IERC20(investToken).safeTransferFrom(_msgSender(), address(this), amount_);
+            uint256 balanceAfter_ = IERC20(investToken).balanceOf(address(this));
+
+            amount_ = balanceAfter_ - balanceBefore_;
+
             require(userData.invested + amount_ >= pool.minimalStake, "DS: amount too low");
 
-            totalETHStaked += amount_;
-
-            IERC20(investToken).safeTransferFrom(_msgSender(), address(this), amount_);
+            totalInvestedInPublicPools += amount_;
         }
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
@@ -243,12 +221,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.invested += amount_;
     }
 
-    function _withdraw(
-        address user_,
-        uint256 poolId_,
-        uint256 amount_,
-        uint256 currentPoolRate_
-    ) internal {
+    function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
         Pool storage pool = pools[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
@@ -256,27 +229,30 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 invested_ = userData.invested;
         require(invested_ > 0, "DS: user isn't staked");
 
+        if (amount_ > invested_) {
+            amount_ = invested_;
+        }
+
+        uint256 newInvested_;
         if (pool.isPublic) {
-            uint256 totalTokensAmount_ = IERC20(investToken).balanceOf(address(this));
-
-            if (amount_ > totalTokensAmount_) {
-                amount_ = totalTokensAmount_;
-            }
-            if (amount_ > invested_) {
-                amount_ = invested_;
-            }
-
-            uint256 newInvested_ = invested_ - amount_;
             require(
-                block.timestamp < pool.payoutStart ||
-                    block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
+                block.timestamp < pool.payoutStart || block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
                 "DS: pool withdraw is locked"
             );
+
+            uint256 investTokenContractBalance = IERC20(investToken).balanceOf(address(this));
+            if (amount_ > investTokenContractBalance) {
+                amount_ = investTokenContractBalance;
+            }
+
+            newInvested_ = invested_ - amount_;
 
             require(
                 amount_ > 0 && (newInvested_ >= pool.minimalStake || newInvested_ == 0),
                 "DS: invalid withdraw amount"
             );
+        } else {
+            newInvested_ = invested_ - amount_;
         }
 
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
@@ -290,32 +266,35 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.rate = currentPoolRate_;
         userData.invested -= amount_;
 
-        _mintUserReaward(user_, pendingRewards_, poolId_);
+        uint256 mintedAmount_ = _mintUserRewards(user_, pendingRewards_);
+        userData.pendingRewards = pendingRewards_ - mintedAmount_;
 
         if (pool.isPublic) {
-            totalETHStaked -= amount_;
+            totalInvestedInPublicPools -= amount_;
+
             IERC20(investToken).safeTransfer(user_, amount_);
         }
     }
 
-    function _mintUserReaward(address user_, uint256 amount_, uint256 poolId_) internal {
-        uint256 maximumAmountToMint_ = MOR(rewardToken).cap() - MOR(rewardToken).totalSupply();
+    function _mintUserRewards(address user_, uint256 amount_) internal returns (uint256) {
+        uint256 maxAmount_ = IMOR(rewardToken).cap() - IMOR(rewardToken).totalSupply();
 
-        uint256 amountToMint_ = amount_ > maximumAmountToMint_ ? maximumAmountToMint_ : amount_;
-
-        usersData[user_][poolId_].pendingRewards = amount_ - amountToMint_;
-
-        if (amountToMint_ > 0) {
-            MOR(rewardToken).mint(user_, amountToMint_);
+        if (amount_ == 0 || maxAmount_ == 0) {
+            return 0;
+        } else if (amount_ > maxAmount_) {
+            amount_ = maxAmount_;
         }
+
+        IMOR(rewardToken).mint(user_, amount_);
+
+        return amount_;
     }
 
     function _getCurrentUserReward(
         uint256 currentPoolRate_,
         UserData memory userData_
     ) internal pure returns (uint256) {
-        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.invested) /
-            PRECISION;
+        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.invested) / PRECISION;
 
         return userData_.pendingRewards + newRewards_;
     }
@@ -337,8 +316,31 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
+    /*** Swap                                                                                   ***/
+    /**********************************************************************************************/
+
+    function overplus() public view returns (uint256) {
+        uint256 investTokenContractBalance = IERC20(investToken).balanceOf(address(this));
+        if (investTokenContractBalance <= totalInvestedInPublicPools) {
+            return 0;
+        }
+
+        return investTokenContractBalance - totalInvestedInPublicPools;
+    }
+
+    function swapAndBurnOverplus(uint256 amountOutMin_) external onlyOwner {
+        uint256 overplus_ = overplus();
+        require(overplus_ > 0, "DS: overplus is zero");
+
+        ISwap(swap).swap(overplus_, amountOutMin_);
+
+        IMOR(rewardToken).burn(IMOR(rewardToken).balanceOf(address(this)));
+    }
+
+    /**********************************************************************************************/
     /*** UUPS                                                                                   ***/
     /**********************************************************************************************/
+
     function removeUpgradeability() external onlyOwner {
         isNotUpgradeable = true;
     }

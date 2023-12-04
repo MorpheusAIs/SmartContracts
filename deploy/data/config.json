@@ -2,30 +2,34 @@
   "cap": "1000000000000000000000000",
   "pools": [
     {
-      "payoutStart": 1732964765,
-      "decreaseInterval": 60,
+      "payoutStart": 1701443580,
+      "decreaseInterval": 28800,
       "withdrawLockPeriod": 10,
       "claimLockPeriod": 10,
       "initialReward": "100000000000000000",
       "rewardDecrease": "10000000000000000",
-      "minimalStake": "1000000000000000000",
+      "minimalStake": "1000000000000000",
       "isPublic": true
     },
     {
-      "payoutStart": 1732964765,
+      "payoutStart": 1701443580,
       "decreaseInterval": 60,
       "withdrawLockPeriod": 1,
       "claimLockPeriod": 1,
-      "initialReward": "100000000000000000",
-      "rewardDecrease": "10000000000000000",
-      "minimalStake": "1000000000000000000",
+      "initialReward": "100000000000000000000",
+      "rewardDecrease": "100000000000000000000",
+      "minimalStake": "1000000000000000",
       "isPublic": false,
-      "whitelistedUsers": ["0x901F2d23823730fb7F2356920e0E273EFdCdFe17"],
-      "amounts": ["1"]
+      "whitelistedUsers": [
+        "0x901F2d23823730fb7F2356920e0E273EFdCdFe17",
+        "0x19ec1E4b714990620edf41fE28e9a1552953a7F4"
+      ],
+      "amounts": ["1", "1"]
     }
   ],
   "swapAddresses": {
     "stEth": "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
+    "wStEth": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
     "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
   },
   "swapParams": {

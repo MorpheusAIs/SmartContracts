@@ -5,9 +5,7 @@ import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRoute
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SwapRouterMock {
-    function exactInputSingle(
-        ISwapRouter.ExactInputSingleParams calldata params_
-    ) external returns (uint256) {
+    function exactInputSingle(ISwapRouter.ExactInputSingleParams calldata params_) external returns (uint256) {
         IERC20(params_.tokenIn).transferFrom(msg.sender, address(this), params_.amountIn);
         IERC20(params_.tokenOut).transfer(params_.recipient, params_.amountIn);
 

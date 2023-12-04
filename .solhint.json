@@ -3,7 +3,7 @@
   "plugins": ["prettier"],
   "rules": {
     "reentrancy": "off",
-    "prettier/prettier": "off",
+    "prettier/prettier": "error",
     "modifier-name-mixedcase": "off",
     "no-empty-blocks": "off",
     "func-visibility": "off",

@@ -1,7 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.20;
 
+/**
+ * This is the library that calculates the reward for the period with linear distribution and interval decrease.
+ * Supports the constant reward amount (decreaseAmount_ = 0)
+ */
 library LinearDistributionIntervalDecrease {
+    /**
+     * The function to calculate the reward for the period.
+     * @param initialAmount_ The initial reward amount.
+     * @param decreaseAmount_ The reward decrease amount.
+     * @param payoutStart_ The timestamp when the period starts to pay out rewards.
+     * @param interval_ The interval in seconds between reward decreases.
+     * @param startTime_ The timestamp when the period starts.
+     * @param endTime_ The timestamp when the period ends.
+     * @return The reward amount.
+     */
     function getPeriodReward(
         uint256 initialAmount_,
         uint256 decreaseAmount_,
@@ -19,12 +33,7 @@ library LinearDistributionIntervalDecrease {
             startTime_ = payoutStart_;
         }
 
-        uint128 maxEndTime_ = _calculateMaxEndTime(
-            payoutStart_,
-            interval_,
-            initialAmount_,
-            decreaseAmount_
-        );
+        uint128 maxEndTime_ = _calculateMaxEndTime(payoutStart_, interval_, initialAmount_, decreaseAmount_);
 
         if (endTime_ > maxEndTime_) {
             endTime_ = maxEndTime_;

@@ -5,6 +5,7 @@ import {
   StETHMock__factory,
   SwapRouterMock__factory,
   Swap__factory,
+  WStETHMock__factory,
 } from '@/generated-types/ethers';
 import { ISwap } from '@/generated-types/ethers/contracts/Swap';
 import { Deployer, Reporter } from '@solarity/hardhat-migrate';
@@ -14,14 +15,19 @@ module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
 
   let stETH: string;
+  let WStETH: string;
   let swapRouter: string;
   if (config.swapAddresses) {
     stETH = config.swapAddresses.stEth;
+    WStETH = config.swapAddresses.wStEth;
     swapRouter = config.swapAddresses.swapRouter;
   } else {
     // deploy mock
     const stETHMock = await deployer.deploy(StETHMock__factory);
     stETH = await stETHMock.getAddress();
+
+    const wstETHMock = await deployer.deploy(WStETHMock__factory, [stETH]);
+    WStETH = await wstETHMock.getAddress();
 
     const swapRouterMock = await deployer.deploy(SwapRouterMock__factory);
     swapRouter = await swapRouterMock.getAddress();
@@ -36,6 +42,7 @@ module.exports = async function (deployer: Deployer) {
   const swapParams: ISwap.SwapParamsStruct = {
     tokenIn: stETH,
     tokenOut: MOR.address,
+    intermediateToken: WStETH,
     fee: config.swapParams.fee,
     sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
   };
@@ -58,6 +65,6 @@ module.exports = async function (deployer: Deployer) {
     ['MOR', MOR.address],
     ['StETH', stETH],
     ['Distribution', await distribution.getAddress()],
-    ['Swap', await swap.getAddress()]
+    ['Swap', await swap.getAddress()],
   );
 };

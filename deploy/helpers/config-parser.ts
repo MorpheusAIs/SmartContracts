@@ -1,6 +1,5 @@
 import { IDistribution, Swap } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
-import { _getDefaultSwapParams } from '@/test/fork/Swap.fork.test';
 import { BigNumberish } from 'ethers';
 import { readFileSync } from 'fs';
 
@@ -9,6 +8,7 @@ export type Config = {
   pools?: PoolInitInfo[];
   swapAddresses?: {
     stEth: string;
+    wStEth: string;
     swapRouter: string;
   };
   swapParams: {
@@ -36,6 +36,10 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
   if (config.swapAddresses != undefined) {
     if (config.swapAddresses.stEth == undefined) {
       nonZeroAddr(config.swapAddresses.stEth, 'swapAddresses.stEth');
+    }
+
+    if (config.swapAddresses.wStEth == undefined) {
+      nonZeroAddr(config.swapAddresses.wStEth, 'swapAddresses.wStEth');
     }
 
     if (config.swapAddresses.swapRouter == undefined) {

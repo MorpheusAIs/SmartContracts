@@ -9,17 +9,15 @@ import {
   StETHMock,
   Swap,
 } from '@/generated-types/ethers';
+import { WStETHMock } from '@/generated-types/ethers/contracts/mock/tokens/WStETHMock';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { _getDefaultSwapParams } from './fork/Swap.fork.test';
 import { getCurrentBlockTime, setNextTime, setTime } from './helpers/block-helper';
-
-const oneHour = 3600;
-const oneDay = 86400;
+import { getDefaultPool, getDefaultSwapParams, oneDay, oneHour } from './helpers/distribution-helper';
 
 describe('Distribution', () => {
   const reverter = new Reverter();
@@ -37,84 +35,82 @@ describe('Distribution', () => {
 
   let rewardToken: MOR;
   let investToken: StETHMock;
+  let intermediateToken: WStETHMock;
   let swapRouter: ISwapRouter;
 
   let swap: Swap;
-
-  async function _getNextPoolId() {
-    let poolId = 0;
-
-    while (true) {
-      try {
-        await distribution.pools(poolId);
-        poolId++;
-      } catch (e) {
-        return poolId;
-      }
-    }
-  }
-  // @dev: should be called before other pool creation
-  async function _getRewardTokenFromPool(amount: bigint, user: SignerWithAddress) {
-    const poolId = await _getNextPoolId();
-    const pool: IDistribution.PoolStruct = {
-      initialReward: amount,
-      rewardDecrease: amount,
-      payoutStart: (await getCurrentBlockTime()) + 2,
-      decreaseInterval: 1,
-      withdrawLockPeriod: 0,
-      claimLockPeriod: 0,
-      isPublic: true,
-      minimalStake: 0,
-    };
-
-    await distribution.createPool(pool);
-    await distribution.connect(user).stake(poolId, wei(1));
-    await distribution.connect(user).withdraw(poolId, wei(1));
-  }
 
   before(async () => {
     await setTime(oneHour);
     [OWNER, SECOND] = await ethers.getSigners();
 
-    ownerAddress = await OWNER.getAddress();
-    secondAddress = await SECOND.getAddress();
+    [ownerAddress, secondAddress] = await Promise.all([OWNER.getAddress(), SECOND.getAddress()]);
 
-    const libFactory = await ethers.getContractFactory('LinearDistributionIntervalDecrease');
-    lib = await libFactory.deploy();
+    const [
+      libFactory,
+      ERC1967ProxyFactory,
+      MORFactory,
+      stETHMockFactory,
+      WStETHMockFactory,
+      swapRouterMock,
+      swapFactory,
+    ] = await Promise.all([
+      ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+      ethers.getContractFactory('ERC1967Proxy'),
+      ethers.getContractFactory('MOR'),
+      ethers.getContractFactory('StETHMock'),
+      ethers.getContractFactory('WStETHMock'),
+      ethers.getContractFactory('SwapRouterMock'),
+      ethers.getContractFactory('Swap'),
+    ]);
 
+    // START deploy contracts without deps
+    [lib, investToken, swapRouter] = await Promise.all([
+      libFactory.deploy(),
+      stETHMockFactory.deploy(),
+      swapRouterMock.deploy() as unknown as ISwapRouter,
+    ]);
+    // END
+
+    // START deploy distribution contract
     distributionFactory = await ethers.getContractFactory('Distribution', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
       },
     });
-    const ERC1967ProxyFactory = await ethers.getContractFactory('ERC1967Proxy');
 
     const distributionImplementation = await distributionFactory.deploy();
     const distributionProxy = await ERC1967ProxyFactory.deploy(await distributionImplementation.getAddress(), '0x');
-
-    const MORFactory = await ethers.getContractFactory('MOR');
-    rewardToken = await MORFactory.deploy(await distributionProxy.getAddress(), wei(1000000000));
-
-    const IStETHMockFactory = await ethers.getContractFactory('StETHMock');
-    investToken = await IStETHMockFactory.deploy();
-
-    const swapRouterMock = await ethers.getContractFactory('SwapRouterMock');
-    swapRouter = (await swapRouterMock.deploy()) as unknown as ISwapRouter;
-
-    const Swap = await ethers.getContractFactory('Swap');
-    swap = await Swap.deploy(
-      swapRouter,
-      _getDefaultSwapParams(await investToken.getAddress(), await rewardToken.getAddress())
-    );
-
     distribution = distributionFactory.attach(await distributionProxy.getAddress()) as Distribution;
+    // END
+
+    // Get contract addresses
+    const [distributionAddress, swapRouterAddress, investTokenAddress] = await Promise.all([
+      distribution.getAddress(),
+      swapRouter.getAddress(),
+      investToken.getAddress(),
+    ]);
+
+    // Deploy reward token
+    rewardToken = await MORFactory.deploy(distributionAddress, wei(1000000000));
+
+    // deploy intermediate token
+    intermediateToken = await WStETHMockFactory.deploy(investTokenAddress);
+
+    // START deploy swap contract
+    swap = await swapFactory.deploy(
+      swapRouterAddress,
+      getDefaultSwapParams(investTokenAddress, await rewardToken.getAddress(), await intermediateToken.getAddress()),
+    );
+    // END
 
     await distribution.Distribution_init(rewardToken, investToken, swap, []);
 
-    await investToken.mint(ownerAddress, wei(1000));
-    await investToken.mint(secondAddress, wei(1000));
-    await investToken.approve(await distribution.getAddress(), wei(1000));
-    await investToken.connect(SECOND).approve(await distribution.getAddress(), wei(1000));
+    await Promise.all([investToken.mint(ownerAddress, wei(1000)), investToken.mint(secondAddress, wei(1000))]);
+    await Promise.all([
+      investToken.approve(distributionAddress, wei(1000)),
+      investToken.connect(SECOND).approve(distributionAddress, wei(1000)),
+    ]);
 
     await reverter.snapshot();
   });
@@ -131,7 +127,7 @@ describe('Distribution', () => {
         expect(investToken_).to.eq(await investToken.getAddress());
       });
       it('should create pools with correct data', async () => {
-        const pool1 = _getDefaultPool();
+        const pool1 = getDefaultPool();
         const pool2 = {
           ...pool1,
           isPublic: false,
@@ -154,6 +150,20 @@ describe('Distribution', () => {
 
         await expect(distribution.Distribution_init(rewardToken, investToken, swap, [])).to.be.rejectedWith(reason);
       });
+      it('should revert if pass invalid reward token', async () => {
+        const reason = 'DS: invalid reward token';
+
+        const distribution = await distributionFactory.deploy();
+        await expect(distribution.Distribution_init(swap, investToken, swap, [])).to.be.rejectedWith(reason);
+      });
+      it('should revert if pass invalid swap contract', async () => {
+        const reason = 'DS: invalid swap contract';
+
+        const distribution = await distributionFactory.deploy();
+        await expect(distribution.Distribution_init(rewardToken, investToken, rewardToken, [])).to.be.rejectedWith(
+          reason,
+        );
+      });
     });
 
     describe('#_authorizeUpgrade', () => {
@@ -173,7 +183,7 @@ describe('Distribution', () => {
       });
       it('should revert if caller is not the owner', async () => {
         await expect(distribution.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
-          'Ownable: caller is not the owner'
+          'Ownable: caller is not the owner',
         );
       });
       it('should revert if `isNotUpgradeable == true`', async () => {
@@ -186,7 +196,7 @@ describe('Distribution', () => {
 
   describe('#createPool', () => {
     it('should create pool with correct data', async () => {
-      const pool = _getDefaultPool();
+      const pool = getDefaultPool();
 
       await distribution.createPool(pool);
 
@@ -196,28 +206,22 @@ describe('Distribution', () => {
 
     describe('should revert if try to create pool with incorrect data', () => {
       it('if `payoutStart == 0`', async () => {
-        const pool = _getDefaultPool();
+        const pool = getDefaultPool();
         pool.payoutStart = 0;
 
         await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid payout start value');
       });
       it('if `rewardDecrease > 0 && decreaseInterval == 0`', async () => {
-        const pool = _getDefaultPool();
+        const pool = getDefaultPool();
         pool.decreaseInterval = 0;
 
         await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid reward decrease');
       });
-      it('if `withdrawLockPeriod < claimLockPeriod`', async () => {
-        const pool = _getDefaultPool();
-        pool.withdrawLockPeriod = 0;
-
-        await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid lock periods');
-      });
     });
 
     it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).createPool(_getDefaultPool())).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+      await expect(distribution.connect(SECOND).createPool(getDefaultPool())).to.be.revertedWith(
+        'Ownable: caller is not the owner',
       );
     });
   });
@@ -227,9 +231,9 @@ describe('Distribution', () => {
     let defaultPool: IDistribution.PoolStruct;
 
     beforeEach(async () => {
-      defaultPool = _getDefaultPool();
+      defaultPool = getDefaultPool();
 
-      await distribution.createPool(_getDefaultPool());
+      await distribution.createPool(getDefaultPool());
     });
 
     it('should edit pool with correct data', async () => {
@@ -259,12 +263,12 @@ describe('Distribution', () => {
     });
 
     it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).editPool(poolId, _getDefaultPool())).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+      await expect(distribution.connect(SECOND).editPool(poolId, getDefaultPool())).to.be.revertedWith(
+        'Ownable: caller is not the owner',
       );
     });
     it("should revert if pool doesn't exist", async () => {
-      await expect(distribution.editPool(1, _getDefaultPool())).to.be.revertedWith("DS: pool doesn't exist");
+      await expect(distribution.editPool(1, getDefaultPool())).to.be.revertedWith("DS: pool doesn't exist");
     });
   });
 
@@ -272,7 +276,7 @@ describe('Distribution', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      const pool = { ..._getDefaultPool(), isPublic: false };
+      const pool = { ...getDefaultPool(), isPublic: false };
 
       await distribution.createPool(pool);
     });
@@ -522,21 +526,54 @@ describe('Distribution', () => {
       expect(userData.invested).to.eq(wei(0));
       expect(userData.pendingRewards).to.eq(0);
     });
+    it('should do nothing id invested amount is the same', async () => {
+      let userData;
+
+      setNextTime(oneHour * 2);
+      await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
+
+      expect(await investToken.balanceOf(secondAddress)).to.eq(wei(1000));
+      expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(0));
+      userData = await distribution.usersData(secondAddress, poolId);
+      expect(userData.invested).to.eq(wei(1));
+      expect(userData.pendingRewards).to.eq(0);
+
+      expect(await investToken.balanceOf(ownerAddress)).to.eq(wei(1000));
+      expect(await rewardToken.balanceOf(ownerAddress)).to.eq(wei(0));
+      userData = await distribution.usersData(ownerAddress, poolId);
+      expect(userData.invested).to.eq(wei(4));
+      expect(userData.pendingRewards).to.eq(0);
+
+      setNextTime(oneHour * 3);
+      await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
+
+      expect(await investToken.balanceOf(secondAddress)).to.eq(wei(1000));
+      expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(0));
+      userData = await distribution.usersData(secondAddress, poolId);
+      expect(userData.invested).to.eq(wei(1));
+      expect(userData.pendingRewards).to.eq(0);
+
+      expect(await investToken.balanceOf(ownerAddress)).to.eq(wei(1000));
+      expect(await rewardToken.balanceOf(ownerAddress)).to.eq(wei(0));
+      userData = await distribution.usersData(ownerAddress, poolId);
+      expect(userData.invested).to.eq(wei(4));
+      expect(userData.pendingRewards).to.eq(0);
+    });
     it('should revert if caller is not owner', async () => {
       await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [])).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+        'Ownable: caller is not the owner',
       );
     });
     it('should revert if caller is not owner', async () => {
       await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [])).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+        'Ownable: caller is not the owner',
       );
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.manageUsersInPrivatePool(1, [], [])).to.be.revertedWith("DS: pool doesn't exist");
     });
     it('should revert if pool is public', async () => {
-      const pool = _getDefaultPool();
+      const pool = getDefaultPool();
 
       await distribution.createPool(pool);
 
@@ -544,11 +581,11 @@ describe('Distribution', () => {
     });
     it('should revert if lengths of arrays are not equal', async () => {
       await expect(distribution.manageUsersInPrivatePool(poolId, [secondAddress], [])).to.be.revertedWith(
-        'DS: invalid length'
+        'DS: invalid length',
       );
 
       await expect(distribution.manageUsersInPrivatePool(poolId, [], [wei(1)])).to.be.revertedWith(
-        'DS: invalid length'
+        'DS: invalid length',
       );
     });
   });
@@ -557,13 +594,13 @@ describe('Distribution', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      const pool = _getDefaultPool();
+      const pool = getDefaultPool();
       await distribution.createPool(pool);
     });
 
     it('should stake correctly', async () => {
       // A stakes 1 token
-      let tx = await distribution.stake(poolId, wei(1));
+      await distribution.stake(poolId, wei(1));
       let userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(1));
       expect(userData.rate).to.eq(0);
@@ -572,11 +609,11 @@ describe('Distribution', () => {
       expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
       expect(poolData.totalInvested).to.eq(wei(1));
       expect(poolData.rate).to.eq(0);
-      expect(await distribution.totalETHStaked()).to.eq(wei(1));
+      expect(await distribution.totalInvestedInPublicPools()).to.eq(wei(1));
 
       // A stakes 2 tokens
       await setNextTime(oneDay * 2);
-      tx = await distribution.stake(poolId, wei(3));
+      await distribution.stake(poolId, wei(3));
       userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(4));
       expect(userData.rate).to.eq(wei(100, 25));
@@ -585,11 +622,11 @@ describe('Distribution', () => {
       expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
       expect(poolData.totalInvested).to.eq(wei(4));
       expect(poolData.rate).to.eq(wei(100, 25));
-      expect(await distribution.totalETHStaked()).to.eq(wei(4));
+      expect(await distribution.totalInvestedInPublicPools()).to.eq(wei(4));
 
       // B stakes 8 tokens
       await setNextTime(oneDay * 3);
-      tx = await distribution.connect(SECOND).stake(poolId, wei(8));
+      await distribution.connect(SECOND).stake(poolId, wei(8));
       userData = await distribution.usersData(await SECOND.getAddress(), poolId);
       expect(userData.invested).to.eq(wei(8));
       expect(userData.rate).to.eq(wei(124.5, 25));
@@ -598,18 +635,18 @@ describe('Distribution', () => {
       expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
       expect(poolData.totalInvested).to.eq(wei(12));
       expect(poolData.rate).to.eq(wei(124.5, 25));
-      expect(await distribution.totalETHStaked()).to.eq(wei(12));
+      expect(await distribution.totalInvestedInPublicPools()).to.eq(wei(12));
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.stake(1, wei(1))).to.be.revertedWith("DS: pool doesn't exist");
     });
     it('should revert if pool is private', async () => {
-      const pool = { ..._getDefaultPool(), isPublic: false };
+      const pool = { ...getDefaultPool(), isPublic: false };
       await distribution.createPool(pool);
       await expect(distribution.stake(1, wei(1))).to.be.revertedWith("DS: pool isn't public");
     });
     it('should revert if amount is less than minimal stake', async () => {
-      const pool = { ..._getDefaultPool(), minimalStake: wei(2) };
+      const pool = { ...getDefaultPool(), minimalStake: wei(2) };
       await distribution.createPool(pool);
       await expect(distribution.stake(1, wei(1))).to.be.revertedWith('DS: amount too low');
     });
@@ -622,7 +659,7 @@ describe('Distribution', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      await distribution.createPool(_getDefaultPool());
+      await distribution.createPool(getDefaultPool());
     });
 
     it('should correctly claim, one user, without reinvests', async () => {
@@ -701,8 +738,6 @@ describe('Distribution', () => {
       expect(userData.pendingRewards).to.eq(0);
     });
     it('should correctly claim, one user, join after start', async () => {
-      let userData;
-
       await setNextTime(oneDay + oneDay);
       await distribution.connect(SECOND).stake(poolId, wei(1));
 
@@ -711,7 +746,7 @@ describe('Distribution', () => {
       await distribution.claim(poolId, SECOND);
 
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(98));
-      userData = await distribution.usersData(secondAddress, poolId);
+      const userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.invested).to.eq(wei(1));
       expect(userData.pendingRewards).to.eq(0);
     });
@@ -823,7 +858,7 @@ describe('Distribution', () => {
 
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(
         wei(100 + 12.25 + 24.5 + 141 + 53.4),
-        wei(0.000001)
+        wei(0.000001),
       );
       userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.invested).to.eq(wei(3));
@@ -883,7 +918,7 @@ describe('Distribution', () => {
 
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(
         wei(100 + 12.25 + 24.5 + 141 + 53.4),
-        wei(0.000001)
+        wei(0.000001),
       );
       userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.invested).to.eq(wei(3));
@@ -893,7 +928,7 @@ describe('Distribution', () => {
       let userData;
 
       const newPool = {
-        ..._getDefaultPool(),
+        ...getDefaultPool(),
         initialReward: 0,
       };
 
@@ -925,7 +960,7 @@ describe('Distribution', () => {
       let userData;
 
       const newPool = {
-        ..._getDefaultPool(),
+        ...getDefaultPool(),
         initialReward: 0,
       };
 
@@ -939,7 +974,7 @@ describe('Distribution', () => {
       await distribution.editPool(poolId, newPool);
 
       await setNextTime(oneDay + oneDay * 3);
-      await distribution.editPool(poolId, _getDefaultPool());
+      await distribution.editPool(poolId, getDefaultPool());
 
       // Claim after 3 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 4);
@@ -959,7 +994,7 @@ describe('Distribution', () => {
     it('should save reward to pending reward if cannot mint reward token', async () => {
       const amountToMintMaximum = (await rewardToken.cap()) - (await rewardToken.totalSupply());
 
-      await _getRewardTokenFromPool(amountToMintMaximum - wei(1), OWNER);
+      await _getRewardTokenFromPool(distribution, amountToMintMaximum - wei(1), OWNER);
 
       await distribution.stake(poolId, wei(10));
 
@@ -967,6 +1002,7 @@ describe('Distribution', () => {
 
       let tx = await distribution.claim(poolId, OWNER);
       expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(1));
+
       let userData = await distribution.usersData(OWNER, poolId);
       expect(userData.pendingRewards).to.equal(wei(99));
 
@@ -990,7 +1026,7 @@ describe('Distribution', () => {
     });
     it('should revert if nothing to claim', async () => {
       const newPool = {
-        ..._getDefaultPool(),
+        ...getDefaultPool(),
         initialReward: 0,
       };
 
@@ -1007,7 +1043,7 @@ describe('Distribution', () => {
       let reward;
 
       const newPool = {
-        ..._getDefaultPool(),
+        ...getDefaultPool(),
         initialReward: wei(14400),
         rewardDecrease: wei(2.468994701),
       };
@@ -1061,7 +1097,7 @@ describe('Distribution', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      await distribution.createPool(_getDefaultPool());
+      await distribution.createPool(getDefaultPool());
     });
 
     it('should correctly withdraw, few users, withdraw all', async () => {
@@ -1082,7 +1118,7 @@ describe('Distribution', () => {
       userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(0));
       expect(userData.pendingRewards).to.eq(0);
-      expect(await distribution.totalETHStaked()).to.eq(wei(1));
+      expect(await distribution.totalInvestedInPublicPools()).to.eq(wei(1));
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
@@ -1107,7 +1143,7 @@ describe('Distribution', () => {
       userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.invested).to.eq(wei(0));
       expect(userData.pendingRewards).to.eq(0);
-      expect(await distribution.totalETHStaked()).to.eq(wei(0));
+      expect(await distribution.totalInvestedInPublicPools()).to.eq(wei(0));
 
       await expect(distribution.claim(poolId, OWNER)).to.be.revertedWith("DS: user isn't staked");
       await expect(distribution.claim(poolId, SECOND)).to.be.revertedWith("DS: user isn't staked");
@@ -1172,8 +1208,6 @@ describe('Distribution', () => {
       expect(userData.pendingRewards).to.eq(0);
     });
     it('should correctly withdraw, when pool is no started', async () => {
-      let userData;
-
       await setNextTime(oneHour * 2);
       await distribution.connect(OWNER).stake(poolId, wei(4));
 
@@ -1182,7 +1216,7 @@ describe('Distribution', () => {
 
       expect(await investToken.balanceOf(ownerAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(ownerAddress)).to.eq(0);
-      userData = await distribution.usersData(ownerAddress, poolId);
+      const userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.invested).to.eq(wei(0));
       expect(userData.pendingRewards).to.eq(0);
     });
@@ -1230,7 +1264,7 @@ describe('Distribution', () => {
       await expect(distribution.withdraw(poolId, wei(0.99))).to.be.revertedWith('DS: invalid withdraw amount');
     });
     it('should revert if pool is private', async () => {
-      const pool = { ..._getDefaultPool(), isPublic: false };
+      const pool = { ...getDefaultPool(), isPublic: false };
       await distribution.createPool(pool);
       await expect(distribution.withdraw(1, wei(1))).to.be.revertedWith("DS: pool isn't public");
     });
@@ -1251,7 +1285,7 @@ describe('Distribution', () => {
   describe('#removeUpgradeability', () => {
     it('should revert if caller is not owner', async () => {
       await expect(distribution.connect(SECOND).removeUpgradeability()).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+        'Ownable: caller is not the owner',
       );
     });
     it('should remove upgradeability', async () => {
@@ -1277,7 +1311,7 @@ describe('Distribution', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      const pool = _getDefaultPool();
+      const pool = getDefaultPool();
 
       await distribution.createPool(pool);
     });
@@ -1433,7 +1467,7 @@ describe('Distribution', () => {
 
   describe('#overplus', () => {
     beforeEach(async () => {
-      const pool = _getDefaultPool();
+      const pool = getDefaultPool();
 
       await distribution.createPool(pool);
       await distribution.createPool(pool);
@@ -1444,7 +1478,7 @@ describe('Distribution', () => {
 
       await setTime(oneDay * 9999);
 
-      let overplus = await distribution.overplus();
+      const overplus = await distribution.overplus();
       expect(overplus).to.eq(0);
     });
 
@@ -1455,7 +1489,7 @@ describe('Distribution', () => {
 
       await investToken.setTotalPooledEther(wei(0.5));
 
-      let overplus = await distribution.overplus();
+      const overplus = await distribution.overplus();
       expect(overplus).to.eq(0);
     });
 
@@ -1484,10 +1518,10 @@ describe('Distribution', () => {
     });
   });
 
-  describe('#burnOverplus', () => {
+  describe('#swapAndBurnOverplus', () => {
     beforeEach(async () => {
       await investToken.mint(OWNER, wei(100));
-      await _getRewardTokenFromPool(wei(100), OWNER);
+      await _getRewardTokenFromPool(distribution, wei(100), OWNER);
       await rewardToken.transfer(swapRouter, wei(20));
 
       await investToken.approve(await swapRouter.getAddress(), wei(5));
@@ -1496,17 +1530,19 @@ describe('Distribution', () => {
 
       await investToken.approve(swap.getAddress(), wei(10));
 
-      const pool = _getDefaultPool();
+      const pool = getDefaultPool();
 
       await distribution.createPool(pool);
     });
 
     it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).burnOverplus(0)).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(distribution.connect(SECOND).swapAndBurnOverplus(0)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
     });
 
     it('should revert if overplus is <= 0', async () => {
-      await expect(distribution.burnOverplus(0)).to.be.revertedWith('DS: nothing to burn');
+      await expect(distribution.swapAndBurnOverplus(0)).to.be.revertedWith('DS: overplus is zero');
     });
 
     it('should burn overplus', async () => {
@@ -1519,7 +1555,7 @@ describe('Distribution', () => {
       const overplus = await distribution.overplus();
       expect(overplus).to.eq(wei(1));
 
-      const tx = await distribution.burnOverplus(0);
+      const tx = await distribution.swapAndBurnOverplus(0);
       await expect(tx).to.changeTokenBalance(investToken, distribution, wei(-1));
 
       const rewardTokenTotalSupplyAfter = await rewardToken.totalSupply();
@@ -1528,17 +1564,38 @@ describe('Distribution', () => {
   });
 });
 
-export const _getDefaultPool = (): IDistribution.PoolStruct => {
-  return {
-    payoutStart: oneDay,
-    decreaseInterval: oneDay,
-    withdrawLockPeriod: 12 * oneHour,
-    claimLockPeriod: 12 * oneHour,
-    initialReward: wei(100),
-    rewardDecrease: wei(2),
-    minimalStake: wei(0.1),
+// @dev: should be called before other pool creation
+const _getRewardTokenFromPool = async (distribution: Distribution, amount: bigint, user: SignerWithAddress) => {
+  const poolId = await _getNextPoolId(distribution);
+  const pool: IDistribution.PoolStruct = {
+    initialReward: amount,
+    rewardDecrease: amount,
+    payoutStart: (await getCurrentBlockTime()) + 2,
+    decreaseInterval: 1,
+    withdrawLockPeriod: 0,
+    claimLockPeriod: 0,
     isPublic: true,
+    minimalStake: 0,
   };
+
+  await distribution.createPool(pool);
+  await distribution.connect(user).stake(poolId, wei(1));
+  await distribution.connect(user).withdraw(poolId, wei(1));
+};
+
+const _getNextPoolId = async (distribution: Distribution) => {
+  let poolId = 0;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      await distribution.pools(poolId);
+
+      poolId++;
+    } catch (e) {
+      return poolId;
+    }
+  }
 };
 
 const _comparePoolStructs = (a: IDistribution.PoolStruct, b: IDistribution.PoolStruct): boolean => {

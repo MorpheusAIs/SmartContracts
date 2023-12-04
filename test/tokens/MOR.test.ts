@@ -42,6 +42,18 @@ describe('MOR', () => {
     });
   });
 
+  describe('supportsInterface', () => {
+    it('should support IMOR', async () => {
+      expect(await mor.supportsInterface('0xbaa0dcc0')).to.be.true;
+    });
+    it('should support IERC20', async () => {
+      expect(await mor.supportsInterface('0x36372b07')).to.be.true;
+    });
+    it('should support IERC165', async () => {
+      expect(await mor.supportsInterface('0x01ffc9a7')).to.be.true;
+    });
+  });
+
   describe('mint', () => {
     it('should mint tokens', async () => {
       const amount = wei('10');
@@ -56,7 +68,7 @@ describe('MOR', () => {
 
     it('should revert if not called by the owner', async () => {
       await expect(mor.connect(SECOND).mint(await SECOND.getAddress(), wei('10'))).to.be.revertedWith(
-        'MOR: caller is not the owner'
+        'MOR: caller is not the owner',
       );
     });
   });

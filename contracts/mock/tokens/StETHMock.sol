@@ -12,7 +12,7 @@ contract StETHMock is ERC20 {
 
     constructor() ERC20("Staked Ether", "stETH") {}
 
-    function mint(address account_, uint256 amount_) external returns (uint256 newTotalShares) {
+    function mint(address account_, uint256 amount_) external {
         _mint(account_, amount_);
     }
 

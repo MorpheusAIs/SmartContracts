@@ -1,33 +1,31 @@
 import { Distribution, IDistribution } from '@/generated-types/ethers';
-import { StETHMock } from '@/generated-types/ethers/contracts/mock/tokens/StETHMock';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { _getDefaultPool } from '../Distribution.test';
-import { setTime } from '../helpers/block-helper';
-
-const oneHour = 3600;
+import { getDefaultPool, getDefaultSwapParams, oneHour } from '../helpers/distribution-helper';
 
 describe('LinearDistributionIntervalDecrease', () => {
   const reverter = new Reverter();
 
   let distribution: Distribution;
-  let moc: StETHMock;
-  let swap: string;
 
   before(async () => {
-    await setTime(oneHour * 2);
+    const [libFactory, MORFactory, stETHMockFactory, swapFactory] = await Promise.all([
+      ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+      ethers.getContractFactory('MOR'),
+      ethers.getContractFactory('StETHMock'),
+      ethers.getContractFactory('Swap'),
+    ]);
 
-    const StETHMockFactory = await ethers.getContractFactory('StETHMock');
-    moc = await StETHMockFactory.deploy();
-
-    swap = await (await ethers.getSigners())[0].getAddress();
-
-    const libFactory = await ethers.getContractFactory('LinearDistributionIntervalDecrease');
+    const stETHMock = await stETHMockFactory.deploy();
     const lib = await libFactory.deploy();
+    const swap = await swapFactory.deploy(
+      await stETHMock.getAddress(),
+      getDefaultSwapParams(await stETHMock.getAddress(), await stETHMock.getAddress(), await stETHMock.getAddress()),
+    );
 
+    // START deploy distribution contract
     const distributionFactory = await ethers.getContractFactory('Distribution', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
@@ -35,7 +33,11 @@ describe('LinearDistributionIntervalDecrease', () => {
     });
 
     distribution = await distributionFactory.deploy();
-    await distribution.Distribution_init(await moc.getAddress(), await moc.getAddress(), swap, []);
+    // END
+
+    const MOR = await MORFactory.deploy(await distribution.getAddress(), wei(1000000000));
+
+    await distribution.Distribution_init(await MOR.getAddress(), await stETHMock.getAddress(), swap, []);
 
     await reverter.snapshot();
   });
@@ -49,7 +51,7 @@ describe('LinearDistributionIntervalDecrease', () => {
     let pool3: IDistribution.PoolStruct;
 
     beforeEach(async () => {
-      const defaultPool = _getDefaultPool();
+      const defaultPool = getDefaultPool();
 
       pool0 = { ...defaultPool };
       pool0.payoutStart = 24 * oneHour + oneHour;
@@ -166,7 +168,7 @@ describe('LinearDistributionIntervalDecrease', () => {
       reward = await distribution.getPeriodReward(
         poolId,
         payoutStart + 12352 * oneHour,
-        payoutStart + (12352 + 8) * oneHour
+        payoutStart + (12352 + 8) * oneHour,
       );
       expect(reward).to.eq(wei(100));
 
@@ -189,7 +191,7 @@ describe('LinearDistributionIntervalDecrease', () => {
       reward = await distribution.getPeriodReward(
         poolId,
         payoutStart + (12352 + 8) * oneHour,
-        payoutStart + (12352 + 16) * oneHour
+        payoutStart + (12352 + 16) * oneHour,
       );
       expect(reward).to.eq(wei(100));
 
@@ -209,7 +211,7 @@ describe('LinearDistributionIntervalDecrease', () => {
       reward = await distribution.getPeriodReward(
         poolId,
         payoutStart + (12352 + 6) * oneHour,
-        payoutStart + (12352 + 14) * oneHour
+        payoutStart + (12352 + 14) * oneHour,
       );
       expect(reward).to.eq(wei(100));
 
@@ -229,7 +231,7 @@ describe('LinearDistributionIntervalDecrease', () => {
       reward = await distribution.getPeriodReward(
         poolId,
         payoutStart + (12352 + 14) * oneHour,
-        payoutStart + (12352 + 24) * oneHour
+        payoutStart + (12352 + 24) * oneHour,
       );
       expect(reward).to.eq(wei(125));
 
@@ -343,3 +345,5 @@ const _testRewardsCalculation = async (distribution: Distribution, poolId: numbe
   reward = await distribution.getPeriodReward(poolId, payoutStart + 14 * oneHour, payoutStart + 30 * oneHour);
   expect(reward).to.eq(wei(191));
 };
+
+// npx hardhat test "test/libs/LinearDistributionIntervalDecrease.test.ts"
