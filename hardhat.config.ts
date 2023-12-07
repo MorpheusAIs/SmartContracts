@@ -112,6 +112,7 @@ const config: HardhatUserConfig = {
   },
   migrate: {
     pathToMigrations: './deploy/',
+    only: 2,
   },
   mocha: {
     timeout: 1000000,
