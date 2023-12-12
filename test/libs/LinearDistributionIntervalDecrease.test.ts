@@ -3,7 +3,7 @@ import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { getDefaultPool, getDefaultSwapParams, oneHour } from '../helpers/distribution-helper';
+import { addressMinusAlias, getDefaultPool, getDefaultSwapParams, oneHour } from '../helpers/distribution-helper';
 
 describe('LinearDistributionIntervalDecrease', () => {
   const reverter = new Reverter();
@@ -36,7 +36,7 @@ describe('LinearDistributionIntervalDecrease', () => {
     distribution = await distributionFactory.deploy();
     // END
 
-    const MOR = await MORFactory.deploy(await distribution.getAddress(), wei(1000000000));
+    const MOR = await MORFactory.deploy(addressMinusAlias(distribution), wei(1000000000));
 
     await distribution.Distribution_init(await MOR.getAddress(), await stETHMock.getAddress(), swap, []);
 

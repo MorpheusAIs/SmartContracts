@@ -2,6 +2,7 @@ import { MOR } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
+import { addressMinusAlias } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
 describe('MOR', () => {
@@ -18,7 +19,7 @@ describe('MOR', () => {
     [OWNER, SECOND] = await ethers.getSigners();
 
     const MORFactory = await ethers.getContractFactory('MOR');
-    mor = await MORFactory.deploy(await OWNER.getAddress(), cap);
+    mor = await MORFactory.deploy(addressMinusAlias(OWNER), cap);
 
     reverter.snapshot();
   });

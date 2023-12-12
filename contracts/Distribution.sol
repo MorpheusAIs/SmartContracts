@@ -336,7 +336,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
-        Bridge(bridge).bridgeTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        Bridge(bridge).bridgeInvestTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

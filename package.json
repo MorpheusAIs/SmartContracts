@@ -32,6 +32,8 @@
     "lint-sol-fix": "prettier --write \"contracts/**/*.sol\""
   },
   "dependencies": {
+    "@arbitrum/nitro-contracts": "^1.1.0",
+    "@arbitrum/token-bridge-contracts": "^1.1.2",
     "@openzeppelin/contracts": "4.9.2",
     "@openzeppelin/contracts-upgradeable": "4.9.2",
     "@solarity/solidity-lib": "2.5.9",
