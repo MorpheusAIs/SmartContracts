@@ -22,6 +22,7 @@ describe('LinearDistributionIntervalDecrease', () => {
     const lib = await libFactory.deploy();
     const swap = await swapFactory.deploy(
       await stETHMock.getAddress(),
+      await stETHMock.getAddress(),
       getDefaultSwapParams(await stETHMock.getAddress(), await stETHMock.getAddress(), await stETHMock.getAddress()),
     );
 

@@ -3,6 +3,7 @@ import {
   DistributionV2,
   Distribution__factory,
   IDistribution,
+  INonfungiblePositionManager,
   ISwapRouter,
   LinearDistributionIntervalDecrease,
   MOR,
@@ -37,6 +38,7 @@ describe('Distribution', () => {
   let investToken: StETHMock;
   let intermediateToken: WStETHMock;
   let swapRouter: ISwapRouter;
+  let nonfungiblePositionManager: INonfungiblePositionManager;
 
   let swap: Swap;
 
@@ -54,6 +56,7 @@ describe('Distribution', () => {
       WStETHMockFactory,
       swapRouterMock,
       swapFactory,
+      nonfungiblePositionManagerFactory,
     ] = await Promise.all([
       ethers.getContractFactory('LinearDistributionIntervalDecrease'),
       ethers.getContractFactory('ERC1967Proxy'),
@@ -62,13 +65,15 @@ describe('Distribution', () => {
       ethers.getContractFactory('WStETHMock'),
       ethers.getContractFactory('SwapRouterMock'),
       ethers.getContractFactory('Swap'),
+      ethers.getContractFactory('NonfungiblePositionManagerMock'),
     ]);
 
     // START deploy contracts without deps
-    [lib, investToken, swapRouter] = await Promise.all([
+    [lib, investToken, swapRouter, nonfungiblePositionManager] = await Promise.all([
       libFactory.deploy(),
       stETHMockFactory.deploy(),
       swapRouterMock.deploy() as unknown as ISwapRouter,
+      nonfungiblePositionManagerFactory.deploy() as unknown as INonfungiblePositionManager,
     ]);
     // END
 
@@ -85,11 +90,13 @@ describe('Distribution', () => {
     // END
 
     // Get contract addresses
-    const [distributionAddress, swapRouterAddress, investTokenAddress] = await Promise.all([
-      distribution.getAddress(),
-      swapRouter.getAddress(),
-      investToken.getAddress(),
-    ]);
+    const [distributionAddress, swapRouterAddress, investTokenAddress, nonfungiblePositionManagerAddress] =
+      await Promise.all([
+        distribution.getAddress(),
+        swapRouter.getAddress(),
+        investToken.getAddress(),
+        nonfungiblePositionManager.getAddress(),
+      ]);
 
     // Deploy reward token
     rewardToken = await MORFactory.deploy(distributionAddress, wei(1000000000));
@@ -100,6 +107,7 @@ describe('Distribution', () => {
     // START deploy swap contract
     swap = await swapFactory.deploy(
       swapRouterAddress,
+      nonfungiblePositionManagerAddress,
       getDefaultSwapParams(investTokenAddress, await rewardToken.getAddress(), await intermediateToken.getAddress()),
     );
     // END
@@ -1518,50 +1526,50 @@ describe('Distribution', () => {
     });
   });
 
-  describe('#swapAndBurnOverplus', () => {
-    beforeEach(async () => {
-      await investToken.mint(OWNER, wei(100));
-      await _getRewardTokenFromPool(distribution, wei(100), OWNER);
-      await rewardToken.transfer(swapRouter, wei(20));
+  // describe('#swapAndBurnOverplus', () => {
+  //   beforeEach(async () => {
+  //     await investToken.mint(OWNER, wei(100));
+  //     await _getRewardTokenFromPool(distribution, wei(100), OWNER);
+  //     await rewardToken.transfer(swapRouter, wei(20));
 
-      await investToken.approve(await swapRouter.getAddress(), wei(5));
+  //     await investToken.approve(await swapRouter.getAddress(), wei(5));
 
-      await rewardToken.approve(await swapRouter.getAddress(), wei(10));
+  //     await rewardToken.approve(await swapRouter.getAddress(), wei(10));
 
-      await investToken.approve(swap.getAddress(), wei(10));
+  //     await investToken.approve(swap.getAddress(), wei(10));
 
-      const pool = getDefaultPool();
+  //     const pool = getDefaultPool();
 
-      await distribution.createPool(pool);
-    });
+  //     await distribution.createPool(pool);
+  //   });
 
-    it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).swapAndBurnOverplus(0)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
-    });
+  //   it('should revert if caller is not owner', async () => {
+  //     await expect(distribution.connect(SECOND).swapAndBurnOverplus(0)).to.be.revertedWith(
+  //       'Ownable: caller is not the owner',
+  //     );
+  //   });
 
-    it('should revert if overplus is <= 0', async () => {
-      await expect(distribution.swapAndBurnOverplus(0)).to.be.revertedWith('DS: overplus is zero');
-    });
+  //   it('should revert if overplus is <= 0', async () => {
+  //     await expect(distribution.swapAndBurnOverplus(0)).to.be.revertedWith('DS: overplus is zero');
+  //   });
 
-    it('should burn overplus', async () => {
-      await distribution.stake(1, wei(1));
+  //   it('should burn overplus', async () => {
+  //     await distribution.stake(1, wei(1));
 
-      await investToken.setTotalPooledEther(wei(2, 25));
+  //     await investToken.setTotalPooledEther(wei(2, 25));
 
-      const rewardTokenTotalSupplyBefore = await rewardToken.totalSupply();
+  //     const rewardTokenTotalSupplyBefore = await rewardToken.totalSupply();
 
-      const overplus = await distribution.overplus();
-      expect(overplus).to.eq(wei(1));
+  //     const overplus = await distribution.overplus();
+  //     expect(overplus).to.eq(wei(1));
 
-      const tx = await distribution.swapAndBurnOverplus(0);
-      await expect(tx).to.changeTokenBalance(investToken, distribution, wei(-1));
+  //     const tx = await distribution.swapAndBurnOverplus(0);
+  //     await expect(tx).to.changeTokenBalance(investToken, distribution, wei(-1));
 
-      const rewardTokenTotalSupplyAfter = await rewardToken.totalSupply();
-      expect(rewardTokenTotalSupplyAfter).to.eq(rewardTokenTotalSupplyBefore - wei(1));
-    });
-  });
+  //     const rewardTokenTotalSupplyAfter = await rewardToken.totalSupply();
+  //     expect(rewardTokenTotalSupplyAfter).to.eq(rewardTokenTotalSupplyBefore - wei(1));
+  //   });
+  // });
 });
 
 // @dev: should be called before other pool creation

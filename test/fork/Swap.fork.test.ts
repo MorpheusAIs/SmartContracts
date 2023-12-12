@@ -1,4 +1,6 @@
 import {
+  INonfungiblePositionManager,
+  INonfungiblePositionManager__factory,
   ISwapRouter,
   ISwapRouter__factory,
   MOR,
@@ -26,6 +28,7 @@ describe('Swap', () => {
   let swap: Swap;
 
   const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
+  const nonfungiblePositionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
   const stethAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
   const wstethAddress = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
@@ -35,6 +38,7 @@ describe('Swap', () => {
   const richAddress = '0xE53FFF67f9f384d20Ebea36F43b93DC49Ed22753';
 
   let swapRouter: ISwapRouter;
+  let nonfungiblePositionManager: INonfungiblePositionManager;
 
   let inputToken: StETHMock;
   let outputToken: MOR;
@@ -53,6 +57,7 @@ describe('Swap', () => {
     [SECOND] = await ethers.getSigners();
 
     swapRouter = ISwapRouter__factory.connect(swapRouterAddress, OWNER);
+    nonfungiblePositionManager = INonfungiblePositionManager__factory.connect(nonfungiblePositionManagerAddress, OWNER);
 
     inputToken = StETHMock__factory.connect(stethAddress, OWNER);
     outputToken = MOR__factory.connect(usdcAddress, OWNER);
@@ -61,6 +66,7 @@ describe('Swap', () => {
     const Swap = await ethers.getContractFactory('Swap', OWNER);
     swap = await Swap.deploy(
       swapRouter,
+      nonfungiblePositionManager,
       getDefaultSwapParams(
         await inputToken.getAddress(),
         await outputToken.getAddress(),

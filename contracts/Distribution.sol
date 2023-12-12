@@ -9,8 +9,8 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
 import {IDistribution} from "./interfaces/IDistribution.sol";
-import {ISwap} from "./interfaces/ISwap.sol";
 import {IMOR} from "./interfaces/IMOR.sol";
+import {Bridge} from "./Bridge.sol";
 
 contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
@@ -19,7 +19,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     address public rewardToken;
     address public investToken;
-    address public swap;
+    address public bridge;
 
     // Pool storage
     Pool[] public pools;
@@ -45,24 +45,23 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     function Distribution_init(
         address rewardToken_,
         address investToken_,
-        address swap_,
+        address bridge_,
         Pool[] calldata poolsInfo_
     ) external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
 
         require(IMOR(rewardToken_).supportsInterface(type(IMOR).interfaceId), "DS: invalid reward token");
-        require(ISwap(swap_).supportsInterface(type(ISwap).interfaceId), "DS: invalid swap contract");
 
         for (uint256 i = 0; i < poolsInfo_.length; i++) {
             createPool(poolsInfo_[i]);
         }
 
-        IERC20(investToken_).approve(swap_, type(uint256).max);
+        IERC20(investToken_).approve(bridge_, type(uint256).max);
 
         rewardToken = rewardToken_;
         investToken = investToken_;
-        swap = swap_;
+        bridge = bridge_;
     }
 
     /**********************************************************************************************/
@@ -316,7 +315,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** Swap                                                                                   ***/
+    /*** Bridge and Swap                                                                        ***/
     /**********************************************************************************************/
 
     function overplus() public view returns (uint256) {
@@ -328,13 +327,16 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return investTokenContractBalance - totalInvestedInPublicPools;
     }
 
-    function swapAndBurnOverplus(uint256 amountOutMin_) external onlyOwner {
+    function bridgeOverplus(
+        address recipient_,
+        uint256 gasLimit_,
+        uint256 maxFeePerGas_,
+        uint256 maxSubmissionCost_
+    ) external onlyOwner {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
-        ISwap(swap).swap(overplus_, amountOutMin_);
-
-        IMOR(rewardToken).burn(IMOR(rewardToken).balanceOf(address(this)));
+        Bridge(bridge).bridgeTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

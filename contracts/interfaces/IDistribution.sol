@@ -58,13 +58,13 @@ interface IDistribution {
      * The function to initialize the contract.
      * @param rewardToken_ The address of reward token.
      * @param investToken_ The address of invest token.
-     * @param swap_ The address of swap contract.
+     * @param bridge_ The address of bridge contract.
      * @param poolsInfo_ The array of initial pools.
      */
     function Distribution_init(
         address rewardToken_,
         address investToken_,
-        address swap_,
+        address bridge_,
         Pool[] calldata poolsInfo_
     ) external;
 
@@ -134,10 +134,18 @@ interface IDistribution {
     function overplus() external view returns (uint256);
 
     /**
-     * The function to swap overplussed invest tokens to reward tokens and burn.
-     * @param amountOutMin_ The minimal amount of tokens to swap.
+     * The function to bridge the overplus of the staked invest tokens.
+     * @param recipient_ The recipient's address.
+     * @param gasLimit_ The gas limit.
+     * @param maxFeePerGas_ The max fee per gas.
+     * @param maxSubmissionCost_ The max submission cost.
      */
-    function swapAndBurnOverplus(uint256 amountOutMin_) external;
+    function bridgeOverplus(
+        address recipient_,
+        uint256 gasLimit_,
+        uint256 maxFeePerGas_,
+        uint256 maxSubmissionCost_
+    ) external;
 
     /**
      * The function to remove upgradeability.
@@ -161,12 +169,6 @@ interface IDistribution {
      * @return The address of invest token.
      */
     function investToken() external view returns (address);
-
-    /**
-     * The function to get the address of swap contract.
-     * @return The address of swap contract.
-     */
-    function swap() external view returns (address);
 
     /**
      * The function to get the amount of invest tokens that are staked in the pool.

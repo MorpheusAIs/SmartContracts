@@ -13,7 +13,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Reverter } from '../helpers/reverter';
 
-describe.only('Bridge', () => {
+describe('Bridge', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
@@ -72,26 +72,6 @@ describe.only('Bridge', () => {
     });
   });
 
-  describe('bridgeTokensRefund', () => {
-    beforeEach(async () => {
-      await token.approve(bridge, ethers.MaxUint256);
-    });
-    it('should bridge tokens', async () => {
-      const amount = wei(0.01);
-      const gasLimit = 1_000_000;
-      const maxFeePerGas = 1_000_000_000;
-      const maxSubmissionCost = 900_000_000_000_000;
-
-      const tx = await bridge.bridgeTokensRefund.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
-        value: maxSubmissionCost + gasLimit * maxFeePerGas,
-      });
-      console.log(tx);
-
-      await bridge.bridgeTokensRefund(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
-        value: maxSubmissionCost + gasLimit * maxFeePerGas,
-      });
-    });
-  });
   describe('bridgeTokens', () => {
     beforeEach(async () => {
       await token.approve(bridge, ethers.MaxUint256);

@@ -38,6 +38,12 @@ interface ISwap is IERC165 {
      */
     function swap(uint256 amountIn_, uint256 amountOutMinimum_) external returns (uint256);
 
+    function increaseLiquidityCurrentRange(
+        uint256 tokenId,
+        uint256 amountAdd0_,
+        uint256 amountAdd1_
+    ) external returns (uint128 liquidity, uint256 amount0, uint256 amount1);
+
     /**
      * The function to get the router address.
      * @return The address of the router.

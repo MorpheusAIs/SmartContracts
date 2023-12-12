@@ -18,30 +18,6 @@ contract Bridge is ERC165, Ownable {
         token = _token;
     }
 
-    function bridgeTokensRefund(
-        uint256 amount,
-        address recipient,
-        uint256 gasLimit,
-        uint256 maxFeePerGas,
-        uint256 maxSubmissionCost
-    ) external payable returns (bytes memory) {
-        IERC20(token).safeTransferFrom(_msgSender(), address(this), amount);
-        IERC20(token).approve(IL1GatewayRouter(l1GatewayRouter).getGateway(token), amount);
-
-        bytes memory data = abi.encode(maxSubmissionCost, "");
-
-        return
-            IL1GatewayRouter(l1GatewayRouter).outboundTransferCustomRefund{value: msg.value}(
-                token,
-                recipient,
-                recipient,
-                amount,
-                gasLimit,
-                maxFeePerGas,
-                data
-            );
-    }
-
     function bridgeTokens(
         uint256 amount,
         address recipient,
