@@ -18,13 +18,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { getCurrentBlockTime, setNextTime, setTime } from './helpers/block-helper';
-import {
-  addressMinusAlias,
-  getDefaultPool,
-  getDefaultSwapParams,
-  oneDay,
-  oneHour,
-} from './helpers/distribution-helper';
+import { getDefaultPool, getDefaultSwapParams, oneDay, oneHour } from './helpers/distribution-helper';
 
 describe('Distribution', () => {
   const reverter = new Reverter();
@@ -105,7 +99,7 @@ describe('Distribution', () => {
       ]);
 
     // Deploy reward token
-    rewardToken = await MORFactory.deploy(addressMinusAlias(distribution), wei(1000000000));
+    rewardToken = await MORFactory.deploy(distribution, wei(1000000000));
 
     // deploy intermediate token
     intermediateToken = await WStETHMockFactory.deploy(investTokenAddress);

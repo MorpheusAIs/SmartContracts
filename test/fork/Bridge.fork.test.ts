@@ -2,41 +2,37 @@ import {
   Bridge,
   IGatewayRouter,
   IGatewayRouter__factory,
-  IInbox,
-  IInbox__factory,
   IStETH,
   IStETH__factory,
   IWStETH,
   IWStETH__factory,
-  MOR,
 } from '@/generated-types/ethers';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { addressMinusAlias } from '../helpers/distribution-helper';
+import {} from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
-describe('Bridge', () => {
+describe.only('Bridge', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
   const l1GatewayRouterAddress = '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef';
-  const inboxAddress = '0x7522988bb327b89dA2dbbE229B8191C159540847';
+  const lzEndpointAddress = '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675';
   const stethAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
   const wstethAddress = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 
   const richAddress = '0xE53FFF67f9f384d20Ebea36F43b93DC49Ed22753';
 
   let l1GatewayRouter: IGatewayRouter;
-  let inbox: IInbox;
   let bridge: Bridge;
 
   let steth: IStETH;
   let investToken: IWStETH;
-  let rewardToken: MOR;
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
       {
@@ -50,15 +46,15 @@ describe('Bridge', () => {
     [, SECOND] = await ethers.getSigners();
 
     l1GatewayRouter = IGatewayRouter__factory.connect(l1GatewayRouterAddress, OWNER);
-    inbox = IInbox__factory.connect(inboxAddress, OWNER);
     investToken = IWStETH__factory.connect(wstethAddress, OWNER);
     steth = IStETH__factory.connect(stethAddress, OWNER);
 
-    const Mor = await ethers.getContractFactory('MOR', OWNER);
-    rewardToken = await Mor.deploy(addressMinusAlias(OWNER), wei(100));
-
     const Bridge = await ethers.getContractFactory('Bridge', OWNER);
-    bridge = await Bridge.deploy(l1GatewayRouter, inbox, investToken, rewardToken);
+    bridge = await Bridge.deploy(l1GatewayRouter, investToken, {
+      lzEndpoint: lzEndpointAddress,
+      communicator: ZERO_ADDR,
+      communicatorChainId: 110, // Arbitrum
+    });
 
     await steth.approve(investToken, ethers.MaxUint256);
     await investToken.wrap(wei(100));
@@ -101,6 +97,14 @@ describe('Bridge', () => {
 
       await bridge.bridgeInvestTokens(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
+      });
+    });
+  });
+
+  describe('sendMintRewardMessage', () => {
+    it('should just sendMintRewardMessage', async () => {
+      await bridge.sendMintRewardMessage(SECOND, wei(1), {
+        value: wei(1),
       });
     });
   });
