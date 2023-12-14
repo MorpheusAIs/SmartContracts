@@ -33,6 +33,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       initialDate: '1970-01-01T00:00:00Z',
+      forking: {
+        url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
+        blockNumber: 10207728,
+      },
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
@@ -112,7 +116,7 @@ const config: HardhatUserConfig = {
   },
   migrate: {
     pathToMigrations: './deploy/',
-    only: 2,
+    only: 3,
   },
   mocha: {
     timeout: 1000000,

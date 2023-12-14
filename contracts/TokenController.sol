@@ -51,19 +51,33 @@ contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
         uint64 nonce_,
         bytes memory payload_
     ) external {
-        require(nonce_ > nonce, "Rec: invalid nonce"); // do we need this?
-        require(msg.sender == address(config.lzEndpoint), "Rec: invalid lz endpoint");
-        require(senderChainId_ == config.communicatorChainId, "Rec: invalid sender chain ID");
+        require(nonce_ > nonce, "TC: invalid nonce"); // do we need this?
+        require(msg.sender == config.lzEndpoint, "TC: invalid lz endpoint");
+        require(senderChainId_ == config.communicatorChainId, "TC: invalid sender chain ID");
 
         address sender_;
         assembly {
             sender_ := mload(add(receiverAndSenderAddresses_, 20))
         }
-        require(sender_ == config.communicator, "Rec: invalid sender address");
+        require(sender_ == config.communicator, "TC: invalid sender address");
 
         nonce = nonce_;
 
         (address user_, uint256 amount_) = abi.decode(payload_, (address, uint256));
+
+        _mintRewardTokens(user_, amount_);
+    }
+
+    function _mintRewardTokens(address user_, uint256 amount_) internal {
+        uint256 maxAmount_ = IMOR(rewardToken).cap() - IMOR(rewardToken).totalSupply();
+
+        if (amount_ == 0 || maxAmount_ == 0) {
+            return;
+        }
+
+        if (amount_ > maxAmount_) {
+            amount_ = maxAmount_;
+        }
 
         IMOR(rewardToken).mint(user_, amount_);
     }

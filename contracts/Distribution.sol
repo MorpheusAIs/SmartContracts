@@ -165,10 +165,10 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         // Update user data
         userData.rate = currentPoolRate_;
+        userData.pendingRewards = 0;
 
         // Transfer rewards
-        uint256 mintedAmount_ = _mintUserRewards(user_, pendingRewards_);
-        userData.pendingRewards = pendingRewards_ - mintedAmount_;
+        Bridge(bridge).sendMintRewardMessage(user_, pendingRewards_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
@@ -263,30 +263,16 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         // Update user data
         userData.rate = currentPoolRate_;
-        userData.invested -= amount_;
+        userData.invested = newInvested_;
+        userData.pendingRewards = 0;
 
-        uint256 mintedAmount_ = _mintUserRewards(user_, pendingRewards_);
-        userData.pendingRewards = pendingRewards_ - mintedAmount_;
+        Bridge(bridge).sendMintRewardMessage(user_, pendingRewards_);
 
         if (pool.isPublic) {
             totalInvestedInPublicPools -= amount_;
 
             IERC20(investToken).safeTransfer(user_, amount_);
         }
-    }
-
-    function _mintUserRewards(address user_, uint256 amount_) internal returns (uint256) {
-        uint256 maxAmount_ = IMOR(rewardToken).cap() - IMOR(rewardToken).totalSupply();
-
-        if (amount_ == 0 || maxAmount_ == 0) {
-            return 0;
-        } else if (amount_ > maxAmount_) {
-            amount_ = maxAmount_;
-        }
-
-        IMOR(rewardToken).mint(user_, amount_);
-
-        return amount_;
     }
 
     function _getCurrentUserReward(

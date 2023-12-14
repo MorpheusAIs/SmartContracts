@@ -11,7 +11,7 @@ import {ISwap, IERC165} from "./interfaces/ISwap.sol";
 import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
 
 contract Swap is ISwap, ERC165, Ownable {
-    address public immutable override router;
+    address public immutable router;
     address public immutable nonfungiblePositionManager;
 
     SwapParams public params;
@@ -23,8 +23,8 @@ contract Swap is ISwap, ERC165, Ownable {
         _editParams(params_);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(ISwap).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId_) public view override(ERC165, IERC165) returns (bool) {
+        return interfaceId_ == type(ISwap).interfaceId || super.supportsInterface(interfaceId_);
     }
 
     function editParams(SwapParams memory newParams_) public onlyOwner {
@@ -66,7 +66,7 @@ contract Swap is ISwap, ERC165, Ownable {
     }
 
     function increaseLiquidityCurrentRange(
-        uint256 tokenId,
+        uint256 tokenId_,
         uint256 investTokenAmountAdd_,
         uint256 rewardTokenAmountAdd_
     ) external returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
@@ -74,7 +74,7 @@ contract Swap is ISwap, ERC165, Ownable {
         uint256 amountAdd1_;
 
         (, , address token0, , , , , , , , , ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
-            tokenId
+            tokenId_
         );
         if (token0 == params.tokenIn) {
             amountAdd0_ = investTokenAmountAdd_;
@@ -86,7 +86,7 @@ contract Swap is ISwap, ERC165, Ownable {
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params_ = INonfungiblePositionManager
             .IncreaseLiquidityParams({
-                tokenId: tokenId,
+                tokenId: tokenId_,
                 amount0Desired: amountAdd0_,
                 amount1Desired: amountAdd1_,
                 amount0Min: 0,

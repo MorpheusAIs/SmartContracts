@@ -12,10 +12,9 @@ import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import {} from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
-describe.only('Bridge', () => {
+describe('Bridge', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
@@ -106,6 +105,13 @@ describe.only('Bridge', () => {
       await bridge.sendMintRewardMessage(SECOND, wei(1), {
         value: wei(1),
       });
+    });
+    it('should revert if not called by the owner', async () => {
+      await expect(
+        bridge.connect(SECOND).sendMintRewardMessage(SECOND, wei(1), {
+          value: wei(1),
+        }),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 });

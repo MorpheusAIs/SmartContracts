@@ -14,11 +14,11 @@ contract MOR is IMOR, ERC165, ERC20Capped, ERC20Burnable {
         owner = owner_;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId_) public view override(ERC165, IERC165) returns (bool) {
         return
-            interfaceId == type(IMOR).interfaceId ||
-            interfaceId == type(IERC20).interfaceId ||
-            super.supportsInterface(interfaceId);
+            interfaceId_ == type(IMOR).interfaceId ||
+            interfaceId_ == type(IERC20).interfaceId ||
+            super.supportsInterface(interfaceId_);
     }
 
     function cap() public view override(IMOR, ERC20Capped) returns (uint256) {

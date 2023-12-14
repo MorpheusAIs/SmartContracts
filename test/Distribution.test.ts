@@ -1,14 +1,17 @@
 import {
+  Bridge,
   Distribution,
   DistributionV2,
   Distribution__factory,
   IDistribution,
   INonfungiblePositionManager,
   ISwapRouter,
+  LZEndpointMock,
   LinearDistributionIntervalDecrease,
   MOR,
   StETHMock,
   Swap,
+  TokenController,
 } from '@/generated-types/ethers';
 import { WStETHMock } from '@/generated-types/ethers/contracts/mock/tokens/WStETHMock';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
@@ -21,6 +24,9 @@ import { getCurrentBlockTime, setNextTime, setTime } from './helpers/block-helpe
 import { getDefaultPool, getDefaultSwapParams, oneDay, oneHour } from './helpers/distribution-helper';
 
 describe('Distribution', () => {
+  const senderChainId = 101;
+  const receiverChainId = 110;
+
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
@@ -40,6 +46,12 @@ describe('Distribution', () => {
   let swapRouter: ISwapRouter;
   let nonfungiblePositionManager: INonfungiblePositionManager;
 
+  let lZEndpointMockSender: LZEndpointMock;
+  let lZEndpointMockReceiver: LZEndpointMock;
+
+  let bridge: Bridge;
+  let tokenController: TokenController;
+
   let swap: Swap;
 
   before(async () => {
@@ -57,6 +69,9 @@ describe('Distribution', () => {
       swapRouterMock,
       swapFactory,
       nonfungiblePositionManagerFactory,
+      bridgeFactory,
+      LZEndpointMock,
+      TokenController,
     ] = await Promise.all([
       ethers.getContractFactory('LinearDistributionIntervalDecrease'),
       ethers.getContractFactory('ERC1967Proxy'),
@@ -66,16 +81,39 @@ describe('Distribution', () => {
       ethers.getContractFactory('SwapRouterMock'),
       ethers.getContractFactory('Swap'),
       ethers.getContractFactory('NonfungiblePositionManagerMock'),
+      ethers.getContractFactory('Bridge'),
+      ethers.getContractFactory('LZEndpointMock'),
+      ethers.getContractFactory('TokenController'),
     ]);
 
     // START deploy contracts without deps
-    [lib, investToken, swapRouter, nonfungiblePositionManager] = await Promise.all([
-      libFactory.deploy(),
-      stETHMockFactory.deploy(),
-      swapRouterMock.deploy() as unknown as ISwapRouter,
-      nonfungiblePositionManagerFactory.deploy() as unknown as INonfungiblePositionManager,
-    ]);
+    [lib, investToken, swapRouter, nonfungiblePositionManager, lZEndpointMockSender, lZEndpointMockReceiver] =
+      await Promise.all([
+        libFactory.deploy(),
+        stETHMockFactory.deploy(),
+        swapRouterMock.deploy() as unknown as ISwapRouter,
+        nonfungiblePositionManagerFactory.deploy() as unknown as INonfungiblePositionManager,
+        LZEndpointMock.deploy(senderChainId),
+        LZEndpointMock.deploy(receiverChainId),
+      ]);
     // END
+
+    tokenController = await TokenController.deploy(investToken, ZERO_ADDR, investToken, {
+      lzEndpoint: lZEndpointMockReceiver,
+      communicator: ZERO_ADDR,
+      communicatorChainId: senderChainId,
+    });
+
+    bridge = await bridgeFactory.deploy(
+      ZERO_ADDR,
+      ZERO_ADDR,
+      {
+        lzEndpoint: lZEndpointMockSender,
+        communicator: tokenController,
+        communicatorChainId: receiverChainId,
+      },
+      { value: wei(100) },
+    );
 
     // START deploy distribution contract
     distributionFactory = await ethers.getContractFactory('Distribution', {
@@ -99,7 +137,15 @@ describe('Distribution', () => {
       ]);
 
     // Deploy reward token
-    rewardToken = await MORFactory.deploy(distribution, wei(1000000000));
+    rewardToken = await MORFactory.deploy(tokenController, wei(1000000000));
+
+    await tokenController.setParams(investToken, rewardToken, {
+      lzEndpoint: lZEndpointMockReceiver,
+      communicator: bridge,
+      communicatorChainId: senderChainId,
+    });
+
+    await lZEndpointMockSender.setDestLzEndpoint(tokenController, lZEndpointMockReceiver);
 
     // deploy intermediate token
     intermediateToken = await WStETHMockFactory.deploy(investTokenAddress);
@@ -112,13 +158,15 @@ describe('Distribution', () => {
     );
     // END
 
-    await distribution.Distribution_init(rewardToken, investToken, swap, []);
+    await distribution.Distribution_init(rewardToken, investToken, bridge, []);
 
     await Promise.all([investToken.mint(ownerAddress, wei(1000)), investToken.mint(secondAddress, wei(1000))]);
     await Promise.all([
       investToken.approve(distributionAddress, wei(1000)),
       investToken.connect(SECOND).approve(distributionAddress, wei(1000)),
     ]);
+
+    await bridge.transferOwnership(distributionAddress);
 
     await reverter.snapshot();
   });
@@ -145,7 +193,7 @@ describe('Distribution', () => {
         };
 
         const distribution = await distributionFactory.deploy();
-        await distribution.Distribution_init(rewardToken, investToken, swap, [pool1, pool2]);
+        await distribution.Distribution_init(rewardToken, investToken, bridge, [pool1, pool2]);
 
         const pool1Data: IDistribution.PoolStruct = await distribution.pools(0);
         expect(_comparePoolStructs(pool1, pool1Data)).to.be.true;
@@ -156,21 +204,13 @@ describe('Distribution', () => {
       it('should revert if try to call init function twice', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        await expect(distribution.Distribution_init(rewardToken, investToken, swap, [])).to.be.rejectedWith(reason);
+        await expect(distribution.Distribution_init(rewardToken, investToken, bridge, [])).to.be.rejectedWith(reason);
       });
       it('should revert if pass invalid reward token', async () => {
         const reason = 'DS: invalid reward token';
 
         const distribution = await distributionFactory.deploy();
-        await expect(distribution.Distribution_init(swap, investToken, swap, [])).to.be.rejectedWith(reason);
-      });
-      it('should revert if pass invalid swap contract', async () => {
-        const reason = 'DS: invalid swap contract';
-
-        const distribution = await distributionFactory.deploy();
-        await expect(distribution.Distribution_init(rewardToken, investToken, rewardToken, [])).to.be.rejectedWith(
-          reason,
-        );
+        await expect(distribution.Distribution_init(swap, investToken, bridge, [])).to.be.rejectedWith(reason);
       });
     });
 
@@ -999,7 +1039,7 @@ describe('Distribution', () => {
       expect(userData.invested).to.eq(wei(1));
       expect(userData.pendingRewards).to.eq(0);
     });
-    it('should save reward to pending reward if cannot mint reward token', async () => {
+    it('should not save reward to pending reward if cannot mint reward token', async () => {
       const amountToMintMaximum = (await rewardToken.cap()) - (await rewardToken.totalSupply());
 
       await _getRewardTokenFromPool(distribution, amountToMintMaximum - wei(1), OWNER);
@@ -1012,14 +1052,14 @@ describe('Distribution', () => {
       expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(1));
 
       let userData = await distribution.usersData(OWNER, poolId);
-      expect(userData.pendingRewards).to.equal(wei(99));
+      expect(userData.pendingRewards).to.equal(wei(0));
 
       await setNextTime(oneDay + oneDay * 2);
 
       tx = await distribution.claim(poolId, OWNER);
       expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(0));
       userData = await distribution.usersData(OWNER, poolId);
-      expect(userData.pendingRewards).to.equal(wei(197));
+      expect(userData.pendingRewards).to.equal(wei(0));
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.claim(1, SECOND)).to.be.revertedWith("DS: pool doesn't exist");
