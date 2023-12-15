@@ -17,7 +17,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     bool public isNotUpgradeable;
 
-    address public rewardToken;
     address public investToken;
     address public bridge;
 
@@ -42,16 +41,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** Init                                                                                   ***/
     /**********************************************************************************************/
-    function Distribution_init(
-        address rewardToken_,
-        address investToken_,
-        address bridge_,
-        Pool[] calldata poolsInfo_
-    ) external initializer {
+    function Distribution_init(address investToken_, address bridge_, Pool[] calldata poolsInfo_) external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
-
-        require(IMOR(rewardToken_).supportsInterface(type(IMOR).interfaceId), "DS: invalid reward token");
 
         for (uint256 i = 0; i < poolsInfo_.length; i++) {
             createPool(poolsInfo_[i]);
@@ -59,7 +51,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         IERC20(investToken_).approve(bridge_, type(uint256).max);
 
-        rewardToken = rewardToken_;
         investToken = investToken_;
         bridge = bridge_;
     }

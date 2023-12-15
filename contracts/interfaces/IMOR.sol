@@ -26,10 +26,4 @@ interface IMOR is IERC20, IERC165 {
      * @param amount_ The amount of tokens to burn.
      */
     function burn(uint256 amount_) external;
-
-    /**
-     * The function to get the owner of the contract.
-     * @return The address of the owner.
-     */
-    function owner() external view returns (address);
 }

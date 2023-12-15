@@ -56,17 +56,11 @@ interface IDistribution {
 
     /**
      * The function to initialize the contract.
-     * @param rewardToken_ The address of reward token.
      * @param investToken_ The address of invest token.
      * @param bridge_ The address of bridge contract.
      * @param poolsInfo_ The array of initial pools.
      */
-    function Distribution_init(
-        address rewardToken_,
-        address investToken_,
-        address bridge_,
-        Pool[] calldata poolsInfo_
-    ) external;
+    function Distribution_init(address investToken_, address bridge_, Pool[] calldata poolsInfo_) external;
 
     /**
      * The function to create a new pool.
@@ -157,12 +151,6 @@ interface IDistribution {
      * @return The flag that indicates if the contract is upgradeable.
      */
     function isNotUpgradeable() external view returns (bool);
-
-    /**
-     * The function to get the address of reward token.
-     * @return The address of reward token.
-     */
-    function rewardToken() external view returns (address);
 
     /**
      * The function to get the address of invest token.

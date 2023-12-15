@@ -2,6 +2,7 @@ import {
   ISwap,
   LZEndpointMock__factory,
   MOR__factory,
+  NonfungiblePositionManagerMock__factory,
   StETHMock__factory,
   SwapRouterMock__factory,
   Swap__factory,
@@ -10,7 +11,7 @@ import {
 } from '@/generated-types/ethers';
 import { IBridge } from '@/generated-types/ethers/contracts/Bridge';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
-import { Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
 
 module.exports = async function (deployer: Deployer) {
@@ -30,7 +31,7 @@ module.exports = async function (deployer: Deployer) {
     wStEthOnL2 = config.swapAddresses.wStEthOnL2;
   } else {
     // deploy mock
-    const stETHMock = await deployer.deploy(StETHMock__factory);
+    const stETHMock = await deployer.deploy(StETHMock__factory, [], { name: 'StETH on L2' });
     stETH = await stETHMock.getAddress();
 
     const wstETHMock = await deployer.deploy(WStETHMock__factory, [stETH]);
@@ -39,10 +40,10 @@ module.exports = async function (deployer: Deployer) {
     const swapRouterMock = await deployer.deploy(SwapRouterMock__factory);
     swapRouter = await swapRouterMock.getAddress();
 
-    const nonfungiblePositionManagerMock = await deployer.deploy(SwapRouterMock__factory);
+    const nonfungiblePositionManagerMock = await deployer.deploy(NonfungiblePositionManagerMock__factory);
     nonfungiblePositionManager = await nonfungiblePositionManagerMock.getAddress();
 
-    const wStEthOnL2Mock = await deployer.deploy(WStETHMock__factory, [stETH]);
+    const wStEthOnL2Mock = await deployer.deploy(WStETHMock__factory, [stETH], { name: 'Wrapped stETH on L2' });
     wStEthOnL2 = await wStEthOnL2Mock.getAddress();
   }
 
@@ -51,13 +52,15 @@ module.exports = async function (deployer: Deployer) {
     receiverLzEndpoint = config.lzConfig.receiverLzEndpoint;
   } else {
     // deploy mock
-    const receiverLzEndpointMock = await deployer.deploy(LZEndpointMock__factory, [
-      config.chainsConfig.receiverChainId,
-    ]);
+    const receiverLzEndpointMock = await deployer.deploy(
+      LZEndpointMock__factory,
+      [config.chainsConfig.receiverChainId],
+      { name: 'LZEndpoint on L2' },
+    );
     receiverLzEndpoint = await receiverLzEndpointMock.getAddress();
   }
 
-  const MOR = await deployer.deployed(MOR__factory);
+  const MOR = await deployer.deploy(MOR__factory, [config.cap]);
 
   const swapParams: ISwap.SwapParamsStruct = {
     tokenIn: stETH,
@@ -74,6 +77,9 @@ module.exports = async function (deployer: Deployer) {
     communicatorChainId: config.chainsConfig.senderChainId,
   };
   const tokenController = await deployer.deploy(TokenController__factory, [wStEthOnL2, MOR, swap, receiverLzConfig]);
+  DefaultStorage.set('tokenControllerOnL2', tokenController.address);
 
-  Reporter.reportContracts(['Swap', swap.address], ['TokenController', tokenController.address]);
+  await MOR.transferOwnership(tokenController);
+
+  Reporter.reportContracts(['Swap', swap.address], ['TokenController', tokenController.address], ['MOR', MOR.address]);
 };

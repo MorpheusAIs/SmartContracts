@@ -3,11 +3,11 @@ import {
   Distribution__factory,
   ERC1967Proxy__factory,
   LZEndpointMock__factory,
-  MOR__factory,
   StETHMock__factory,
 } from '@/generated-types/ethers';
 import { IBridge } from '@/generated-types/ethers/contracts/Bridge';
-import { Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
+import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
 
 module.exports = async function (deployer: Deployer) {
@@ -19,7 +19,7 @@ module.exports = async function (deployer: Deployer) {
     stETH = config.swapAddresses.stEth;
   } else {
     // deploy mock
-    const stETHMock = await deployer.deploy(StETHMock__factory);
+    const stETHMock = await deployer.deploy(StETHMock__factory, { name: 'StETH on L1' });
     stETH = await stETHMock.getAddress();
   }
 
@@ -28,7 +28,9 @@ module.exports = async function (deployer: Deployer) {
     senderLzEndpoint = config.lzConfig.senderLzEndpoint;
   } else {
     // deploy mock
-    const senderLzEndpointMock = await deployer.deploy(LZEndpointMock__factory, [config.chainsConfig.senderChainId]);
+    const senderLzEndpointMock = await deployer.deploy(LZEndpointMock__factory, [config.chainsConfig.senderChainId], {
+      name: 'LZEndpoint on L1',
+    });
     senderLzEndpoint = await senderLzEndpointMock.getAddress();
   }
 
@@ -36,23 +38,21 @@ module.exports = async function (deployer: Deployer) {
   if (config.arbitrumConfig) {
     l1GatewayRouter = config.arbitrumConfig.l1GatewayRouter;
   } else {
-    l1GatewayRouter = '0x00000';
+    l1GatewayRouter = ZERO_ADDR;
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
   const ERC1967Proxy = await deployer.deploy(ERC1967Proxy__factory, [distributionImpl, '0x']);
   const distribution = Distribution__factory.connect(ERC1967Proxy.address, await deployer.getSigner());
 
-  const MOR = await deployer.deploy(MOR__factory, [distribution, config.cap]);
-
   const senderLzConfig: IBridge.LzConfigStruct = {
     lzEndpoint: senderLzEndpoint,
-    communicator: (await deployer.deployed(Bridge__factory)).address,
+    communicator: DefaultStorage.get('tokenControllerOnL2'),
     communicatorChainId: config.chainsConfig.receiverChainId,
   };
   const bridge = await deployer.deploy(Bridge__factory, [l1GatewayRouter, stETH, senderLzConfig]);
 
-  await distribution.Distribution_init(MOR, stETH, bridge, config.pools || []);
+  await distribution.Distribution_init(stETH, bridge, config.pools || []);
 
   if (config.pools) {
     for (let i = 0; i < config.pools.length; i++) {
@@ -66,7 +66,6 @@ module.exports = async function (deployer: Deployer) {
   }
 
   Reporter.reportContracts(
-    ['MOR', MOR.address],
     ['StETH', stETH],
     ['Distribution', await distribution.getAddress()],
     ['Bridge', await bridge.getAddress()],
