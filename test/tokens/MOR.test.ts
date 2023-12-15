@@ -18,7 +18,7 @@ describe('MOR', () => {
     [OWNER, SECOND] = await ethers.getSigners();
 
     const MORFactory = await ethers.getContractFactory('MOR');
-    mor = await MORFactory.deploy(OWNER, cap);
+    mor = await MORFactory.deploy(cap);
 
     reverter.snapshot();
   });
@@ -28,10 +28,6 @@ describe('MOR', () => {
   });
 
   describe('constructor', () => {
-    it('should set the owner', async () => {
-      expect(await mor.owner()).to.equal(await OWNER.getAddress());
-    });
-
     it('should set the cap', async () => {
       expect(await mor.cap()).to.equal(cap);
     });
@@ -68,7 +64,7 @@ describe('MOR', () => {
 
     it('should revert if not called by the owner', async () => {
       await expect(mor.connect(SECOND).mint(await SECOND.getAddress(), wei('10'))).to.be.revertedWith(
-        'MOR: caller is not the owner',
+        'Ownable: caller is not the owner',
       );
     });
   });

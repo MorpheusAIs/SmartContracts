@@ -33,7 +33,8 @@ describe('TokenController', () => {
       communicatorChainId: 2,
     });
 
-    mor = await Mor.deploy(tokenController, wei(100));
+    mor = await Mor.deploy(wei(100));
+    await mor.transferOwnership(tokenController);
 
     await tokenController.setParams(steth, mor, { lzEndpoint: THIRD, communicator: OWNER, communicatorChainId: 2 });
 
