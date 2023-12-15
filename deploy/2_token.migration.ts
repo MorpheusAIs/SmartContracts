@@ -1,13 +1,12 @@
 import {
+  Bridge__factory,
   Distribution__factory,
   ERC1967Proxy__factory,
+  LZEndpointMock__factory,
   MOR__factory,
   StETHMock__factory,
-  SwapRouterMock__factory,
-  Swap__factory,
-  WStETHMock__factory,
 } from '@/generated-types/ethers';
-import { ISwap } from '@/generated-types/ethers/contracts/Swap';
+import { IBridge } from '@/generated-types/ethers/contracts/Bridge';
 import { Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
 
@@ -15,22 +14,29 @@ module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
 
   let stETH: string;
-  let WStETH: string;
-  let swapRouter: string;
+
   if (config.swapAddresses) {
     stETH = config.swapAddresses.stEth;
-    WStETH = config.swapAddresses.wStEth;
-    swapRouter = config.swapAddresses.swapRouter;
   } else {
     // deploy mock
     const stETHMock = await deployer.deploy(StETHMock__factory);
     stETH = await stETHMock.getAddress();
+  }
 
-    const wstETHMock = await deployer.deploy(WStETHMock__factory, [stETH]);
-    WStETH = await wstETHMock.getAddress();
+  let senderLzEndpoint: string;
+  if (config.lzConfig) {
+    senderLzEndpoint = config.lzConfig.senderLzEndpoint;
+  } else {
+    // deploy mock
+    const senderLzEndpointMock = await deployer.deploy(LZEndpointMock__factory, [config.chainsConfig.senderChainId]);
+    senderLzEndpoint = await senderLzEndpointMock.getAddress();
+  }
 
-    const swapRouterMock = await deployer.deploy(SwapRouterMock__factory);
-    swapRouter = await swapRouterMock.getAddress();
+  let l1GatewayRouter: string;
+  if (config.arbitrumConfig) {
+    l1GatewayRouter = config.arbitrumConfig.l1GatewayRouter;
+  } else {
+    l1GatewayRouter = '0x00000';
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
@@ -39,16 +45,14 @@ module.exports = async function (deployer: Deployer) {
 
   const MOR = await deployer.deploy(MOR__factory, [distribution, config.cap]);
 
-  const swapParams: ISwap.SwapParamsStruct = {
-    tokenIn: stETH,
-    tokenOut: MOR.address,
-    intermediateToken: WStETH,
-    fee: config.swapParams.fee,
-    sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
+  const senderLzConfig: IBridge.LzConfigStruct = {
+    lzEndpoint: senderLzEndpoint,
+    communicator: (await deployer.deployed(Bridge__factory)).address,
+    communicatorChainId: config.chainsConfig.receiverChainId,
   };
-  const swap = await deployer.deploy(Swap__factory, [swapRouter, swapParams]);
+  const bridge = await deployer.deploy(Bridge__factory, [l1GatewayRouter, stETH, senderLzConfig]);
 
-  await distribution.Distribution_init(MOR, stETH, swap, config.pools || []);
+  await distribution.Distribution_init(MOR, stETH, bridge, config.pools || []);
 
   if (config.pools) {
     for (let i = 0; i < config.pools.length; i++) {
@@ -65,6 +69,6 @@ module.exports = async function (deployer: Deployer) {
     ['MOR', MOR.address],
     ['StETH', stETH],
     ['Distribution', await distribution.getAddress()],
-    ['Swap', await swap.getAddress()],
+    ['Bridge', await bridge.getAddress()],
   );
 };

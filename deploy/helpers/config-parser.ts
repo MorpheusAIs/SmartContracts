@@ -1,19 +1,32 @@
-import { IDistribution, Swap } from '@/generated-types/ethers';
+import { IDistribution } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { BigNumberish } from 'ethers';
 import { readFileSync } from 'fs';
 
 export type Config = {
   cap: number;
+  chainsConfig: {
+    senderChainId: number;
+    receiverChainId: number;
+  };
   pools?: PoolInitInfo[];
   swapAddresses?: {
     stEth: string;
     wStEth: string;
     swapRouter: string;
+    nonfungiblePositionManager: string;
+    wStEthOnL2: string;
   };
   swapParams: {
     fee: string;
     sqrtPriceLimitX96: string;
+  };
+  arbitrumConfig?: {
+    l1GatewayRouter: string;
+  };
+  lzConfig?: {
+    senderLzEndpoint: string;
+    receiverLzEndpoint: string;
   };
 };
 
@@ -27,6 +40,16 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
 
   if (config.cap == undefined) {
     throw new Error(`Invalid 'cap' value.`);
+  }
+
+  if (config.chainsConfig == undefined) {
+    throw new Error(`Invalid 'chainsConfig' value.`);
+  }
+  if (config.chainsConfig.receiverChainId == undefined) {
+    throw new Error(`Invalid 'chainsConfig.receiverChainId' value.`);
+  }
+  if (config.chainsConfig.senderChainId == undefined) {
+    throw new Error(`Invalid 'chainsConfig.senderChainId' value.`);
   }
 
   if (config.pools != undefined) {
@@ -45,6 +68,14 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
     if (config.swapAddresses.swapRouter == undefined) {
       nonZeroAddr(config.swapAddresses.swapRouter, 'swapAddresses.swapRouter');
     }
+
+    if (config.swapAddresses.nonfungiblePositionManager == undefined) {
+      nonZeroAddr(config.swapAddresses.nonfungiblePositionManager, 'swapAddresses.nonfungiblePositionManager');
+    }
+
+    if (config.swapAddresses.wStEthOnL2 == undefined) {
+      nonZeroAddr(config.swapAddresses.wStEthOnL2, 'swapAddresses.wStEthOnL2');
+    }
   }
 
   if (
@@ -53,6 +84,21 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
     nonNumber(config.swapParams.sqrtPriceLimitX96)
   ) {
     throw new Error('Invalid `swapParams`');
+  }
+
+  if (config.lzConfig != undefined) {
+    if (config.lzConfig.senderLzEndpoint == undefined) {
+      throw new Error('Invalid `lzConfig.senderLzEndpoint`');
+    }
+    if (config.lzConfig.receiverLzEndpoint == undefined) {
+      throw new Error('Invalid `lzConfig.receiverLzEndpoint`');
+    }
+  }
+
+  if (config.arbitrumConfig != undefined) {
+    if (config.arbitrumConfig.l1GatewayRouter == undefined) {
+      throw new Error('Invalid `arbitrumConfig.l1GatewayRouter`');
+    }
   }
 
   return config;
