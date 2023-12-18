@@ -47,7 +47,7 @@ module.exports = async function (deployer: Deployer) {
 
   const senderLzConfig: IL1Sender.LzConfigStruct = {
     lzEndpoint: senderLzEndpoint,
-    communicator: DefaultStorage.get('tokenControllerOnL2'),
+    communicator: DefaultStorage.get('l2ReceiverOnL2'),
     communicatorChainId: config.chainsConfig.receiverChainId,
   };
   const l1Sender = await deployer.deploy(L1Sender__factory, [l1GatewayRouter, stETH, senderLzConfig]);

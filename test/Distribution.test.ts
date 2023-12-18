@@ -4,11 +4,11 @@ import {
   Distribution__factory,
   IDistribution,
   L1Sender,
+  L2Receiver,
   LZEndpointMock,
   LinearDistributionIntervalDecrease,
   MOR,
   StETHMock,
-  TokenController,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
@@ -43,7 +43,7 @@ describe('Distribution', () => {
   let lZEndpointMockReceiver: LZEndpointMock;
 
   let l1Sender: L1Sender;
-  let tokenController: TokenController;
+  let l2Receiver: L2Receiver;
 
   before(async () => {
     await setTime(oneHour);
@@ -51,23 +51,16 @@ describe('Distribution', () => {
 
     [ownerAddress, secondAddress] = await Promise.all([OWNER.getAddress(), SECOND.getAddress()]);
 
-    const [
-      libFactory,
-      ERC1967ProxyFactory,
-      MORFactory,
-      stETHMockFactory,
-      l1SenderFactory,
-      LZEndpointMock,
-      TokenController,
-    ] = await Promise.all([
-      ethers.getContractFactory('LinearDistributionIntervalDecrease'),
-      ethers.getContractFactory('ERC1967Proxy'),
-      ethers.getContractFactory('MOR'),
-      ethers.getContractFactory('StETHMock'),
-      ethers.getContractFactory('L1Sender'),
-      ethers.getContractFactory('LZEndpointMock'),
-      ethers.getContractFactory('TokenController'),
-    ]);
+    const [libFactory, ERC1967ProxyFactory, MORFactory, stETHMockFactory, l1SenderFactory, LZEndpointMock, L2Receiver] =
+      await Promise.all([
+        ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+        ethers.getContractFactory('ERC1967Proxy'),
+        ethers.getContractFactory('MOR'),
+        ethers.getContractFactory('StETHMock'),
+        ethers.getContractFactory('L1Sender'),
+        ethers.getContractFactory('LZEndpointMock'),
+        ethers.getContractFactory('L2Receiver'),
+      ]);
 
     // START deploy contracts without deps
     [lib, depositToken, lZEndpointMockSender, lZEndpointMockReceiver] = await Promise.all([
@@ -78,7 +71,7 @@ describe('Distribution', () => {
     ]);
     // END
 
-    tokenController = await TokenController.deploy(depositToken, ZERO_ADDR, depositToken, {
+    l2Receiver = await L2Receiver.deploy(depositToken, ZERO_ADDR, depositToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: ZERO_ADDR,
       communicatorChainId: senderChainId,
@@ -89,7 +82,7 @@ describe('Distribution', () => {
       ZERO_ADDR,
       {
         lzEndpoint: lZEndpointMockSender,
-        communicator: tokenController,
+        communicator: l2Receiver,
         communicatorChainId: receiverChainId,
       },
       { value: wei(100) },
@@ -114,13 +107,13 @@ describe('Distribution', () => {
     rewardToken = await MORFactory.deploy(wei(1000000000));
     rewardToken.transferOwnership(distributionAddress);
 
-    await tokenController.setParams(depositToken, rewardToken, {
+    await l2Receiver.setParams(depositToken, rewardToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: l1Sender,
       communicatorChainId: senderChainId,
     });
 
-    await lZEndpointMockSender.setDestLzEndpoint(tokenController, lZEndpointMockReceiver);
+    await lZEndpointMockSender.setDestLzEndpoint(l2Receiver, lZEndpointMockReceiver);
 
     await distribution.Distribution_init(depositToken, l1Sender, []);
 

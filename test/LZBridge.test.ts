@@ -1,4 +1,4 @@
-import { L1Sender, LZEndpointMock, MOR, TokenController } from '@/generated-types/ethers';
+import { L1Sender, L2Receiver, LZEndpointMock, MOR } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
@@ -19,16 +19,16 @@ describe('L1Sender', () => {
   let lZEndpointMockReceiver: LZEndpointMock;
 
   let l1Sender: L1Sender;
-  let tokenController: TokenController;
+  let l2Receiver: L2Receiver;
 
   let rewardToken: MOR;
   before(async () => {
     [OWNER, SECOND] = await ethers.getSigners();
     let depositToken;
 
-    const [LZEndpointMock, TokenController, Mor, L1Sender, StETHMock] = await Promise.all([
+    const [LZEndpointMock, L2Receiver, Mor, L1Sender, StETHMock] = await Promise.all([
       ethers.getContractFactory('LZEndpointMock', OWNER),
-      ethers.getContractFactory('TokenController', OWNER),
+      ethers.getContractFactory('L2Receiver', OWNER),
       ethers.getContractFactory('MOR', OWNER),
       ethers.getContractFactory('L1Sender', OWNER),
       ethers.getContractFactory('StETHMock', OWNER),
@@ -40,7 +40,7 @@ describe('L1Sender', () => {
       StETHMock.deploy(),
     ]);
 
-    tokenController = await TokenController.deploy(depositToken, ZERO_ADDR, depositToken, {
+    l2Receiver = await L2Receiver.deploy(depositToken, ZERO_ADDR, depositToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: ZERO_ADDR,
       communicatorChainId: senderChainId,
@@ -50,17 +50,17 @@ describe('L1Sender', () => {
 
     l1Sender = await L1Sender.deploy(ZERO_ADDR, ZERO_ADDR, {
       lzEndpoint: lZEndpointMockSender,
-      communicator: tokenController,
+      communicator: l2Receiver,
       communicatorChainId: receiverChainId,
     });
 
-    await tokenController.setParams(depositToken, rewardToken, {
+    await l2Receiver.setParams(depositToken, rewardToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: l1Sender,
       communicatorChainId: senderChainId,
     });
 
-    await lZEndpointMockSender.setDestLzEndpoint(tokenController, lZEndpointMockReceiver);
+    await lZEndpointMockSender.setDestLzEndpoint(l2Receiver, lZEndpointMockReceiver);
 
     await reverter.snapshot();
   });
@@ -71,13 +71,13 @@ describe('L1Sender', () => {
 
   describe('sendMintMessage', () => {
     it('should sendMintMessage', async () => {
-      expect(await tokenController.nonce()).to.equal(0);
+      expect(await l2Receiver.nonce()).to.equal(0);
 
       const amount = wei(1);
 
       const tx = await l1Sender.sendMintMessage(SECOND, amount, { value: wei(0.5) });
       await expect(tx).changeTokenBalance(rewardToken, SECOND, amount);
-      expect(await tokenController.nonce()).to.equal(1);
+      expect(await l2Receiver.nonce()).to.equal(1);
     });
   });
 });

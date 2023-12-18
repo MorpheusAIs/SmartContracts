@@ -9,9 +9,9 @@ import {ILayerZeroReceiver} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/int
 import {IMOR} from "./interfaces/IMOR.sol";
 import {ISwap} from "./interfaces/ISwap.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
-import {ITokenController} from "./interfaces/ITokenController.sol";
+import {IL2Receiver} from "./interfaces/IL2Receiver.sol";
 
-contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
+contract L2Receiver is IL2Receiver, ILayerZeroReceiver, Ownable {
     address public depositToken;
     address public rewardToken;
     address public swap;
@@ -55,7 +55,7 @@ contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
         uint64 nonce_,
         bytes memory payload_
     ) external {
-        require(nonce_ > nonce, "TC: invalid nonce"); // do we need this?
+        require(nonce_ > nonce, "TC: invalid nonce");
         require(msg.sender == config.lzEndpoint, "TC: invalid lz endpoint");
         require(senderChainId_ == config.communicatorChainId, "TC: invalid sender chain ID");
 

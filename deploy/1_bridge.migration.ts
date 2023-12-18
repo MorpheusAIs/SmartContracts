@@ -1,18 +1,18 @@
 import {
   ISwap,
+  L2Receiver__factory,
   LZEndpointMock__factory,
   MOR__factory,
   NonfungiblePositionManagerMock__factory,
   StETHMock__factory,
   SwapRouterMock__factory,
   Swap__factory,
-  TokenController__factory,
   WStETHMock__factory,
 } from '@/generated-types/ethers';
+import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
-import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
@@ -76,10 +76,10 @@ module.exports = async function (deployer: Deployer) {
     communicator: ZERO_ADDR, // TODO: set correct address of Bridge
     communicatorChainId: config.chainsConfig.senderChainId,
   };
-  const tokenController = await deployer.deploy(TokenController__factory, [wStEthOnL2, MOR, swap, receiverLzConfig]);
-  DefaultStorage.set('tokenControllerOnL2', tokenController.address);
+  const l2Receiver = await deployer.deploy(L2Receiver__factory, [wStEthOnL2, MOR, swap, receiverLzConfig]);
+  DefaultStorage.set('l2ReceiverOnL2', l2Receiver.address);
 
-  await MOR.transferOwnership(tokenController);
+  await MOR.transferOwnership(l2Receiver);
 
-  Reporter.reportContracts(['Swap', swap.address], ['TokenController', tokenController.address], ['MOR', MOR.address]);
+  Reporter.reportContracts(['Swap', swap.address], ['L2Receiver', l2Receiver.address], ['MOR', MOR.address]);
 };
