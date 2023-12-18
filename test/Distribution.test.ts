@@ -2,6 +2,7 @@ import {
   Distribution,
   DistributionV2,
   Distribution__factory,
+  GatewayRouterMock,
   IDistribution,
   L1Sender,
   L2Receiver,
@@ -51,23 +52,34 @@ describe('Distribution', () => {
 
     [ownerAddress, secondAddress] = await Promise.all([OWNER.getAddress(), SECOND.getAddress()]);
 
-    const [libFactory, ERC1967ProxyFactory, MORFactory, stETHMockFactory, l1SenderFactory, LZEndpointMock, L2Receiver] =
-      await Promise.all([
-        ethers.getContractFactory('LinearDistributionIntervalDecrease'),
-        ethers.getContractFactory('ERC1967Proxy'),
-        ethers.getContractFactory('MOR'),
-        ethers.getContractFactory('StETHMock'),
-        ethers.getContractFactory('L1Sender'),
-        ethers.getContractFactory('LZEndpointMock'),
-        ethers.getContractFactory('L2Receiver'),
-      ]);
+    const [
+      libFactory,
+      ERC1967ProxyFactory,
+      MORFactory,
+      stETHMockFactory,
+      l1SenderFactory,
+      LZEndpointMock,
+      L2Receiver,
+      gatewayRouterMock,
+    ] = await Promise.all([
+      ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+      ethers.getContractFactory('ERC1967Proxy'),
+      ethers.getContractFactory('MOR'),
+      ethers.getContractFactory('StETHMock'),
+      ethers.getContractFactory('L1Sender'),
+      ethers.getContractFactory('LZEndpointMock'),
+      ethers.getContractFactory('L2Receiver'),
+      ethers.getContractFactory('GatewayRouterMock'),
+    ]);
 
+    let gatewayRouter: GatewayRouterMock;
     // START deploy contracts without deps
-    [lib, depositToken, lZEndpointMockSender, lZEndpointMockReceiver] = await Promise.all([
+    [lib, depositToken, lZEndpointMockSender, lZEndpointMockReceiver, gatewayRouter] = await Promise.all([
       libFactory.deploy(),
       stETHMockFactory.deploy(),
       LZEndpointMock.deploy(senderChainId),
       LZEndpointMock.deploy(receiverChainId),
+      gatewayRouterMock.deploy(SECOND),
     ]);
     // END
 
@@ -78,8 +90,8 @@ describe('Distribution', () => {
     });
 
     l1Sender = await l1SenderFactory.deploy(
-      ZERO_ADDR,
-      ZERO_ADDR,
+      gatewayRouter,
+      depositToken,
       {
         lzEndpoint: lZEndpointMockSender,
         communicator: l2Receiver,
@@ -107,7 +119,7 @@ describe('Distribution', () => {
     rewardToken = await MORFactory.deploy(wei(1000000000));
     rewardToken.transferOwnership(distributionAddress);
 
-    await l2Receiver.setParams(depositToken, rewardToken, {
+    await l2Receiver.setParams(depositToken, rewardToken, depositToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: l1Sender,
       communicatorChainId: senderChainId,
@@ -318,8 +330,8 @@ describe('Distribution', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 1);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(20));
@@ -373,8 +385,8 @@ describe('Distribution', () => {
 
       // Claim after 2 day
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(20 + 49));
@@ -394,8 +406,8 @@ describe('Distribution', () => {
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       await setNextTime(oneDay * 20000);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(510));
@@ -416,8 +428,8 @@ describe('Distribution', () => {
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       await setNextTime(oneDay * 20000);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(130));
@@ -491,8 +503,8 @@ describe('Distribution', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 1);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(20));
@@ -666,7 +678,7 @@ describe('Distribution', () => {
 
       // Claim after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(198));
       userData = await distribution.usersData(secondAddress, poolId);
@@ -675,7 +687,7 @@ describe('Distribution', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 3);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(294));
       userData = await distribution.usersData(secondAddress, poolId);
@@ -684,7 +696,7 @@ describe('Distribution', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 6);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(570));
       userData = await distribution.usersData(secondAddress, poolId);
@@ -708,7 +720,7 @@ describe('Distribution', () => {
 
       // Claim after 1.5 days
       await setNextTime(oneDay + oneDay * 1.5);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(149));
       userData = await distribution.usersData(secondAddress, poolId);
@@ -726,7 +738,7 @@ describe('Distribution', () => {
 
       // Claim after 5.25 days
       await setNextTime(oneDay + oneDay * 5.25);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(149 + 353.5), wei(0.000001));
       userData = await distribution.usersData(secondAddress, poolId);
@@ -739,7 +751,7 @@ describe('Distribution', () => {
 
       // Claim after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(secondAddress)).to.eq(wei(98));
       const userData = await distribution.usersData(secondAddress, poolId);
@@ -757,8 +769,8 @@ describe('Distribution', () => {
 
       // Claim after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER); // The reward will be slightly larger since the calculation is a second later.
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) }); // The reward will be slightly larger since the calculation is a second later.
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -772,8 +784,8 @@ describe('Distribution', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 3);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5 + 72), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -787,8 +799,8 @@ describe('Distribution', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 6);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5 + 72 + 207), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -820,8 +832,8 @@ describe('Distribution', () => {
 
       // Claim after 2 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(36.75 + 24.5), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -844,8 +856,8 @@ describe('Distribution', () => {
 
       // Claim after 7 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 7);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(36.75 + 24.5 + 141 + 124.6), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -880,8 +892,8 @@ describe('Distribution', () => {
 
       // Claim after 2 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(36.75 + 24.5), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -904,8 +916,8 @@ describe('Distribution', () => {
 
       // Claim after 7 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 7);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(36.75 + 24.5 + 141 + 124.6), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -939,8 +951,8 @@ describe('Distribution', () => {
 
       // Claim after 3 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 4);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -974,8 +986,8 @@ describe('Distribution', () => {
 
       // Claim after 3 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 4);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5 + 70.5), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -996,7 +1008,7 @@ describe('Distribution', () => {
 
       await setNextTime(oneDay + oneDay);
 
-      let tx = await distribution.claim(poolId, OWNER);
+      let tx = await distribution.claim(poolId, OWNER, { value: wei(0.5) });
       expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(1));
 
       let userData = await distribution.usersData(OWNER, poolId);
@@ -1004,7 +1016,7 @@ describe('Distribution', () => {
 
       await setNextTime(oneDay + oneDay * 2);
 
-      tx = await distribution.claim(poolId, OWNER);
+      tx = await distribution.claim(poolId, OWNER, { value: wei(0.5) });
       expect(tx).to.changeTokenBalance(rewardToken, OWNER, wei(0));
       userData = await distribution.usersData(OWNER, poolId);
       expect(userData.pendingRewards).to.equal(wei(0));
@@ -1118,7 +1130,7 @@ describe('Distribution', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
-      await distribution.claim(poolId, SECOND);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5), wei(0.000001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -1165,8 +1177,8 @@ describe('Distribution', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(58.8 + 48), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
@@ -1190,8 +1202,8 @@ describe('Distribution', () => {
 
       // Claim after 5 days
       await setNextTime(oneDay + oneDay * 5);
-      await distribution.claim(poolId, SECOND);
-      await distribution.claim(poolId, OWNER);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(58.8 + 48 + 47 + 61.33333), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);

@@ -34,11 +34,11 @@ module.exports = async function (deployer: Deployer) {
     senderLzEndpoint = await senderLzEndpointMock.getAddress();
   }
 
-  let l1GatewayRouter: string;
+  let arbitrumBridgeGatewayRouter: string;
   if (config.arbitrumConfig) {
-    l1GatewayRouter = config.arbitrumConfig.l1GatewayRouter;
+    arbitrumBridgeGatewayRouter = config.arbitrumConfig.arbitrumBridgeGatewayRouter;
   } else {
-    l1GatewayRouter = ZERO_ADDR;
+    arbitrumBridgeGatewayRouter = ZERO_ADDR;
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
@@ -50,7 +50,7 @@ module.exports = async function (deployer: Deployer) {
     communicator: DefaultStorage.get('l2ReceiverOnL2'),
     communicatorChainId: config.chainsConfig.receiverChainId,
   };
-  const l1Sender = await deployer.deploy(L1Sender__factory, [l1GatewayRouter, stETH, senderLzConfig]);
+  const l1Sender = await deployer.deploy(L1Sender__factory, [arbitrumBridgeGatewayRouter, stETH, senderLzConfig]);
 
   await distribution.Distribution_init(stETH, l1Sender, config.pools || []);
 

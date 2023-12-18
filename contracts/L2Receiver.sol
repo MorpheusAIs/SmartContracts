@@ -32,10 +32,12 @@ contract L2Receiver is IL2Receiver, ILayerZeroReceiver, Ownable {
     function setParams(
         address depositToken_,
         address rewardToken_,
+        address swap_,
         IL1Sender.LzConfig memory config_
     ) external onlyOwner {
         depositToken = depositToken_;
         rewardToken = rewardToken_;
+        swap = swap_;
         config = config_;
     }
 

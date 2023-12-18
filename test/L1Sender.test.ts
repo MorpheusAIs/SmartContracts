@@ -26,12 +26,13 @@ describe('L1Sender', () => {
     [OWNER, SECOND] = await ethers.getSigners();
     let depositToken;
 
-    const [LZEndpointMock, L2Receiver, Mor, L1Sender, StETHMock] = await Promise.all([
-      ethers.getContractFactory('LZEndpointMock', OWNER),
-      ethers.getContractFactory('L2Receiver', OWNER),
-      ethers.getContractFactory('MOR', OWNER),
-      ethers.getContractFactory('L1Sender', OWNER),
-      ethers.getContractFactory('StETHMock', OWNER),
+    const [LZEndpointMock, L2Receiver, Mor, L1Sender, StETHMock, GatewayRouterMock] = await Promise.all([
+      ethers.getContractFactory('LZEndpointMock'),
+      ethers.getContractFactory('L2Receiver'),
+      ethers.getContractFactory('MOR'),
+      ethers.getContractFactory('L1Sender'),
+      ethers.getContractFactory('StETHMock'),
+      ethers.getContractFactory('GatewayRouterMock'),
     ]);
 
     [lZEndpointMockSender, lZEndpointMockReceiver, depositToken] = await Promise.all([
@@ -40,27 +41,31 @@ describe('L1Sender', () => {
       StETHMock.deploy(),
     ]);
 
-    l2Receiver = await L2Receiver.deploy(depositToken, ZERO_ADDR, depositToken, {
+    const gatewayRouterMock = await GatewayRouterMock.deploy(lZEndpointMockSender);
+
+    rewardToken = await Mor.deploy(wei(100));
+
+    l2Receiver = await L2Receiver.deploy(depositToken, rewardToken, OWNER, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: ZERO_ADDR,
       communicatorChainId: senderChainId,
     });
 
-    rewardToken = await Mor.deploy(wei(100));
-
-    l1Sender = await L1Sender.deploy(ZERO_ADDR, ZERO_ADDR, {
+    l1Sender = await L1Sender.deploy(gatewayRouterMock, depositToken, {
       lzEndpoint: lZEndpointMockSender,
       communicator: l2Receiver,
       communicatorChainId: receiverChainId,
     });
 
-    await l2Receiver.setParams(depositToken, rewardToken, {
+    await l2Receiver.setParams(depositToken, rewardToken, OWNER, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: l1Sender,
       communicatorChainId: senderChainId,
     });
 
     await lZEndpointMockSender.setDestLzEndpoint(l2Receiver, lZEndpointMockReceiver);
+
+    await rewardToken.transferOwnership(l2Receiver);
 
     await reverter.snapshot();
   });
@@ -75,9 +80,17 @@ describe('L1Sender', () => {
 
       const amount = wei(1);
 
-      const tx = await l1Sender.sendMintMessage(SECOND, amount, { value: wei(0.5) });
+      const tx = await l1Sender.sendMintMessage(SECOND, amount, OWNER, { value: wei(0.5) });
       await expect(tx).changeTokenBalance(rewardToken, SECOND, amount);
+
       expect(await l2Receiver.nonce()).to.equal(1);
+    });
+    it('should revert if not called by the owner', async () => {
+      await expect(
+        l1Sender.connect(SECOND).sendMintMessage(SECOND, wei(1), OWNER, {
+          value: wei(1),
+        }),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 });

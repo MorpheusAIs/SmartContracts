@@ -22,7 +22,7 @@ export type Config = {
     sqrtPriceLimitX96: string;
   };
   arbitrumConfig?: {
-    l1GatewayRouter: string;
+    arbitrumBridgeGatewayRouter: string;
   };
   lzConfig?: {
     senderLzEndpoint: string;
@@ -96,8 +96,8 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
   }
 
   if (config.arbitrumConfig != undefined) {
-    if (config.arbitrumConfig.l1GatewayRouter == undefined) {
-      throw new Error('Invalid `arbitrumConfig.l1GatewayRouter`');
+    if (config.arbitrumConfig.arbitrumBridgeGatewayRouter == undefined) {
+      throw new Error('Invalid `arbitrumConfig.arbitrumBridgeGatewayRouter`');
     }
   }
 

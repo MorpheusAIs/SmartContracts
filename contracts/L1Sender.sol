@@ -13,15 +13,36 @@ import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
 contract L1Sender is IL1Sender, ERC165, Ownable {
-    address public l1GatewayRouter;
+    address public arbitrumBridgeGatewayRouter;
     address public depositToken;
 
     LzConfig public config;
 
-    constructor(address l1GatewayRouter_, address depositToken_, LzConfig memory config_) payable {
-        l1GatewayRouter = l1GatewayRouter_;
+    constructor(address arbitrumBridgeGatewayRouter_, address depositToken_, LzConfig memory config_) payable {
+        arbitrumBridgeGatewayRouter = arbitrumBridgeGatewayRouter_;
         depositToken = depositToken_;
         config = config_;
+
+        IERC20(depositToken).approve(
+            IGatewayRouter(arbitrumBridgeGatewayRouter_).getGateway(depositToken_),
+            type(uint256).max
+        );
+    }
+
+    function setParams(
+        address arbitrumBridgeGatewayRouter_,
+        address depositToken_,
+        LzConfig memory config_
+    ) external onlyOwner {
+        arbitrumBridgeGatewayRouter = arbitrumBridgeGatewayRouter_;
+        depositToken = depositToken_;
+        config = config_;
+
+        // is it OK to not discard the previous approval?
+        IERC20(depositToken).approve(
+            IGatewayRouter(arbitrumBridgeGatewayRouter_).getGateway(depositToken_),
+            type(uint256).max
+        );
     }
 
     function sendTokensOnSwap(
@@ -30,30 +51,29 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
     ) external payable returns (bytes memory) {
-        IERC20(depositToken).approve(IGatewayRouter(l1GatewayRouter).getGateway(depositToken), type(uint256).max);
-
+        uint256 currentBalance = IERC20(depositToken).balanceOf(address(this));
         bytes memory data = abi.encode(maxSubmissionCost_, "");
 
         return
-            IGatewayRouter(l1GatewayRouter).outboundTransfer{value: msg.value}(
+            IGatewayRouter(arbitrumBridgeGatewayRouter).outboundTransfer{value: msg.value}(
                 depositToken,
                 recipient_,
-                IERC20(depositToken).balanceOf(address(this)),
+                currentBalance,
                 gasLimit_,
                 maxFeePerGas_,
                 data
             );
     }
 
-    function sendMintMessage(address user_, uint256 amount_) external payable onlyOwner {
+    function sendMintMessage(address user_, uint256 amount_, address refundee_) external payable onlyOwner {
         bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.communicator, address(this));
         bytes memory payload_ = abi.encode(user_, amount_);
 
-        ILayerZeroEndpoint(config.lzEndpoint).send{value: 0.1 ether}(
-            config.communicatorChainId, // destination LayerZero chainId
-            receiverAndSenderAddresses_, // send to this address on the destination
+        ILayerZeroEndpoint(config.lzEndpoint).send{value: msg.value}(
+            config.communicatorChainId, // communicator LayerZero chainId
+            receiverAndSenderAddresses_, // send to this address to the communicator
             payload_, // bytes payload
-            payable(tx.origin), // refund address TODO: CHANGE TO msg.sender
+            payable(refundee_), // refund address
             address(0x0), // future parameter
             bytes("") // adapterParams (see "Advanced Features")
         );

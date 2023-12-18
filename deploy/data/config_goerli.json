@@ -43,7 +43,7 @@
     "sqrtPriceLimitX96": 0
   },
   "arbitrumConfig": {
-    "l1GatewayRouter": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"
+    "arbitrumBridgeGatewayRouter": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"
   },
   "lzConfig": {
     "senderLzEndpoint": "0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23",

@@ -140,7 +140,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
-    function claim(uint256 poolId_, address user_) external poolExists(poolId_) {
+    function claim(uint256 poolId_, address user_) external payable poolExists(poolId_) {
         Pool storage pool = pools[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
@@ -161,7 +161,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.pendingRewards = 0;
 
         // Transfer rewards
-        L1Sender(l1Sender).sendMintMessage(user_, pendingRewards_);
+        L1Sender(l1Sender).sendMintMessage{value: msg.value}(user_, pendingRewards_, _msgSender());
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
@@ -257,9 +257,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update user data
         userData.rate = currentPoolRate_;
         userData.deposited = newDeposited_;
-        userData.pendingRewards = 0;
-
-        L1Sender(l1Sender).sendMintMessage(user_, pendingRewards_);
+        userData.pendingRewards = pendingRewards_;
 
         if (pool.isPublic) {
             totalDepositedInPublicPools -= amount_;

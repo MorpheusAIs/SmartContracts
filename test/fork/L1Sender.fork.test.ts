@@ -20,14 +20,14 @@ describe('L1Sender', () => {
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
-  const l1GatewayRouterAddress = '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef';
+  const arbitrumBridgeGatewayRouterAddress = '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef';
   const lzEndpointAddress = '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675';
   const stethAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
   const wstethAddress = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 
   const richAddress = '0xE53FFF67f9f384d20Ebea36F43b93DC49Ed22753';
 
-  let l1GatewayRouter: IGatewayRouter;
+  let arbitrumBridgeGatewayRouter: IGatewayRouter;
   let l1Sender: L1Sender;
 
   let steth: IStETH;
@@ -44,12 +44,12 @@ describe('L1Sender', () => {
     OWNER = await ethers.getImpersonatedSigner(richAddress);
     [, SECOND] = await ethers.getSigners();
 
-    l1GatewayRouter = IGatewayRouter__factory.connect(l1GatewayRouterAddress, OWNER);
+    arbitrumBridgeGatewayRouter = IGatewayRouter__factory.connect(arbitrumBridgeGatewayRouterAddress, OWNER);
     depositToken = IWStETH__factory.connect(wstethAddress, OWNER);
     steth = IStETH__factory.connect(stethAddress, OWNER);
 
     const L1Sender = await ethers.getContractFactory('L1Sender', OWNER);
-    l1Sender = await L1Sender.deploy(l1GatewayRouter, depositToken, {
+    l1Sender = await L1Sender.deploy(arbitrumBridgeGatewayRouter, depositToken, {
       lzEndpoint: lzEndpointAddress,
       communicator: ZERO_ADDR,
       communicatorChainId: 110, // Arbitrum
@@ -74,7 +74,7 @@ describe('L1Sender', () => {
       expect(await l1Sender.depositToken()).to.equal(await depositToken.getAddress());
     });
     it('should set the router', async () => {
-      expect(await l1Sender.l1GatewayRouter()).to.equal(await l1GatewayRouter.getAddress());
+      expect(await l1Sender.arbitrumBridgeGatewayRouter()).to.equal(await arbitrumBridgeGatewayRouter.getAddress());
     });
   });
 
@@ -100,16 +100,9 @@ describe('L1Sender', () => {
 
   describe('sendMintMessage', () => {
     it('should just sendMintMessage', async () => {
-      await l1Sender.sendMintMessage(SECOND, wei(1), {
+      await l1Sender.sendMintMessage(SECOND, wei(1), OWNER, {
         value: wei(1),
       });
-    });
-    it('should revert if not called by the owner', async () => {
-      await expect(
-        l1Sender.connect(SECOND).sendMintMessage(SECOND, wei(1), {
-          value: wei(1),
-        }),
-      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 });

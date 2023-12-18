@@ -36,7 +36,7 @@ describe('L2Receiver', () => {
     mor = await Mor.deploy(wei(100));
     await mor.transferOwnership(l2Receiver);
 
-    await l2Receiver.setParams(steth, mor, { lzEndpoint: THIRD, communicator: OWNER, communicatorChainId: 2 });
+    await l2Receiver.setParams(steth, mor, THIRD, { lzEndpoint: THIRD, communicator: OWNER, communicatorChainId: 2 });
 
     reverter.snapshot();
   });
@@ -63,7 +63,7 @@ describe('L2Receiver', () => {
 
   describe('setParams', () => {
     it('should set params', async () => {
-      await l2Receiver.setParams(mor, steth, {
+      await l2Receiver.setParams(mor, steth, OWNER, {
         lzEndpoint: ZERO_ADDR,
         communicator: SECOND,
         communicatorChainId: 1,
@@ -71,13 +71,14 @@ describe('L2Receiver', () => {
 
       expect(await l2Receiver.depositToken()).to.be.equal(await mor.getAddress());
       expect(await l2Receiver.rewardToken()).to.be.equal(await steth.getAddress());
+      expect(await l2Receiver.swap()).to.be.equal(await OWNER.getAddress());
 
       expect(await l2Receiver.config()).to.be.deep.equal([ZERO_ADDR, await SECOND.getAddress(), 1n]);
     });
 
     it('should revert if not owner', async () => {
       await expect(
-        l2Receiver.connect(SECOND).setParams(ZERO_ADDR, ZERO_ADDR, {
+        l2Receiver.connect(SECOND).setParams(ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, {
           lzEndpoint: ZERO_ADDR,
           communicator: ZERO_ADDR,
           communicatorChainId: 0,

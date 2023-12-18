@@ -104,7 +104,7 @@ interface IDistribution {
      * @param poolId_ The pool's id.
      * @param user_ The user's address.
      */
-    function claim(uint256 poolId_, address user_) external;
+    function claim(uint256 poolId_, address user_) external payable;
 
     /**
      * The function to withdraw tokens from the pool.
