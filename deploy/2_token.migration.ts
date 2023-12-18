@@ -1,11 +1,11 @@
 import {
-  Bridge__factory,
   Distribution__factory,
   ERC1967Proxy__factory,
+  L1Sender__factory,
   LZEndpointMock__factory,
   StETHMock__factory,
 } from '@/generated-types/ethers';
-import { IBridge } from '@/generated-types/ethers/contracts/Bridge';
+import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
@@ -45,14 +45,14 @@ module.exports = async function (deployer: Deployer) {
   const ERC1967Proxy = await deployer.deploy(ERC1967Proxy__factory, [distributionImpl, '0x']);
   const distribution = Distribution__factory.connect(ERC1967Proxy.address, await deployer.getSigner());
 
-  const senderLzConfig: IBridge.LzConfigStruct = {
+  const senderLzConfig: IL1Sender.LzConfigStruct = {
     lzEndpoint: senderLzEndpoint,
     communicator: DefaultStorage.get('tokenControllerOnL2'),
     communicatorChainId: config.chainsConfig.receiverChainId,
   };
-  const bridge = await deployer.deploy(Bridge__factory, [l1GatewayRouter, stETH, senderLzConfig]);
+  const l1Sender = await deployer.deploy(L1Sender__factory, [l1GatewayRouter, stETH, senderLzConfig]);
 
-  await distribution.Distribution_init(stETH, bridge, config.pools || []);
+  await distribution.Distribution_init(stETH, l1Sender, config.pools || []);
 
   if (config.pools) {
     for (let i = 0; i < config.pools.length; i++) {
@@ -68,6 +68,6 @@ module.exports = async function (deployer: Deployer) {
   Reporter.reportContracts(
     ['StETH', stETH],
     ['Distribution', await distribution.getAddress()],
-    ['Bridge', await bridge.getAddress()],
+    ['L1Sender', await l1Sender.getAddress()],
   );
 };

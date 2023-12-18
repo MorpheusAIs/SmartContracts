@@ -1,4 +1,4 @@
-import { Bridge, LZEndpointMock, MOR, TokenController } from '@/generated-types/ethers';
+import { L1Sender, LZEndpointMock, MOR, TokenController } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
@@ -6,7 +6,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Reverter } from './helpers/reverter';
 
-describe('Bridge', () => {
+describe('L1Sender', () => {
   const senderChainId = 101;
   const receiverChainId = 110;
 
@@ -18,7 +18,7 @@ describe('Bridge', () => {
   let lZEndpointMockSender: LZEndpointMock;
   let lZEndpointMockReceiver: LZEndpointMock;
 
-  let bridge: Bridge;
+  let l1Sender: L1Sender;
   let tokenController: TokenController;
 
   let rewardToken: MOR;
@@ -26,11 +26,11 @@ describe('Bridge', () => {
     [OWNER, SECOND] = await ethers.getSigners();
     let investToken;
 
-    const [LZEndpointMock, TokenController, Mor, Bridge, StETHMock] = await Promise.all([
+    const [LZEndpointMock, TokenController, Mor, L1Sender, StETHMock] = await Promise.all([
       ethers.getContractFactory('LZEndpointMock', OWNER),
       ethers.getContractFactory('TokenController', OWNER),
       ethers.getContractFactory('MOR', OWNER),
-      ethers.getContractFactory('Bridge', OWNER),
+      ethers.getContractFactory('L1Sender', OWNER),
       ethers.getContractFactory('StETHMock', OWNER),
     ]);
 
@@ -46,9 +46,9 @@ describe('Bridge', () => {
       communicatorChainId: senderChainId,
     });
 
-    rewardToken = await Mor.deploy(tokenController, wei(100));
+    rewardToken = await Mor.deploy(wei(100));
 
-    bridge = await Bridge.deploy(ZERO_ADDR, ZERO_ADDR, {
+    l1Sender = await L1Sender.deploy(ZERO_ADDR, ZERO_ADDR, {
       lzEndpoint: lZEndpointMockSender,
       communicator: tokenController,
       communicatorChainId: receiverChainId,
@@ -56,7 +56,7 @@ describe('Bridge', () => {
 
     await tokenController.setParams(investToken, rewardToken, {
       lzEndpoint: lZEndpointMockReceiver,
-      communicator: bridge,
+      communicator: l1Sender,
       communicatorChainId: senderChainId,
     });
 
@@ -75,7 +75,7 @@ describe('Bridge', () => {
 
       const amount = wei(1);
 
-      const tx = await bridge.sendMintRewardMessage(SECOND, amount, { value: wei(0.5) });
+      const tx = await l1Sender.sendMintRewardMessage(SECOND, amount, { value: wei(0.5) });
       await expect(tx).changeTokenBalance(rewardToken, SECOND, amount);
       expect(await tokenController.nonce()).to.equal(1);
     });

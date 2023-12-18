@@ -11,9 +11,8 @@ describe('LinearDistributionIntervalDecrease', () => {
   let distribution: Distribution;
 
   before(async () => {
-    const [libFactory, MORFactory, stETHMockFactory, swapFactory] = await Promise.all([
+    const [libFactory, stETHMockFactory, swapFactory] = await Promise.all([
       ethers.getContractFactory('LinearDistributionIntervalDecrease'),
-      ethers.getContractFactory('MOR'),
       ethers.getContractFactory('StETHMock'),
       ethers.getContractFactory('Swap'),
     ]);
@@ -36,9 +35,7 @@ describe('LinearDistributionIntervalDecrease', () => {
     distribution = await distributionFactory.deploy();
     // END
 
-    const MOR = await MORFactory.deploy(distribution, wei(1000000000));
-
-    await distribution.Distribution_init(await MOR.getAddress(), await stETHMock.getAddress(), swap, []);
+    await distribution.Distribution_init(await stETHMock.getAddress(), swap, []);
 
     await reverter.snapshot();
   });

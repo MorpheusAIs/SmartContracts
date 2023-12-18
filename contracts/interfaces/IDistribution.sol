@@ -57,10 +57,10 @@ interface IDistribution {
     /**
      * The function to initialize the contract.
      * @param investToken_ The address of invest token.
-     * @param bridge_ The address of bridge contract.
+     * @param l1Sender_ The address of bridge contract.
      * @param poolsInfo_ The array of initial pools.
      */
-    function Distribution_init(address investToken_, address bridge_, Pool[] calldata poolsInfo_) external;
+    function Distribution_init(address investToken_, address l1Sender_, Pool[] calldata poolsInfo_) external;
 
     /**
      * The function to create a new pool.

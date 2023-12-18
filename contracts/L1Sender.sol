@@ -10,9 +10,9 @@ import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IMOR} from "./interfaces/IMOR.sol";
-import {IBridge} from "./interfaces/IBridge.sol";
+import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
-contract Bridge is IBridge, ERC165, Ownable {
+contract L1Sender is IL1Sender, ERC165, Ownable {
     using SafeERC20 for IERC20;
 
     address public l1GatewayRouter;

@@ -1,9 +1,9 @@
 import {
-  Bridge,
   Distribution,
   DistributionV2,
   Distribution__factory,
   IDistribution,
+  L1Sender,
   LZEndpointMock,
   LinearDistributionIntervalDecrease,
   MOR,
@@ -42,7 +42,7 @@ describe('Distribution', () => {
   let lZEndpointMockSender: LZEndpointMock;
   let lZEndpointMockReceiver: LZEndpointMock;
 
-  let bridge: Bridge;
+  let l1Sender: L1Sender;
   let tokenController: TokenController;
 
   before(async () => {
@@ -56,7 +56,7 @@ describe('Distribution', () => {
       ERC1967ProxyFactory,
       MORFactory,
       stETHMockFactory,
-      bridgeFactory,
+      l1SenderFactory,
       LZEndpointMock,
       TokenController,
     ] = await Promise.all([
@@ -64,7 +64,7 @@ describe('Distribution', () => {
       ethers.getContractFactory('ERC1967Proxy'),
       ethers.getContractFactory('MOR'),
       ethers.getContractFactory('StETHMock'),
-      ethers.getContractFactory('Bridge'),
+      ethers.getContractFactory('L1Sender'),
       ethers.getContractFactory('LZEndpointMock'),
       ethers.getContractFactory('TokenController'),
     ]);
@@ -84,7 +84,7 @@ describe('Distribution', () => {
       communicatorChainId: senderChainId,
     });
 
-    bridge = await bridgeFactory.deploy(
+    l1Sender = await l1SenderFactory.deploy(
       ZERO_ADDR,
       ZERO_ADDR,
       {
@@ -116,13 +116,13 @@ describe('Distribution', () => {
 
     await tokenController.setParams(investToken, rewardToken, {
       lzEndpoint: lZEndpointMockReceiver,
-      communicator: bridge,
+      communicator: l1Sender,
       communicatorChainId: senderChainId,
     });
 
     await lZEndpointMockSender.setDestLzEndpoint(tokenController, lZEndpointMockReceiver);
 
-    await distribution.Distribution_init(investToken, bridge, []);
+    await distribution.Distribution_init(investToken, l1Sender, []);
 
     await Promise.all([investToken.mint(ownerAddress, wei(1000)), investToken.mint(secondAddress, wei(1000))]);
     await Promise.all([
@@ -130,7 +130,7 @@ describe('Distribution', () => {
       investToken.connect(SECOND).approve(distributionAddress, wei(1000)),
     ]);
 
-    await bridge.transferOwnership(distributionAddress);
+    await l1Sender.transferOwnership(distributionAddress);
 
     await reverter.snapshot();
   });
@@ -154,7 +154,7 @@ describe('Distribution', () => {
         };
 
         const distribution = await distributionFactory.deploy();
-        await distribution.Distribution_init(investToken, bridge, [pool1, pool2]);
+        await distribution.Distribution_init(investToken, l1Sender, [pool1, pool2]);
 
         const pool1Data: IDistribution.PoolStruct = await distribution.pools(0);
         expect(_comparePoolStructs(pool1, pool1Data)).to.be.true;
@@ -165,7 +165,7 @@ describe('Distribution', () => {
       it('should revert if try to call init function twice', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        await expect(distribution.Distribution_init(investToken, bridge, [])).to.be.rejectedWith(reason);
+        await expect(distribution.Distribution_init(investToken, l1Sender, [])).to.be.rejectedWith(reason);
       });
     });
 

@@ -9,10 +9,10 @@ import {
   TokenController__factory,
   WStETHMock__factory,
 } from '@/generated-types/ethers';
-import { IBridge } from '@/generated-types/ethers/contracts/Bridge';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
 import { parseConfig } from './helpers/config-parser';
+import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
@@ -71,7 +71,7 @@ module.exports = async function (deployer: Deployer) {
   };
   const swap = await deployer.deploy(Swap__factory, [swapRouter, nonfungiblePositionManager, swapParams]);
 
-  const receiverLzConfig: IBridge.LzConfigStruct = {
+  const receiverLzConfig: IL1Sender.LzConfigStruct = {
     lzEndpoint: receiverLzEndpoint,
     communicator: ZERO_ADDR, // TODO: set correct address of Bridge
     communicatorChainId: config.chainsConfig.senderChainId,

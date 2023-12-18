@@ -10,7 +10,7 @@ import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionInter
 
 import {IDistribution} from "./interfaces/IDistribution.sol";
 import {IMOR} from "./interfaces/IMOR.sol";
-import {Bridge} from "./Bridge.sol";
+import {L1Sender} from "./L1Sender.sol";
 
 contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
@@ -18,7 +18,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     bool public isNotUpgradeable;
 
     address public investToken;
-    address public bridge;
+    address public l1Sender;
 
     // Pool storage
     Pool[] public pools;
@@ -41,7 +41,11 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** Init                                                                                   ***/
     /**********************************************************************************************/
-    function Distribution_init(address investToken_, address bridge_, Pool[] calldata poolsInfo_) external initializer {
+    function Distribution_init(
+        address investToken_,
+        address l1Sender_,
+        Pool[] calldata poolsInfo_
+    ) external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
 
@@ -49,10 +53,10 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             createPool(poolsInfo_[i]);
         }
 
-        IERC20(investToken_).approve(bridge_, type(uint256).max);
+        IERC20(investToken_).approve(l1Sender_, type(uint256).max);
 
         investToken = investToken_;
-        bridge = bridge_;
+        l1Sender = l1Sender_;
     }
 
     /**********************************************************************************************/
@@ -159,7 +163,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.pendingRewards = 0;
 
         // Transfer rewards
-        Bridge(bridge).sendMintRewardMessage(user_, pendingRewards_);
+        L1Sender(l1Sender).sendMintRewardMessage(user_, pendingRewards_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
@@ -257,7 +261,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.invested = newInvested_;
         userData.pendingRewards = 0;
 
-        Bridge(bridge).sendMintRewardMessage(user_, pendingRewards_);
+        L1Sender(l1Sender).sendMintRewardMessage(user_, pendingRewards_);
 
         if (pool.isPublic) {
             totalInvestedInPublicPools -= amount_;
@@ -313,7 +317,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
-        Bridge(bridge).bridgeInvestTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        L1Sender(l1Sender).bridgeInvestTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

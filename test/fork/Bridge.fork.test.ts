@@ -1,5 +1,5 @@
 import {
-  Bridge,
+  L1Sender,
   IGatewayRouter,
   IGatewayRouter__factory,
   IStETH,
@@ -14,7 +14,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Reverter } from '../helpers/reverter';
 
-describe('Bridge', () => {
+describe('L1Sender', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
@@ -28,7 +28,7 @@ describe('Bridge', () => {
   const richAddress = '0xE53FFF67f9f384d20Ebea36F43b93DC49Ed22753';
 
   let l1GatewayRouter: IGatewayRouter;
-  let bridge: Bridge;
+  let l1Sender: L1Sender;
 
   let steth: IStETH;
   let investToken: IWStETH;
@@ -48,8 +48,8 @@ describe('Bridge', () => {
     investToken = IWStETH__factory.connect(wstethAddress, OWNER);
     steth = IStETH__factory.connect(stethAddress, OWNER);
 
-    const Bridge = await ethers.getContractFactory('Bridge', OWNER);
-    bridge = await Bridge.deploy(l1GatewayRouter, investToken, {
+    const L1Sender = await ethers.getContractFactory('L1Sender', OWNER);
+    l1Sender = await L1Sender.deploy(l1GatewayRouter, investToken, {
       lzEndpoint: lzEndpointAddress,
       communicator: ZERO_ADDR,
       communicatorChainId: 110, // Arbitrum
@@ -71,16 +71,16 @@ describe('Bridge', () => {
 
   describe('constructor', () => {
     it('should set the investToken', async () => {
-      expect(await bridge.investToken()).to.equal(await investToken.getAddress());
+      expect(await l1Sender.investToken()).to.equal(await investToken.getAddress());
     });
     it('should set the router', async () => {
-      expect(await bridge.l1GatewayRouter()).to.equal(await l1GatewayRouter.getAddress());
+      expect(await l1Sender.l1GatewayRouter()).to.equal(await l1GatewayRouter.getAddress());
     });
   });
 
   describe('bridgeInvestTokens', () => {
     beforeEach(async () => {
-      await investToken.approve(bridge, ethers.MaxUint256);
+      await investToken.approve(l1Sender, ethers.MaxUint256);
     });
     it('should bridge investTokens', async () => {
       const amount = wei(0.01);
@@ -90,11 +90,11 @@ describe('Bridge', () => {
       //                          738_253_009_388_160
       //                          290_990_833_929_152
 
-      await bridge.bridgeInvestTokens.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.bridgeInvestTokens.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
 
-      await bridge.bridgeInvestTokens(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.bridgeInvestTokens(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
     });
@@ -102,13 +102,13 @@ describe('Bridge', () => {
 
   describe('sendMintRewardMessage', () => {
     it('should just sendMintRewardMessage', async () => {
-      await bridge.sendMintRewardMessage(SECOND, wei(1), {
+      await l1Sender.sendMintRewardMessage(SECOND, wei(1), {
         value: wei(1),
       });
     });
     it('should revert if not called by the owner', async () => {
       await expect(
-        bridge.connect(SECOND).sendMintRewardMessage(SECOND, wei(1), {
+        l1Sender.connect(SECOND).sendMintRewardMessage(SECOND, wei(1), {
           value: wei(1),
         }),
       ).to.be.revertedWith('Ownable: caller is not the owner');

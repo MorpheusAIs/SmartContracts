@@ -8,7 +8,7 @@ import {ILayerZeroReceiver} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/int
 
 import {IMOR} from "./interfaces/IMOR.sol";
 import {ISwap} from "./interfaces/ISwap.sol";
-import {IBridge} from "./interfaces/IBridge.sol";
+import {IL1Sender} from "./interfaces/IL1Sender.sol";
 import {ITokenController} from "./interfaces/ITokenController.sol";
 
 contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
@@ -18,9 +18,9 @@ contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
 
     uint64 public nonce;
 
-    IBridge.LzConfig public config;
+    IL1Sender.LzConfig public config;
 
-    constructor(address investToken_, address rewardToken_, address swap_, IBridge.LzConfig memory config_) {
+    constructor(address investToken_, address rewardToken_, address swap_, IL1Sender.LzConfig memory config_) {
         investToken = investToken_;
         rewardToken = rewardToken_;
         swap = swap_;
@@ -29,7 +29,11 @@ contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
         IERC20(investToken_).approve(swap, type(uint256).max);
     }
 
-    function setParams(address investToken_, address rewardToken_, IBridge.LzConfig memory config_) external onlyOwner {
+    function setParams(
+        address investToken_,
+        address rewardToken_,
+        IL1Sender.LzConfig memory config_
+    ) external onlyOwner {
         investToken = investToken_;
         rewardToken = rewardToken_;
         config = config_;
