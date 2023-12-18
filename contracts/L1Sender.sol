@@ -7,14 +7,12 @@ import {IGatewayRouter} from "@arbitrum/token-bridge-contracts/contracts/tokenbr
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
 contract L1Sender is IL1Sender, ERC165, Ownable {
-    using SafeERC20 for IERC20;
-
     address public l1GatewayRouter;
     address public depositToken;
 
@@ -27,14 +25,12 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
     }
 
     function sendTokensOnSwap(
-        uint256 amount_,
         address recipient_,
         uint256 gasLimit_,
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
     ) external payable returns (bytes memory) {
-        IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
-        IERC20(depositToken).approve(IGatewayRouter(l1GatewayRouter).getGateway(depositToken), amount_);
+        IERC20(depositToken).approve(IGatewayRouter(l1GatewayRouter).getGateway(depositToken), type(uint256).max);
 
         bytes memory data = abi.encode(maxSubmissionCost_, "");
 
@@ -42,7 +38,7 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
             IGatewayRouter(l1GatewayRouter).outboundTransfer{value: msg.value}(
                 depositToken,
                 recipient_,
-                amount_,
+                IERC20(depositToken).balanceOf(address(this)),
                 gasLimit_,
                 maxFeePerGas_,
                 data

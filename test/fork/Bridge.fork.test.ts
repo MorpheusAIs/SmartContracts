@@ -79,22 +79,20 @@ describe('L1Sender', () => {
   });
 
   describe('sendTokensOnSwap', () => {
-    beforeEach(async () => {
-      await depositToken.approve(l1Sender, ethers.MaxUint256);
-    });
     it('should bridge depositTokens', async () => {
       const amount = wei(0.01);
+      await depositToken.transfer(l1Sender, amount);
       const gasLimit = 1_000_000; // about 72_000
       const maxFeePerGas = 1_000_000_000; // always 300_000_000
       const maxSubmissionCost = 1_000_000_000_000_000; // different
       //                          738_253_009_388_160
       //                          290_990_833_929_152
 
-      await l1Sender.sendTokensOnSwap.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.sendTokensOnSwap.staticCall(SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
 
-      await l1Sender.sendTokensOnSwap(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.sendTokensOnSwap(SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
     });

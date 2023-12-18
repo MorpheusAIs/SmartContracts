@@ -72,7 +72,7 @@ contract L2Receiver is IL2Receiver, ILayerZeroReceiver, Ownable {
         _mintRewardTokens(user_, amount_);
     }
 
-    function _mintRewardTokens(address user_, uint256 amount_) internal {
+    function _mintRewardTokens(address user_, uint256 amount_) private {
         uint256 maxAmount_ = IMOR(rewardToken).cap() - IMOR(rewardToken).totalSupply();
 
         if (amount_ == 0 || maxAmount_ == 0) {

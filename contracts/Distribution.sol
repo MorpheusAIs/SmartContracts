@@ -53,8 +53,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             createPool(poolsInfo_[i]);
         }
 
-        IERC20(depositToken_).approve(l1Sender_, type(uint256).max);
-
         depositToken = depositToken_;
         l1Sender = l1Sender_;
     }
@@ -317,7 +315,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
-        L1Sender(l1Sender).sendTokensOnSwap(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        IERC20(depositToken).safeTransfer(l1Sender, overplus_);
+
+        L1Sender(l1Sender).sendTokensOnSwap(recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/
