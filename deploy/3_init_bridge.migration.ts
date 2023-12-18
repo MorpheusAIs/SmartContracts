@@ -13,7 +13,7 @@ module.exports = async function (deployer: Deployer) {
     communicatorChainId: (await tokenController.config()).communicatorChainId,
   };
   await tokenController.setParams(
-    await tokenController.investToken(),
+    await tokenController.depositToken(),
     await tokenController.rewardToken(),
     tokenControllerConfig,
   );

@@ -16,31 +16,31 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
     using SafeERC20 for IERC20;
 
     address public l1GatewayRouter;
-    address public investToken;
+    address public depositToken;
 
     LzConfig public config;
 
-    constructor(address l1GatewayRouter_, address investToken_, LzConfig memory config_) payable {
+    constructor(address l1GatewayRouter_, address depositToken_, LzConfig memory config_) payable {
         l1GatewayRouter = l1GatewayRouter_;
-        investToken = investToken_;
+        depositToken = depositToken_;
         config = config_;
     }
 
-    function bridgeInvestTokens(
+    function bridgedepositTokens(
         uint256 amount_,
         address recipient_,
         uint256 gasLimit_,
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
     ) external payable returns (bytes memory) {
-        IERC20(investToken).safeTransferFrom(_msgSender(), address(this), amount_);
-        IERC20(investToken).approve(IGatewayRouter(l1GatewayRouter).getGateway(investToken), amount_);
+        IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
+        IERC20(depositToken).approve(IGatewayRouter(l1GatewayRouter).getGateway(depositToken), amount_);
 
         bytes memory data = abi.encode(maxSubmissionCost_, "");
 
         return
             IGatewayRouter(l1GatewayRouter).outboundTransfer{value: msg.value}(
-                investToken,
+                depositToken,
                 recipient_,
                 amount_,
                 gasLimit_,

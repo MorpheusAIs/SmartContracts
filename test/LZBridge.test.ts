@@ -24,7 +24,7 @@ describe('L1Sender', () => {
   let rewardToken: MOR;
   before(async () => {
     [OWNER, SECOND] = await ethers.getSigners();
-    let investToken;
+    let depositToken;
 
     const [LZEndpointMock, TokenController, Mor, L1Sender, StETHMock] = await Promise.all([
       ethers.getContractFactory('LZEndpointMock', OWNER),
@@ -34,13 +34,13 @@ describe('L1Sender', () => {
       ethers.getContractFactory('StETHMock', OWNER),
     ]);
 
-    [lZEndpointMockSender, lZEndpointMockReceiver, investToken] = await Promise.all([
+    [lZEndpointMockSender, lZEndpointMockReceiver, depositToken] = await Promise.all([
       LZEndpointMock.deploy(senderChainId),
       LZEndpointMock.deploy(receiverChainId),
       StETHMock.deploy(),
     ]);
 
-    tokenController = await TokenController.deploy(investToken, ZERO_ADDR, investToken, {
+    tokenController = await TokenController.deploy(depositToken, ZERO_ADDR, depositToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: ZERO_ADDR,
       communicatorChainId: senderChainId,
@@ -54,7 +54,7 @@ describe('L1Sender', () => {
       communicatorChainId: receiverChainId,
     });
 
-    await tokenController.setParams(investToken, rewardToken, {
+    await tokenController.setParams(depositToken, rewardToken, {
       lzEndpoint: lZEndpointMockReceiver,
       communicator: l1Sender,
       communicatorChainId: senderChainId,

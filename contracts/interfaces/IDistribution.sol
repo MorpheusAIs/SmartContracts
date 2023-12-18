@@ -32,22 +32,22 @@ interface IDistribution {
      * The structure that stores the pool's rate data.
      * @param lastUpdate The timestamp when the pool was updated.
      * @param rate The current reward rate.
-     * @param totalInvested The total amount of tokens invested in the pool.
+     * @param totalDeposited The total amount of tokens deposited in the pool.
      */
     struct PoolData {
         uint128 lastUpdate;
         uint256 rate;
-        uint256 totalInvested;
+        uint256 totalDeposited;
     }
 
     /**
      * The structure that stores the user's rate data of pool.
-     * @param invested The amount of tokens invested in the pool.
+     * @param deposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      */
     struct UserData {
-        uint256 invested;
+        uint256 deposited;
         uint256 rate;
         uint256 pendingRewards;
     }
@@ -56,11 +56,11 @@ interface IDistribution {
 
     /**
      * The function to initialize the contract.
-     * @param investToken_ The address of invest token.
+     * @param depositToken_ The address of deposit token.
      * @param l1Sender_ The address of bridge contract.
      * @param poolsInfo_ The array of initial pools.
      */
-    function Distribution_init(address investToken_, address l1Sender_, Pool[] calldata poolsInfo_) external;
+    function Distribution_init(address depositToken_, address l1Sender_, Pool[] calldata poolsInfo_) external;
 
     /**
      * The function to create a new pool.
@@ -122,13 +122,13 @@ interface IDistribution {
     function getCurrentUserReward(uint256 poolId_, address user_) external view returns (uint256);
 
     /**
-     * The function to calculate the total overplus of the staked invest tokens.
+     * The function to calculate the total overplus of the staked deposit tokens.
      * @return The total overplus amount.
      */
     function overplus() external view returns (uint256);
 
     /**
-     * The function to bridge the overplus of the staked invest tokens.
+     * The function to bridge the overplus of the staked deposit tokens.
      * @param recipient_ The recipient's address.
      * @param gasLimit_ The gas limit.
      * @param maxFeePerGas_ The max fee per gas.
@@ -153,15 +153,15 @@ interface IDistribution {
     function isNotUpgradeable() external view returns (bool);
 
     /**
-     * The function to get the address of invest token.
-     * @return The address of invest token.
+     * The function to get the address of deposit token.
+     * @return The address of deposit token.
      */
-    function investToken() external view returns (address);
+    function depositToken() external view returns (address);
 
     /**
-     * The function to get the amount of invest tokens that are staked in the pool.
+     * The function to get the amount of deposit tokens that are staked in the pool.
      * @dev The value accumulates the amount amount despite the rate differences.
-     * @return The amount of invest tokens.
+     * @return The amount of deposit tokens.
      */
-    function totalInvestedInPublicPools() external view returns (uint256);
+    function totalDepositedInPublicPools() external view returns (uint256);
 }

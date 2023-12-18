@@ -9,7 +9,7 @@ module.exports = async function (deployer: Deployer) {
     await deployer.getSigner(),
   );
 
-  console.log(await distribution.investToken());
+  console.log(await distribution.depositToken());
 
   const newPoolParams: IDistribution.PoolStruct = {
     payoutStart: 1702499135,

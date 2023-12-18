@@ -1,11 +1,11 @@
 import {
-  L1Sender,
   IGatewayRouter,
   IGatewayRouter__factory,
   IStETH,
   IStETH__factory,
   IWStETH,
   IWStETH__factory,
+  L1Sender,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
@@ -31,7 +31,7 @@ describe('L1Sender', () => {
   let l1Sender: L1Sender;
 
   let steth: IStETH;
-  let investToken: IWStETH;
+  let depositToken: IWStETH;
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
       {
@@ -45,18 +45,18 @@ describe('L1Sender', () => {
     [, SECOND] = await ethers.getSigners();
 
     l1GatewayRouter = IGatewayRouter__factory.connect(l1GatewayRouterAddress, OWNER);
-    investToken = IWStETH__factory.connect(wstethAddress, OWNER);
+    depositToken = IWStETH__factory.connect(wstethAddress, OWNER);
     steth = IStETH__factory.connect(stethAddress, OWNER);
 
     const L1Sender = await ethers.getContractFactory('L1Sender', OWNER);
-    l1Sender = await L1Sender.deploy(l1GatewayRouter, investToken, {
+    l1Sender = await L1Sender.deploy(l1GatewayRouter, depositToken, {
       lzEndpoint: lzEndpointAddress,
       communicator: ZERO_ADDR,
       communicatorChainId: 110, // Arbitrum
     });
 
-    await steth.approve(investToken, ethers.MaxUint256);
-    await investToken.wrap(wei(100));
+    await steth.approve(depositToken, ethers.MaxUint256);
+    await depositToken.wrap(wei(100));
 
     await reverter.snapshot();
   });
@@ -70,19 +70,19 @@ describe('L1Sender', () => {
   });
 
   describe('constructor', () => {
-    it('should set the investToken', async () => {
-      expect(await l1Sender.investToken()).to.equal(await investToken.getAddress());
+    it('should set the depositToken', async () => {
+      expect(await l1Sender.depositToken()).to.equal(await depositToken.getAddress());
     });
     it('should set the router', async () => {
       expect(await l1Sender.l1GatewayRouter()).to.equal(await l1GatewayRouter.getAddress());
     });
   });
 
-  describe('bridgeInvestTokens', () => {
+  describe('bridgedepositTokens', () => {
     beforeEach(async () => {
-      await investToken.approve(l1Sender, ethers.MaxUint256);
+      await depositToken.approve(l1Sender, ethers.MaxUint256);
     });
-    it('should bridge investTokens', async () => {
+    it('should bridge depositTokens', async () => {
       const amount = wei(0.01);
       const gasLimit = 1_000_000; // about 72_000
       const maxFeePerGas = 1_000_000_000; // always 300_000_000
@@ -90,11 +90,11 @@ describe('L1Sender', () => {
       //                          738_253_009_388_160
       //                          290_990_833_929_152
 
-      await l1Sender.bridgeInvestTokens.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.bridgedepositTokens.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
 
-      await l1Sender.bridgeInvestTokens(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.bridgedepositTokens(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
     });

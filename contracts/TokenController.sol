@@ -12,7 +12,7 @@ import {IL1Sender} from "./interfaces/IL1Sender.sol";
 import {ITokenController} from "./interfaces/ITokenController.sol";
 
 contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
-    address public investToken;
+    address public depositToken;
     address public rewardToken;
     address public swap;
 
@@ -20,21 +20,21 @@ contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
 
     IL1Sender.LzConfig public config;
 
-    constructor(address investToken_, address rewardToken_, address swap_, IL1Sender.LzConfig memory config_) {
-        investToken = investToken_;
+    constructor(address depositToken_, address rewardToken_, address swap_, IL1Sender.LzConfig memory config_) {
+        depositToken = depositToken_;
         rewardToken = rewardToken_;
         swap = swap_;
         config = config_;
 
-        IERC20(investToken_).approve(swap, type(uint256).max);
+        IERC20(depositToken_).approve(swap, type(uint256).max);
     }
 
     function setParams(
-        address investToken_,
+        address depositToken_,
         address rewardToken_,
         IL1Sender.LzConfig memory config_
     ) external onlyOwner {
-        investToken = investToken_;
+        depositToken = depositToken_;
         rewardToken = rewardToken_;
         config = config_;
     }
@@ -44,7 +44,7 @@ contract TokenController is ITokenController, ILayerZeroReceiver, Ownable {
 
         ISwap(swap).increaseLiquidityCurrentRange(
             tokenId_,
-            IERC20(investToken).balanceOf(address(this)),
+            IERC20(depositToken).balanceOf(address(this)),
             IERC20(rewardToken).balanceOf(address(this))
         );
     }

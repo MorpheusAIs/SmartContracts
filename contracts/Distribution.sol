@@ -17,7 +17,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     bool public isNotUpgradeable;
 
-    address public investToken;
+    address public depositToken;
     address public l1Sender;
 
     // Pool storage
@@ -27,8 +27,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     // User storage
     mapping(address => mapping(uint256 => UserData)) public usersData;
 
-    // Total invested storage
-    uint256 public totalInvestedInPublicPools;
+    // Total deposited storage
+    uint256 public totalDepositedInPublicPools;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -42,7 +42,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /*** Init                                                                                   ***/
     /**********************************************************************************************/
     function Distribution_init(
-        address investToken_,
+        address depositToken_,
         address l1Sender_,
         Pool[] calldata poolsInfo_
     ) external initializer {
@@ -53,9 +53,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             createPool(poolsInfo_[i]);
         }
 
-        IERC20(investToken_).approve(l1Sender_, type(uint256).max);
+        IERC20(depositToken_).approve(l1Sender_, type(uint256).max);
 
-        investToken = investToken_;
+        depositToken = depositToken_;
         l1Sender = l1Sender_;
     }
 
@@ -123,12 +123,12 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             address user_ = users_[i];
             uint256 amount_ = amounts_[i];
 
-            uint256 invested_ = usersData[user_][poolId_].invested;
+            uint256 deposited_ = usersData[user_][poolId_].deposited;
 
-            if (invested_ < amount_) {
-                _stake(user_, poolId_, amount_ - invested_, currentPoolRate_);
-            } else if (invested_ > amount_) {
-                _withdraw(user_, poolId_, invested_ - amount_, currentPoolRate_);
+            if (deposited_ < amount_) {
+                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_);
+            } else if (deposited_ > amount_) {
+                _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
             }
         }
     }
@@ -147,7 +147,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        require(userData.invested > 0, "DS: user isn't staked");
+        require(userData.deposited > 0, "DS: user isn't staked");
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
@@ -192,15 +192,15 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         if (pool.isPublic) {
             // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
-            uint256 balanceBefore_ = IERC20(investToken).balanceOf(address(this));
-            IERC20(investToken).safeTransferFrom(_msgSender(), address(this), amount_);
-            uint256 balanceAfter_ = IERC20(investToken).balanceOf(address(this));
+            uint256 balanceBefore_ = IERC20(depositToken).balanceOf(address(this));
+            IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
+            uint256 balanceAfter_ = IERC20(depositToken).balanceOf(address(this));
 
             amount_ = balanceAfter_ - balanceBefore_;
 
-            require(userData.invested + amount_ >= pool.minimalStake, "DS: amount too low");
+            require(userData.deposited + amount_ >= pool.minimalStake, "DS: amount too low");
 
-            totalInvestedInPublicPools += amount_;
+            totalDepositedInPublicPools += amount_;
         }
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
@@ -208,11 +208,11 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
-        poolData.totalInvested += amount_;
+        poolData.totalDeposited += amount_;
 
         // Update user data
         userData.rate = currentPoolRate_;
-        userData.invested += amount_;
+        userData.deposited += amount_;
     }
 
     function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
@@ -220,33 +220,33 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        uint256 invested_ = userData.invested;
-        require(invested_ > 0, "DS: user isn't staked");
+        uint256 deposited_ = userData.deposited;
+        require(deposited_ > 0, "DS: user isn't staked");
 
-        if (amount_ > invested_) {
-            amount_ = invested_;
+        if (amount_ > deposited_) {
+            amount_ = deposited_;
         }
 
-        uint256 newInvested_;
+        uint256 newDeposited_;
         if (pool.isPublic) {
             require(
                 block.timestamp < pool.payoutStart || block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
                 "DS: pool withdraw is locked"
             );
 
-            uint256 investTokenContractBalance = IERC20(investToken).balanceOf(address(this));
-            if (amount_ > investTokenContractBalance) {
-                amount_ = investTokenContractBalance;
+            uint256 depositTokenContractBalance = IERC20(depositToken).balanceOf(address(this));
+            if (amount_ > depositTokenContractBalance) {
+                amount_ = depositTokenContractBalance;
             }
 
-            newInvested_ = invested_ - amount_;
+            newDeposited_ = deposited_ - amount_;
 
             require(
-                amount_ > 0 && (newInvested_ >= pool.minimalStake || newInvested_ == 0),
+                amount_ > 0 && (newDeposited_ >= pool.minimalStake || newDeposited_ == 0),
                 "DS: invalid withdraw amount"
             );
         } else {
-            newInvested_ = invested_ - amount_;
+            newDeposited_ = deposited_ - amount_;
         }
 
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
@@ -254,19 +254,19 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
-        poolData.totalInvested -= amount_;
+        poolData.totalDeposited -= amount_;
 
         // Update user data
         userData.rate = currentPoolRate_;
-        userData.invested = newInvested_;
+        userData.deposited = newDeposited_;
         userData.pendingRewards = 0;
 
         L1Sender(l1Sender).sendMintRewardMessage(user_, pendingRewards_);
 
         if (pool.isPublic) {
-            totalInvestedInPublicPools -= amount_;
+            totalDepositedInPublicPools -= amount_;
 
-            IERC20(investToken).safeTransfer(user_, amount_);
+            IERC20(depositToken).safeTransfer(user_, amount_);
         }
     }
 
@@ -274,7 +274,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 currentPoolRate_,
         UserData memory userData_
     ) internal pure returns (uint256) {
-        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.invested) / PRECISION;
+        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.deposited) / PRECISION;
 
         return userData_.pendingRewards + newRewards_;
     }
@@ -282,13 +282,13 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     function _getCurrentPoolRate(uint256 poolId_) internal view returns (uint256) {
         PoolData storage poolData = poolsData[poolId_];
 
-        if (poolData.totalInvested == 0) {
+        if (poolData.totalDeposited == 0) {
             return poolData.rate;
         }
 
         uint256 rewards_ = getPeriodReward(poolId_, poolData.lastUpdate, uint128(block.timestamp));
 
-        return poolData.rate + (rewards_ * PRECISION) / poolData.totalInvested;
+        return poolData.rate + (rewards_ * PRECISION) / poolData.totalDeposited;
     }
 
     function _poolExists(uint256 poolId_) internal view returns (bool) {
@@ -300,12 +300,12 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
 
     function overplus() public view returns (uint256) {
-        uint256 investTokenContractBalance = IERC20(investToken).balanceOf(address(this));
-        if (investTokenContractBalance <= totalInvestedInPublicPools) {
+        uint256 depositTokenContractBalance = IERC20(depositToken).balanceOf(address(this));
+        if (depositTokenContractBalance <= totalDepositedInPublicPools) {
             return 0;
         }
 
-        return investTokenContractBalance - totalInvestedInPublicPools;
+        return depositTokenContractBalance - totalDepositedInPublicPools;
     }
 
     function bridgeOverplus(
@@ -317,7 +317,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
-        L1Sender(l1Sender).bridgeInvestTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        L1Sender(l1Sender).bridgedepositTokens(overplus_, recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

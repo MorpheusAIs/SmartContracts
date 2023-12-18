@@ -67,7 +67,7 @@ contract Swap is ISwap, ERC165, Ownable {
 
     function increaseLiquidityCurrentRange(
         uint256 tokenId_,
-        uint256 investTokenAmountAdd_,
+        uint256 depositTokenAmountAdd_,
         uint256 rewardTokenAmountAdd_
     ) external returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
         uint256 amountAdd0_;
@@ -77,11 +77,11 @@ contract Swap is ISwap, ERC165, Ownable {
             tokenId_
         );
         if (token0 == params.tokenIn) {
-            amountAdd0_ = investTokenAmountAdd_;
+            amountAdd0_ = depositTokenAmountAdd_;
             amountAdd1_ = rewardTokenAmountAdd_;
         } else {
             amountAdd0_ = rewardTokenAmountAdd_;
-            amountAdd1_ = investTokenAmountAdd_;
+            amountAdd1_ = depositTokenAmountAdd_;
         }
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params_ = INonfungiblePositionManager

@@ -47,7 +47,7 @@ describe('TokenController', () => {
 
   describe('constructor', () => {
     it('should set params', async () => {
-      expect(await tokenController.investToken()).to.be.equal(await steth.getAddress());
+      expect(await tokenController.depositToken()).to.be.equal(await steth.getAddress());
       expect(await tokenController.rewardToken()).to.be.equal(await mor.getAddress());
       expect(await tokenController.swap()).to.be.equal(await THIRD.getAddress());
 
@@ -69,7 +69,7 @@ describe('TokenController', () => {
         communicatorChainId: 1,
       });
 
-      expect(await tokenController.investToken()).to.be.equal(await mor.getAddress());
+      expect(await tokenController.depositToken()).to.be.equal(await mor.getAddress());
       expect(await tokenController.rewardToken()).to.be.equal(await steth.getAddress());
 
       expect(await tokenController.config()).to.be.deep.equal([ZERO_ADDR, await SECOND.getAddress(), 1n]);
