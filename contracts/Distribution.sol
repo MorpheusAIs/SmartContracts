@@ -163,7 +163,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.pendingRewards = 0;
 
         // Transfer rewards
-        L1Sender(l1Sender).sendMintRewardMessage(user_, pendingRewards_);
+        L1Sender(l1Sender).sendMintMessage(user_, pendingRewards_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
@@ -261,7 +261,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.deposited = newDeposited_;
         userData.pendingRewards = 0;
 
-        L1Sender(l1Sender).sendMintRewardMessage(user_, pendingRewards_);
+        L1Sender(l1Sender).sendMintMessage(user_, pendingRewards_);
 
         if (pool.isPublic) {
             totalDepositedInPublicPools -= amount_;

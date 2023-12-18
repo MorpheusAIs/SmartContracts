@@ -49,7 +49,7 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
             );
     }
 
-    function sendMintRewardMessage(address user_, uint256 amount_) external payable onlyOwner {
+    function sendMintMessage(address user_, uint256 amount_) external payable onlyOwner {
         bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.communicator, address(this));
         bytes memory payload_ = abi.encode(user_, amount_);
 

@@ -69,13 +69,13 @@ describe('L1Sender', () => {
     await reverter.revert();
   });
 
-  describe('sendMintRewardMessage', () => {
-    it('should sendMintRewardMessage', async () => {
+  describe('sendMintMessage', () => {
+    it('should sendMintMessage', async () => {
       expect(await tokenController.nonce()).to.equal(0);
 
       const amount = wei(1);
 
-      const tx = await l1Sender.sendMintRewardMessage(SECOND, amount, { value: wei(0.5) });
+      const tx = await l1Sender.sendMintMessage(SECOND, amount, { value: wei(0.5) });
       await expect(tx).changeTokenBalance(rewardToken, SECOND, amount);
       expect(await tokenController.nonce()).to.equal(1);
     });

@@ -100,15 +100,15 @@ describe('L1Sender', () => {
     });
   });
 
-  describe('sendMintRewardMessage', () => {
-    it('should just sendMintRewardMessage', async () => {
-      await l1Sender.sendMintRewardMessage(SECOND, wei(1), {
+  describe('sendMintMessage', () => {
+    it('should just sendMintMessage', async () => {
+      await l1Sender.sendMintMessage(SECOND, wei(1), {
         value: wei(1),
       });
     });
     it('should revert if not called by the owner', async () => {
       await expect(
-        l1Sender.connect(SECOND).sendMintRewardMessage(SECOND, wei(1), {
+        l1Sender.connect(SECOND).sendMintMessage(SECOND, wei(1), {
           value: wei(1),
         }),
       ).to.be.revertedWith('Ownable: caller is not the owner');
