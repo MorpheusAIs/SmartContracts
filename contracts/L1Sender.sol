@@ -26,7 +26,7 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
         config = config_;
     }
 
-    function bridgedepositTokens(
+    function sendTokensOnSwap(
         uint256 amount_,
         address recipient_,
         uint256 gasLimit_,

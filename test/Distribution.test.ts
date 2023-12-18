@@ -704,7 +704,7 @@ describe('Distribution', () => {
       await setNextTime(oneHour * 2);
       await distribution.connect(SECOND).stake(poolId, wei(1));
 
-      // Redepositment 1 day after the start of reward payment
+      // Deposit 1 day after the start of reward payment
       await setNextTime(oneDay + oneDay);
       await distribution.connect(SECOND).stake(poolId, wei(1));
 
@@ -722,7 +722,7 @@ describe('Distribution', () => {
       expect(userData.deposited).to.eq(wei(2));
       expect(userData.pendingRewards).to.eq(0);
 
-      // Redepositment 4 days after the start of reward payment
+      // Deposit 4 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 4);
       await distribution.connect(SECOND).stake(poolId, wei(1));
 
@@ -816,7 +816,7 @@ describe('Distribution', () => {
       await setNextTime(oneDay + oneDay);
       await distribution.connect(OWNER).stake(poolId, wei(3));
 
-      // Redepositment 1.5 days after the start of reward payment
+      // Deposit 1.5 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 1.5);
       await distribution.connect(SECOND).stake(poolId, wei(2));
 
@@ -840,7 +840,7 @@ describe('Distribution', () => {
       expect(userData.deposited).to.eq(wei(3));
       expect(userData.pendingRewards).to.eq(0);
 
-      // Redepositment 5 days after the start of reward payment
+      // Deposit 5 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 5);
       await distribution.connect(OWNER).stake(poolId, wei(4));
 
@@ -876,7 +876,7 @@ describe('Distribution', () => {
       await setNextTime(oneDay + oneDay);
       await distribution.connect(OWNER).stake(poolId, wei(3));
 
-      // Redepositment 1.5 days after the start of reward payment
+      // Deposit 1.5 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 1.5);
       await distribution.connect(SECOND).stake(poolId, wei(2));
 
@@ -900,7 +900,7 @@ describe('Distribution', () => {
       expect(userData.deposited).to.eq(wei(3));
       expect(userData.pendingRewards).to.eq(0);
 
-      // Redepositment 5 days after the start of reward payment
+      // Deposit 5 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 5);
       await distribution.connect(OWNER).stake(poolId, wei(4));
 

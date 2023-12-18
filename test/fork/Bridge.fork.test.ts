@@ -78,7 +78,7 @@ describe('L1Sender', () => {
     });
   });
 
-  describe('bridgedepositTokens', () => {
+  describe('sendTokensOnSwap', () => {
     beforeEach(async () => {
       await depositToken.approve(l1Sender, ethers.MaxUint256);
     });
@@ -90,11 +90,11 @@ describe('L1Sender', () => {
       //                          738_253_009_388_160
       //                          290_990_833_929_152
 
-      await l1Sender.bridgedepositTokens.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.sendTokensOnSwap.staticCall(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
 
-      await l1Sender.bridgedepositTokens(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      await l1Sender.sendTokensOnSwap(amount, SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
     });
