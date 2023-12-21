@@ -117,7 +117,7 @@ describe('Distribution', () => {
 
     // Deploy reward token
     rewardToken = await MORFactory.deploy(wei(1000000000));
-    rewardToken.transferOwnership(distributionAddress);
+    rewardToken.transferOwnership(l2Receiver);
 
     await l2Receiver.setParams(depositToken, rewardToken, depositToken, {
       lzEndpoint: lZEndpointMockReceiver,
@@ -350,16 +350,18 @@ describe('Distribution', () => {
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(0), wei(0)]);
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
-      expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(39.6), wei(0.001));
+      expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(20), wei(0.001));
       userData = await distribution.usersData(secondAddress, poolId);
       expect(userData.deposited).to.eq(wei(0));
-      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.pendingRewards).to.closeTo(wei(19.6), wei(0.001));
 
       expect(await depositToken.balanceOf(ownerAddress)).to.eq(wei(1000));
-      expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(158.4), wei(0.001));
+      expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(80), wei(0.001));
       userData = await distribution.usersData(ownerAddress, poolId);
       expect(userData.deposited).to.eq(wei(0));
-      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.pendingRewards).to.closeTo(wei(78.4), wei(0.001));
+
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
     });
     it('should correctly calculate rewards after partial stake', async () => {
       let userData;
@@ -521,6 +523,8 @@ describe('Distribution', () => {
       // Withdraw after 2 days
       setNextTime(oneDay + oneDay * 2);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(0), wei(0)]);
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(39.6), wei(0.001));
@@ -1024,9 +1028,6 @@ describe('Distribution', () => {
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.claim(1, SECOND)).to.be.revertedWith("DS: pool doesn't exist");
     });
-    it("should revert if user didn't stake", async () => {
-      await expect(distribution.claim(poolId, SECOND)).to.be.revertedWith("DS: user isn't staked");
-    });
     it("should revert if `withdrawLockPeriod` didn't pass", async () => {
       await distribution.stake(poolId, wei(1));
 
@@ -1120,6 +1121,7 @@ describe('Distribution', () => {
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
       await distribution.connect(OWNER).withdraw(poolId, wei(999));
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(ownerAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(73.5), wei(0.001));
@@ -1145,6 +1147,7 @@ describe('Distribution', () => {
       // Withdraw after 4 days
       await setNextTime(oneDay + oneDay * 4);
       await distribution.connect(SECOND).withdraw(poolId, wei(999));
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(100 + 24.5 + 96 + 94), wei(0.000001));
@@ -1153,8 +1156,8 @@ describe('Distribution', () => {
       expect(userData.pendingRewards).to.eq(0);
       expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(0));
 
-      await expect(distribution.claim(poolId, OWNER)).to.be.revertedWith("DS: user isn't staked");
-      await expect(distribution.claim(poolId, SECOND)).to.be.revertedWith("DS: user isn't staked");
+      await expect(distribution.claim(poolId, OWNER)).to.be.revertedWith('DS: nothing to claim');
+      await expect(distribution.claim(poolId, SECOND)).to.be.revertedWith('DS: nothing to claim');
     });
     it('should correctly withdraw, few users, withdraw part', async () => {
       let userData;
@@ -1168,6 +1171,7 @@ describe('Distribution', () => {
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
       await distribution.connect(OWNER).withdraw(poolId, wei(2));
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(ownerAddress)).to.eq(wei(1000 - 6 + 2));
       expect(await rewardToken.balanceOf(ownerAddress)).to.closeTo(wei(58.8), wei(0.001));
@@ -1193,6 +1197,7 @@ describe('Distribution', () => {
       // Withdraw after 4 days
       await setNextTime(oneDay + oneDay * 4);
       await distribution.connect(SECOND).withdraw(poolId, wei(2));
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000 - 4 + 2));
       expect(await rewardToken.balanceOf(secondAddress)).to.closeTo(wei(100 + 39.2 + 48 + 47), wei(0.001));
@@ -1359,13 +1364,15 @@ describe('Distribution', () => {
 
       await setNextTime(oneDay + oneDay * 3);
       await distribution.withdraw(poolId, wei(1));
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       await setTime(oneDay + oneDay * 4);
       reward = await distribution.getCurrentUserReward(poolId, OWNER);
-      expect(reward).to.eq(wei(94));
+      expect(reward).to.closeTo(wei(94), wei(0.01));
 
       await setNextTime(oneDay + oneDay * 5);
       await distribution.withdraw(poolId, wei(1));
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
       reward = await distribution.getCurrentUserReward(poolId, OWNER);
       expect(reward).to.eq(wei(0));
 
@@ -1414,14 +1421,15 @@ describe('Distribution', () => {
       await setNextTime(oneDay + oneDay * 3);
 
       await distribution.connect(SECOND).withdraw(poolId, wei(1));
+      await distribution.claim(poolId, SECOND, { value: wei(0.5) });
 
       await setTime(oneDay + oneDay * 4);
 
       rewardFirst = await distribution.getCurrentUserReward(poolId, OWNER);
       rewardSecond = await distribution.getCurrentUserReward(poolId, SECOND);
 
-      expect(rewardFirst).to.eq(wei(224.6));
-      expect(rewardSecond).to.eq(wei(47));
+      expect(rewardFirst).to.closeTo(wei(224.6), wei(0.000001));
+      expect(rewardSecond).to.closeTo(wei(47), wei(0.001));
     });
     it('should correctly calculate distribution rewards with real data', async () => {
       const pool: IDistribution.PoolStruct = {

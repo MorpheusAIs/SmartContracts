@@ -145,7 +145,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        require(userData.deposited > 0, "DS: user isn't staked");
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
