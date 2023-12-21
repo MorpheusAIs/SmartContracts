@@ -6,19 +6,17 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 /**
  * This is Swap contract that swaps tokens using Uniswap V3.
  */
-interface ISwap is IERC165 {
+interface IL2TokenReceiver is IERC165 {
     /**
      * The structure that stores the swap params.
      * @param tokenIn The address of the token to swap from.
      * @param tokenOut The address of the token to swap to.
-     * @param intermediateToken The address of the intermediate token.
      * @param fee The fee of the swap.
      * @param sqrtPriceLimitX96 The price limit of the swap.
      */
     struct SwapParams {
         address tokenIn;
         address tokenOut;
-        address intermediateToken;
         uint24 fee;
         uint160 sqrtPriceLimitX96;
     }

@@ -9,71 +9,80 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
 import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
 contract L1Sender is IL1Sender, ERC165, Ownable {
-    address public arbitrumBridgeGatewayRouter;
-    address public depositToken;
+    DepositTokenConfig public depositTokenConfig;
+    RewardTokenConfig public rewardTokenConfig;
 
-    LzConfig public config;
-
-    constructor(address arbitrumBridgeGatewayRouter_, address depositToken_, LzConfig memory config_) payable {
-        arbitrumBridgeGatewayRouter = arbitrumBridgeGatewayRouter_;
-        depositToken = depositToken_;
-        config = config_;
-
-        IERC20(depositToken).approve(
-            IGatewayRouter(arbitrumBridgeGatewayRouter_).getGateway(depositToken_),
-            type(uint256).max
-        );
+    function setRewardTokenConfig(RewardTokenConfig calldata newConfig_) external onlyOwner {
+        rewardTokenConfig = newConfig_;
     }
 
-    function setParams(
-        address arbitrumBridgeGatewayRouter_,
-        address depositToken_,
-        LzConfig memory config_
-    ) external onlyOwner {
-        arbitrumBridgeGatewayRouter = arbitrumBridgeGatewayRouter_;
-        depositToken = depositToken_;
-        config = config_;
+    function setDepositTokenConfig(DepositTokenConfig calldata newConfig_) external onlyOwner {
+        require(newConfig_.receiver != address(0), "L1S: invalid receiver");
 
-        // is it OK to not discard the previous approval?
-        IERC20(depositToken).approve(
-            IGatewayRouter(arbitrumBridgeGatewayRouter_).getGateway(depositToken_),
-            type(uint256).max
-        );
+        DepositTokenConfig storage oldConfig = depositTokenConfig;
+
+        bool isTokenChanged = oldConfig.token != newConfig_.token;
+        bool isGatewayChanged = oldConfig.gateway != newConfig_.gateway;
+        bool isConfigAdded = oldConfig.token != address(0);
+
+        // Remove old allowance
+        if (isConfigAdded && (isTokenChanged || isGatewayChanged)) {
+            address tokenGateway = IGatewayRouter(oldConfig.gateway).getGateway(oldConfig.token);
+            IERC20(oldConfig.token).approve(tokenGateway, 0);
+        }
+
+        // Add new allowance
+        if (isTokenChanged || isGatewayChanged) {
+            address tokenGateway = IGatewayRouter(newConfig_.gateway).getGateway(newConfig_.token);
+            IERC20(newConfig_.token).approve(tokenGateway, type(uint256).max);
+        }
+
+        depositTokenConfig = newConfig_;
     }
 
-    function sendTokensOnSwap(
-        address recipient_,
+    function sendDepositToken(
         uint256 gasLimit_,
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
     ) external payable returns (bytes memory) {
-        uint256 currentBalance = IERC20(depositToken).balanceOf(address(this));
-        bytes memory data = abi.encode(maxSubmissionCost_, "");
+        DepositTokenConfig storage config = depositTokenConfig;
+
+        // Get stETH address from wstETH
+        address unwrappedToken = IWStETH(config.token).stETH();
+        // Get current stETH balance
+        uint256 amountUnwrappedToken = IERC20(unwrappedToken).balanceOf(address(this));
+        // Wrap all stETH to wstETH
+        uint256 amount_ = IWStETH(config.token).wrap(amountUnwrappedToken);
+
+        bytes memory data_ = abi.encode(maxSubmissionCost_, "");
 
         return
-            IGatewayRouter(arbitrumBridgeGatewayRouter).outboundTransfer{value: msg.value}(
-                depositToken,
-                recipient_,
-                currentBalance,
+            IGatewayRouter(config.gateway).outboundTransfer{value: msg.value}(
+                config.token,
+                config.receiver,
+                amount_,
                 gasLimit_,
                 maxFeePerGas_,
-                data
+                data_
             );
     }
 
-    function sendMintMessage(address user_, uint256 amount_, address refundee_) external payable onlyOwner {
-        bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.communicator, address(this));
+    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable onlyOwner {
+        RewardTokenConfig storage config = rewardTokenConfig;
+
+        bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.receiver, address(this));
         bytes memory payload_ = abi.encode(user_, amount_);
 
-        ILayerZeroEndpoint(config.lzEndpoint).send{value: msg.value}(
-            config.communicatorChainId, // communicator LayerZero chainId
+        ILayerZeroEndpoint(config.gateway).send{value: msg.value}(
+            config.receiverChainId, // communicator LayerZero chainId
             receiverAndSenderAddresses_, // send to this address to the communicator
             payload_, // bytes payload
-            payable(refundee_), // refund address
+            payable(refundTo_), // refund address
             address(0x0), // future parameter
             bytes("") // adapterParams (see "Advanced Features")
         );

@@ -2,9 +2,15 @@
 pragma solidity ^0.8.20;
 
 interface IL1Sender {
-    struct LzConfig {
-        address lzEndpoint;
-        address communicator;
-        uint16 communicatorChainId;
+    struct DepositTokenConfig {
+        address token; // wstETH
+        address gateway;
+        address receiver;
+    }
+
+    struct RewardTokenConfig {
+        address gateway;
+        address receiver;
+        uint16 receiverChainId;
     }
 }

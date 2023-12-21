@@ -69,6 +69,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     function editPool(uint256 poolId_, Pool calldata pool_) external onlyOwner poolExists(poolId_) {
         _validatePool(pool_);
+        require(pools[poolId_].isPublic == pool_.isPublic, "DS: invalid pool type");
 
         PoolData storage poolData = poolsData[poolId_];
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
@@ -291,7 +292,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** Bridge and Swap                                                                        ***/
+    /*** Bridge                                                                                 ***/
     /**********************************************************************************************/
 
     function overplus() public view returns (uint256) {
@@ -303,18 +304,13 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return depositTokenContractBalance - totalDepositedInPublicPools;
     }
 
-    function bridgeOverplus(
-        address recipient_,
-        uint256 gasLimit_,
-        uint256 maxFeePerGas_,
-        uint256 maxSubmissionCost_
-    ) external onlyOwner {
+    function bridgeOverplus(uint256 gasLimit_, uint256 maxFeePerGas_, uint256 maxSubmissionCost_) external onlyOwner {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        L1Sender(l1Sender).sendTokensOnSwap(recipient_, gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        L1Sender(l1Sender).sendDepositToken(gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

@@ -8,7 +8,7 @@ contract GatewayRouterMock {
         gateway = gateway_;
     }
 
-    function getGateway(address _token) external view returns (address) {
+    function getGateway(address) external view returns (address) {
         return gateway;
     }
 }

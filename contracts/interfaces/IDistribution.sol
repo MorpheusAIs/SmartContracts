@@ -129,17 +129,11 @@ interface IDistribution {
 
     /**
      * The function to bridge the overplus of the staked deposit tokens.
-     * @param recipient_ The recipient's address.
      * @param gasLimit_ The gas limit.
      * @param maxFeePerGas_ The max fee per gas.
      * @param maxSubmissionCost_ The max submission cost.
      */
-    function bridgeOverplus(
-        address recipient_,
-        uint256 gasLimit_,
-        uint256 maxFeePerGas_,
-        uint256 maxSubmissionCost_
-    ) external;
+    function bridgeOverplus(uint256 gasLimit_, uint256 maxFeePerGas_, uint256 maxSubmissionCost_) external;
 
     /**
      * The function to remove upgradeability.
