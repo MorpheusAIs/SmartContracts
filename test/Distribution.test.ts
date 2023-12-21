@@ -5,11 +5,15 @@ import {
   GatewayRouterMock,
   IDistribution,
   L1Sender,
-  L2Receiver,
+  L2MessageReceiver,
+  L2TokenReceiver,
   LZEndpointMock,
   LinearDistributionIntervalDecrease,
   MOR,
+  NonfungiblePositionManagerMock,
   StETHMock,
+  SwapRouterMock,
+  WStETHMock,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
@@ -39,12 +43,14 @@ describe('Distribution', () => {
 
   let rewardToken: MOR;
   let depositToken: StETHMock;
+  let wstETH: WStETHMock;
 
   let lZEndpointMockSender: LZEndpointMock;
   let lZEndpointMockReceiver: LZEndpointMock;
 
   let l1Sender: L1Sender;
-  let l2Receiver: L2Receiver;
+  let l2MessageReceiver: L2MessageReceiver;
+  let l2TokenReceiver: L2TokenReceiver;
 
   before(async () => {
     await setTime(oneHour);
@@ -57,48 +63,76 @@ describe('Distribution', () => {
       ERC1967ProxyFactory,
       MORFactory,
       stETHMockFactory,
+      wstETHMockFactory,
       l1SenderFactory,
       LZEndpointMock,
-      L2Receiver,
+      L2MessageReceiver,
+      L2TokenReceiver,
       gatewayRouterMock,
+      SwapRouterMock,
+      NonfungiblePositionManagerMock,
     ] = await Promise.all([
       ethers.getContractFactory('LinearDistributionIntervalDecrease'),
       ethers.getContractFactory('ERC1967Proxy'),
       ethers.getContractFactory('MOR'),
       ethers.getContractFactory('StETHMock'),
+      ethers.getContractFactory('WStETHMock'),
       ethers.getContractFactory('L1Sender'),
       ethers.getContractFactory('LZEndpointMock'),
-      ethers.getContractFactory('L2Receiver'),
+      ethers.getContractFactory('L2MessageReceiver'),
+      ethers.getContractFactory('L2TokenReceiver'),
       ethers.getContractFactory('GatewayRouterMock'),
+      ethers.getContractFactory('SwapRouterMock'),
+      ethers.getContractFactory('NonfungiblePositionManagerMock'),
     ]);
 
     let gatewayRouter: GatewayRouterMock;
+    let swapRouter: SwapRouterMock;
+    let nonfungiblePositionManager: NonfungiblePositionManagerMock;
     // START deploy contracts without deps
-    [lib, depositToken, lZEndpointMockSender, lZEndpointMockReceiver, gatewayRouter] = await Promise.all([
+    [
+      lib,
+      depositToken,
+      lZEndpointMockSender,
+      lZEndpointMockReceiver,
+      gatewayRouter,
+      l2MessageReceiver,
+      swapRouter,
+      nonfungiblePositionManager,
+    ] = await Promise.all([
       libFactory.deploy(),
       stETHMockFactory.deploy(),
       LZEndpointMock.deploy(senderChainId),
       LZEndpointMock.deploy(receiverChainId),
       gatewayRouterMock.deploy(SECOND),
+      L2MessageReceiver.deploy(),
+      SwapRouterMock.deploy(),
+      NonfungiblePositionManagerMock.deploy(),
     ]);
     // END
 
-    l2Receiver = await L2Receiver.deploy(depositToken, ZERO_ADDR, depositToken, {
-      lzEndpoint: lZEndpointMockReceiver,
-      communicator: ZERO_ADDR,
-      communicatorChainId: senderChainId,
+    wstETH = await wstETHMockFactory.deploy(depositToken);
+
+    l2TokenReceiver = await L2TokenReceiver.deploy(swapRouter, nonfungiblePositionManager, {
+      tokenIn: depositToken,
+      tokenOut: depositToken,
+      fee: 3000,
+      sqrtPriceLimitX96: 0,
     });
 
-    l1Sender = await l1SenderFactory.deploy(
-      gatewayRouter,
-      depositToken,
-      {
-        lzEndpoint: lZEndpointMockSender,
-        communicator: l2Receiver,
-        communicatorChainId: receiverChainId,
-      },
-      { value: wei(100) },
-    );
+    l1Sender = await l1SenderFactory.deploy();
+
+    await l1Sender.setDepositTokenConfig({
+      token: wstETH,
+      gateway: gatewayRouter,
+      receiver: l2TokenReceiver,
+    });
+
+    await l1Sender.setRewardTokenConfig({
+      gateway: lZEndpointMockSender,
+      receiver: l2MessageReceiver,
+      receiverChainId: receiverChainId,
+    });
 
     // START deploy distribution contract
     distributionFactory = await ethers.getContractFactory('Distribution', {
@@ -117,15 +151,15 @@ describe('Distribution', () => {
 
     // Deploy reward token
     rewardToken = await MORFactory.deploy(wei(1000000000));
-    rewardToken.transferOwnership(l2Receiver);
+    rewardToken.transferOwnership(l2MessageReceiver);
 
-    await l2Receiver.setParams(depositToken, rewardToken, depositToken, {
-      lzEndpoint: lZEndpointMockReceiver,
-      communicator: l1Sender,
-      communicatorChainId: senderChainId,
+    await l2MessageReceiver.setParams(rewardToken, {
+      gateway: lZEndpointMockReceiver,
+      sender: l1Sender,
+      senderChainId: senderChainId,
     });
 
-    await lZEndpointMockSender.setDestLzEndpoint(l2Receiver, lZEndpointMockReceiver);
+    await lZEndpointMockSender.setDestLzEndpoint(l2MessageReceiver, lZEndpointMockReceiver);
 
     await distribution.Distribution_init(depositToken, l1Sender, []);
 
@@ -244,7 +278,7 @@ describe('Distribution', () => {
       await distribution.createPool(getDefaultPool());
     });
 
-    it('should edit pool with correct data', async () => {
+    it('should revert if try to change pool type', async () => {
       const newPool = {
         ...defaultPool,
         payoutStart: 10 * oneDay,
@@ -256,10 +290,7 @@ describe('Distribution', () => {
         isPublic: false,
       };
 
-      await distribution.editPool(poolId, newPool);
-
-      const poolData: IDistribution.PoolStruct = await distribution.pools(poolId);
-      expect(_comparePoolStructs(newPool, poolData)).to.be.true;
+      await expect(distribution.editPool(poolId, newPool)).to.be.rejectedWith('DS: invalid pool type');
     });
 
     describe('should revert if try to edit pool with incorrect data', () => {

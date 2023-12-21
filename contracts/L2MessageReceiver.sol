@@ -16,7 +16,8 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, Ownable {
 
     Config public config;
 
-    function setConfig(Config calldata config_) external onlyOwner {
+    function setParams(address rewardToken_, Config calldata config_) external onlyOwner {
+        rewardToken = rewardToken_;
         config = config_;
     }
 
@@ -26,15 +27,15 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, Ownable {
         uint64 nonce_,
         bytes memory payload_
     ) external {
-        require(nonce_ > nonce, "TC: invalid nonce");
-        require(_msgSender() == config.gateway, "TC: invalid gateway");
-        require(senderChainId_ == config.senderChainId, "TC: invalid sender chain ID");
+        require(nonce_ > nonce, "L2MR: invalid nonce");
+        require(_msgSender() == config.gateway, "L2MR: invalid gateway");
+        require(senderChainId_ == config.senderChainId, "L2MR: invalid sender chain ID");
 
         address sender_;
         assembly {
             sender_ := mload(add(receiverAndSenderAddresses_, 20))
         }
-        require(sender_ == config.sender, "TC: invalid sender address");
+        require(sender_ == config.sender, "L2MR: invalid sender address");
 
         (address user_, uint256 amount_) = abi.decode(payload_, (address, uint256));
 

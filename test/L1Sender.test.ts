@@ -1,5 +1,12 @@
-import { L1Sender, L2Receiver, LZEndpointMock, MOR } from '@/generated-types/ethers';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
+import {
+  GatewayRouterMock,
+  L1Sender,
+  L2MessageReceiver,
+  LZEndpointMock,
+  MOR,
+  StETHMock,
+  WStETHMock,
+} from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
@@ -15,57 +22,62 @@ describe('L1Sender', () => {
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
+  let depositToken: WStETHMock;
+
   let lZEndpointMockSender: LZEndpointMock;
   let lZEndpointMockReceiver: LZEndpointMock;
 
+  let gatewayRouter: GatewayRouterMock;
+
   let l1Sender: L1Sender;
-  let l2Receiver: L2Receiver;
+  let l2MessageReceiver: L2MessageReceiver;
 
   let rewardToken: MOR;
   before(async () => {
     [OWNER, SECOND] = await ethers.getSigners();
-    let depositToken;
 
-    const [LZEndpointMock, L2Receiver, Mor, L1Sender, StETHMock, GatewayRouterMock] = await Promise.all([
-      ethers.getContractFactory('LZEndpointMock'),
-      ethers.getContractFactory('L2Receiver'),
-      ethers.getContractFactory('MOR'),
-      ethers.getContractFactory('L1Sender'),
-      ethers.getContractFactory('StETHMock'),
-      ethers.getContractFactory('GatewayRouterMock'),
-    ]);
+    const [LZEndpointMock, Mor, L1Sender, GatewayRouterMock, StETHMock, WStETHMock, L2MessageReceiver] =
+      await Promise.all([
+        ethers.getContractFactory('LZEndpointMock'),
+        ethers.getContractFactory('MOR'),
+        ethers.getContractFactory('L1Sender'),
+        ethers.getContractFactory('GatewayRouterMock'),
+        ethers.getContractFactory('StETHMock'),
+        ethers.getContractFactory('WStETHMock'),
+        ethers.getContractFactory('L2MessageReceiver'),
+      ]);
 
-    [lZEndpointMockSender, lZEndpointMockReceiver, depositToken] = await Promise.all([
-      LZEndpointMock.deploy(senderChainId),
-      LZEndpointMock.deploy(receiverChainId),
-      StETHMock.deploy(),
-    ]);
+    let stETH: StETHMock;
+    [lZEndpointMockSender, lZEndpointMockReceiver, rewardToken, l1Sender, stETH, l2MessageReceiver] = await Promise.all(
+      [
+        LZEndpointMock.deploy(senderChainId),
+        LZEndpointMock.deploy(receiverChainId),
+        Mor.deploy(wei(100)),
+        L1Sender.deploy(),
+        StETHMock.deploy(),
+        L2MessageReceiver.deploy(),
+      ],
+    );
 
-    const gatewayRouterMock = await GatewayRouterMock.deploy(lZEndpointMockSender);
+    depositToken = await WStETHMock.deploy(stETH);
 
-    rewardToken = await Mor.deploy(wei(100));
+    gatewayRouter = await GatewayRouterMock.deploy(lZEndpointMockSender);
 
-    l2Receiver = await L2Receiver.deploy(depositToken, rewardToken, OWNER, {
-      lzEndpoint: lZEndpointMockReceiver,
-      communicator: ZERO_ADDR,
-      communicatorChainId: senderChainId,
+    await l1Sender.setDepositTokenConfig({
+      token: depositToken,
+      gateway: gatewayRouter,
+      receiver: SECOND,
     });
 
-    l1Sender = await L1Sender.deploy(gatewayRouterMock, depositToken, {
-      lzEndpoint: lZEndpointMockSender,
-      communicator: l2Receiver,
-      communicatorChainId: receiverChainId,
+    await l1Sender.setRewardTokenConfig({
+      gateway: lZEndpointMockSender,
+      receiver: l2MessageReceiver,
+      receiverChainId: receiverChainId,
     });
 
-    await l2Receiver.setParams(depositToken, rewardToken, OWNER, {
-      lzEndpoint: lZEndpointMockReceiver,
-      communicator: l1Sender,
-      communicatorChainId: senderChainId,
-    });
+    await lZEndpointMockSender.setDestLzEndpoint(l2MessageReceiver, lZEndpointMockReceiver);
 
-    await lZEndpointMockSender.setDestLzEndpoint(l2Receiver, lZEndpointMockReceiver);
-
-    await rewardToken.transferOwnership(l2Receiver);
+    await rewardToken.transferOwnership(l2MessageReceiver);
 
     await reverter.snapshot();
   });
@@ -74,17 +86,61 @@ describe('L1Sender', () => {
     await reverter.revert();
   });
 
-  describe('sendMintMessage', () => {
-    it('should sendMintMessage', async () => {
-      expect(await l2Receiver.nonce()).to.equal(0);
-
-      const amount = wei(1);
-
-      const tx = await l1Sender.sendMintMessage(SECOND, amount, OWNER, { value: wei(0.5) });
-      await expect(tx).changeTokenBalance(rewardToken, SECOND, amount);
-
-      expect(await l2Receiver.nonce()).to.equal(1);
+  describe('setRewardTokenConfig', () => {
+    it('should set rewardTokenConfig', async () => {
+      expect(await l1Sender.rewardTokenConfig()).to.be.deep.equal([
+        await lZEndpointMockSender.getAddress(),
+        await l2MessageReceiver.getAddress(),
+        receiverChainId,
+      ]);
     });
+    it('should revert if not called by the owner', async () => {
+      await expect(
+        l1Sender.connect(SECOND).setRewardTokenConfig({
+          gateway: lZEndpointMockSender,
+          receiver: l2MessageReceiver,
+          receiverChainId: receiverChainId,
+        }),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  describe('setDepositTokenConfig', () => {
+    it('should set depositTokenConfig', async () => {
+      expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
+        await depositToken.getAddress(),
+        await gatewayRouter.getAddress(),
+        await SECOND.getAddress(),
+      ]);
+    });
+    it('should set approve to gateway', async () => {
+      expect(await depositToken.allowance(l1Sender, lZEndpointMockSender)).to.be.equal(ethers.MaxUint256);
+    });
+    it('should remove approve from old gateway', async () => {
+      const GatewayRouterMock = await ethers.getContractFactory('GatewayRouterMock');
+      const gatewayRouter2 = await GatewayRouterMock.deploy(SECOND);
+
+      await l1Sender.setDepositTokenConfig({
+        token: depositToken,
+        gateway: gatewayRouter2,
+        receiver: SECOND,
+      });
+
+      expect(await depositToken.allowance(l1Sender, gatewayRouter)).to.be.equal(0);
+      expect(await depositToken.allowance(l1Sender, SECOND)).to.be.equal(ethers.MaxUint256);
+    });
+    it('should revert if not called by the owner', async () => {
+      await expect(
+        l1Sender.connect(SECOND).setDepositTokenConfig({
+          token: depositToken,
+          gateway: lZEndpointMockSender,
+          receiver: SECOND,
+        }),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  describe('sendMintMessage', () => {
     it('should revert if not called by the owner', async () => {
       await expect(
         l1Sender.connect(SECOND).sendMintMessage(SECOND, wei(1), OWNER, {

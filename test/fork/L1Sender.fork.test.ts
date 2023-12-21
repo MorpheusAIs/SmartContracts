@@ -7,14 +7,13 @@ import {
   IWStETH__factory,
   L1Sender,
 } from '@/generated-types/ethers';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Reverter } from '../helpers/reverter';
 
-describe('L1Sender', () => {
+describe('L1Sender Fork', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
@@ -31,7 +30,7 @@ describe('L1Sender', () => {
   let l1Sender: L1Sender;
 
   let steth: IStETH;
-  let depositToken: IWStETH;
+  let wsteth: IWStETH;
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
       {
@@ -45,18 +44,23 @@ describe('L1Sender', () => {
     [, SECOND] = await ethers.getSigners();
 
     arbitrumBridgeGatewayRouter = IGatewayRouter__factory.connect(arbitrumBridgeGatewayRouterAddress, OWNER);
-    depositToken = IWStETH__factory.connect(wstethAddress, OWNER);
+    wsteth = IWStETH__factory.connect(wstethAddress, OWNER);
     steth = IStETH__factory.connect(stethAddress, OWNER);
 
     const L1Sender = await ethers.getContractFactory('L1Sender', OWNER);
-    l1Sender = await L1Sender.deploy(arbitrumBridgeGatewayRouter, depositToken, {
-      lzEndpoint: lzEndpointAddress,
-      communicator: ZERO_ADDR,
-      communicatorChainId: 110, // Arbitrum
+    l1Sender = await L1Sender.deploy();
+
+    await l1Sender.setDepositTokenConfig({
+      token: wsteth,
+      gateway: arbitrumBridgeGatewayRouter,
+      receiver: SECOND,
     });
 
-    await steth.approve(depositToken, ethers.MaxUint256);
-    await depositToken.wrap(wei(100));
+    await l1Sender.setRewardTokenConfig({
+      gateway: lzEndpointAddress,
+      receiver: SECOND,
+      receiverChainId: 110,
+    });
 
     await reverter.snapshot();
   });
@@ -69,32 +73,22 @@ describe('L1Sender', () => {
     await ethers.provider.send('hardhat_reset', []);
   });
 
-  describe('constructor', () => {
-    it('should set the depositToken', async () => {
-      expect(await l1Sender.depositToken()).to.equal(await depositToken.getAddress());
-    });
-    it('should set the router', async () => {
-      expect(await l1Sender.arbitrumBridgeGatewayRouter()).to.equal(await arbitrumBridgeGatewayRouter.getAddress());
-    });
-  });
-
-  describe('sendTokensOnSwap', () => {
+  describe('sendDepositToken', () => {
     it('should bridge depositTokens', async () => {
       const amount = wei(0.01);
-      await depositToken.transfer(l1Sender, amount);
-      const gasLimit = 1_000_000; // about 72_000
-      const maxFeePerGas = 1_000_000_000; // always 300_000_000
-      const maxSubmissionCost = 1_000_000_000_000_000; // different
-      //                          738_253_009_388_160
-      //                          290_990_833_929_152
+      await steth.transfer(l1Sender, amount);
+      const gasLimit = 1_000_000;
+      const maxFeePerGas = 1_000_000_000;
+      const maxSubmissionCost = 1_000_000_000_000_000;
 
-      await l1Sender.sendTokensOnSwap.staticCall(SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
+      const tokenBalanceBefore = await steth.balanceOf(l1Sender);
+
+      await l1Sender.sendDepositToken(gasLimit, maxFeePerGas, maxSubmissionCost, {
         value: maxSubmissionCost + gasLimit * maxFeePerGas,
       });
 
-      await l1Sender.sendTokensOnSwap(SECOND, gasLimit, maxFeePerGas, maxSubmissionCost, {
-        value: maxSubmissionCost + gasLimit * maxFeePerGas,
-      });
+      const tokenBalanceAfter = await steth.balanceOf(l1Sender);
+      expect(tokenBalanceAfter - tokenBalanceBefore).to.closeTo(-amount, wei(0.0001));
     });
   });
 

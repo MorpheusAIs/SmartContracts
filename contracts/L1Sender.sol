@@ -10,10 +10,13 @@ import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
+import {IStETH} from "./interfaces/tokens/IStETH.sol";
 import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
 contract L1Sender is IL1Sender, ERC165, Ownable {
+    address public unwrappedToken;
+
     DepositTokenConfig public depositTokenConfig;
     RewardTokenConfig public rewardTokenConfig;
 
@@ -29,6 +32,12 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
         bool isTokenChanged = oldConfig.token != newConfig_.token;
         bool isGatewayChanged = oldConfig.gateway != newConfig_.gateway;
         bool isConfigAdded = oldConfig.token != address(0);
+
+        // Get stETH address from wstETH
+        if (isTokenChanged) {
+            unwrappedToken = IWStETH(newConfig_.token).stETH();
+            IERC20(unwrappedToken).approve(newConfig_.token, type(uint256).max);
+        }
 
         // Remove old allowance
         if (isConfigAdded && (isTokenChanged || isGatewayChanged)) {
@@ -52,8 +61,6 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
     ) external payable returns (bytes memory) {
         DepositTokenConfig storage config = depositTokenConfig;
 
-        // Get stETH address from wstETH
-        address unwrappedToken = IWStETH(config.token).stETH();
         // Get current stETH balance
         uint256 amountUnwrappedToken = IERC20(unwrappedToken).balanceOf(address(this));
         // Wrap all stETH to wstETH

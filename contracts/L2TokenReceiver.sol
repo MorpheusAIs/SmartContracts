@@ -47,7 +47,7 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
             tokenIn: params_.tokenIn,
             tokenOut: params_.tokenOut,
             fee: params_.fee,
-            recipient: _msgSender(),
+            recipient: address(this),
             deadline: block.timestamp,
             amountIn: amountIn_,
             amountOutMinimum: amountOutMinimum_,
@@ -92,8 +92,8 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
     }
 
     function _editParams(SwapParams memory newParams_) internal {
-        require(newParams_.tokenIn != address(0), "Swap: invalid tokenIn");
-        require(newParams_.tokenOut != address(0), "Swap: invalid tokenOut");
+        require(newParams_.tokenIn != address(0), "L2TR: invalid tokenIn");
+        require(newParams_.tokenOut != address(0), "L2TR: invalid tokenOut");
 
         TransferHelper.safeApprove(newParams_.tokenIn, router, type(uint256).max);
         TransferHelper.safeApprove(newParams_.tokenIn, nonfungiblePositionManager, type(uint256).max);

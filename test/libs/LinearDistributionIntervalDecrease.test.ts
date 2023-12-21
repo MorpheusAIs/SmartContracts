@@ -11,15 +11,15 @@ describe('LinearDistributionIntervalDecrease', () => {
   let distribution: Distribution;
 
   before(async () => {
-    const [libFactory, stETHMockFactory, swapFactory] = await Promise.all([
+    const [libFactory, stETHMockFactory, L2TokenReceiver] = await Promise.all([
       ethers.getContractFactory('LinearDistributionIntervalDecrease'),
       ethers.getContractFactory('StETHMock'),
-      ethers.getContractFactory('Swap'),
+      ethers.getContractFactory('L2TokenReceiver'),
     ]);
 
     const stETHMock = await stETHMockFactory.deploy();
     const lib = await libFactory.deploy();
-    const swap = await swapFactory.deploy(
+    const l2TokenReceiver = await L2TokenReceiver.deploy(
       await stETHMock.getAddress(),
       await stETHMock.getAddress(),
       getDefaultSwapParams(await stETHMock.getAddress(), await stETHMock.getAddress(), await stETHMock.getAddress()),
@@ -35,7 +35,7 @@ describe('LinearDistributionIntervalDecrease', () => {
     distribution = await distributionFactory.deploy();
     // END
 
-    await distribution.Distribution_init(await stETHMock.getAddress(), swap, []);
+    await distribution.Distribution_init(await stETHMock.getAddress(), l2TokenReceiver, []);
 
     await reverter.snapshot();
   });

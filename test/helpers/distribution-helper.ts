@@ -1,4 +1,4 @@
-import { IDistribution, ISwap } from '@/generated-types/ethers';
+import { IDistribution, IL2TokenReceiver } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
 export const oneHour = 3600;
@@ -17,15 +17,10 @@ export const getDefaultPool = (): IDistribution.PoolStruct => {
   };
 };
 
-export const getDefaultSwapParams = (
-  tokenIn: string,
-  tokenOut: string,
-  intermediateToken: string,
-): ISwap.SwapParamsStruct => {
+export const getDefaultSwapParams = (tokenIn: string, tokenOut: string): IL2TokenReceiver.SwapParamsStruct => {
   return {
     tokenIn: tokenIn,
     tokenOut: tokenOut,
-    intermediateToken: intermediateToken,
     fee: 500,
     sqrtPriceLimitX96: 0,
   };
