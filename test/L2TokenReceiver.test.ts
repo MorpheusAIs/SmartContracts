@@ -82,8 +82,8 @@ describe('L2TokenReceiver', () => {
   });
 
   describe('supportsInterface', () => {
-    it('should support ISwap', async () => {
-      expect(await l2TokenReceiver.supportsInterface('0xe48aaa86')).to.be.true;
+    it('should support IL2TokenReceiver', async () => {
+      expect(await l2TokenReceiver.supportsInterface('0x79f94a20')).to.be.true;
     });
     it('should support IERC165', async () => {
       expect(await l2TokenReceiver.supportsInterface('0x01ffc9a7')).to.be.true;
@@ -141,6 +141,20 @@ describe('L2TokenReceiver', () => {
       await expect(
         l2TokenReceiver.editParams(getDefaultSwapParams(await inputToken.getAddress(), ZERO_ADDR)),
       ).to.be.revertedWith('L2TR: invalid tokenOut');
+    });
+  });
+
+  describe('#swap', () => {
+    it('should return if caller is not the owner', async () => {
+      await expect(l2TokenReceiver.connect(SECOND).swap(1, 1)).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  describe('#increaseLiquidityCurrentRange', () => {
+    it('should return if caller is not the owner', async () => {
+      await expect(l2TokenReceiver.connect(SECOND).increaseLiquidityCurrentRange(1, 1, 1)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
     });
   });
 });

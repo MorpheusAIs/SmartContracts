@@ -7,6 +7,7 @@ import { Reverter } from '../helpers/reverter';
 import {
   IERC20,
   IERC20__factory,
+  IL2TokenReceiver,
   INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
   ISwapRouter,
@@ -90,26 +91,46 @@ describe('L2TokenReceiver Fork', () => {
 
   describe('#increaseLiquidityCurrentRange', () => {
     const amountInputToken = wei(0.0001);
-    const amoutOutputToken = 541774411822;
+    const amountOutputToken = 541774411822;
 
     // const poolId = '0x4622df6fb2d9bee0dcdacf545acdb6a2b2f4f863';
     const poolId = 376582;
     beforeEach('setup', async () => {
       await inputToken.transfer(l2TokenReceiver, amountInputToken);
-      await outputToken.transfer(l2TokenReceiver, amoutOutputToken);
+      await outputToken.transfer(l2TokenReceiver, amountOutputToken);
     });
 
     it('should increase liquidity', async () => {
       const tx = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
         poolId,
         amountInputToken,
-        amoutOutputToken,
+        amountOutputToken,
       );
 
-      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amoutOutputToken);
+      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken);
 
       expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[1]);
       expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[2]);
+    });
+    it('should set the amount correctly besides the tokens order', async () => {
+      const newParams: IL2TokenReceiver.SwapParamsStruct = {
+        tokenIn: await outputToken.getAddress(),
+        tokenOut: await inputToken.getAddress(),
+        fee: 1,
+        sqrtPriceLimitX96: 1,
+      };
+
+      await l2TokenReceiver.editParams(newParams);
+
+      const tx = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
+        poolId,
+        amountInputToken,
+        amountOutputToken,
+      );
+      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken);
+
+      expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[1]);
+      expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[2]);
     });
   });
 });

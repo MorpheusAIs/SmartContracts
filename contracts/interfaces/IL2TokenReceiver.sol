@@ -36,6 +36,15 @@ interface IL2TokenReceiver is IERC165 {
      */
     function swap(uint256 amountIn_, uint256 amountOutMinimum_) external returns (uint256);
 
+    /**
+     * The function to increase liquidity in the current price range.
+     * @param tokenId The ID of the position.
+     * @param amountAdd0_ The amount of tokenIn to add.
+     * @param amountAdd1_ The amount of tokenOut to add.
+     * @return liquidity The amount of liquidity added.
+     * @return amount0 The amount of token0 added.
+     * @return amount1 The amount of token1 added.
+     */
     function increaseLiquidityCurrentRange(
         uint256 tokenId,
         uint256 amountAdd0_,
@@ -47,4 +56,10 @@ interface IL2TokenReceiver is IERC165 {
      * @return The address of the router.
      */
     function router() external view returns (address);
+
+    /**
+     * The function to get the nonfungible position manager address.
+     * @return The address of the nonfungible position manager.
+     */
+    function nonfungiblePositionManager() external view returns (address);
 }
