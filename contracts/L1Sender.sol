@@ -15,7 +15,7 @@ import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
 contract L1Sender is IL1Sender, ERC165, Ownable {
-    address public unwrappedToken;
+    address public unwrappedDepositToken;
 
     DepositTokenConfig public depositTokenConfig;
     RewardTokenConfig public rewardTokenConfig;
@@ -29,29 +29,46 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
 
         DepositTokenConfig storage oldConfig = depositTokenConfig;
 
-        bool isTokenChanged = oldConfig.token != newConfig_.token;
-        bool isGatewayChanged = oldConfig.gateway != newConfig_.gateway;
-        bool isConfigAdded = oldConfig.token != address(0);
-
-        // Get stETH address from wstETH
-        if (isTokenChanged) {
-            unwrappedToken = IWStETH(newConfig_.token).stETH();
-            IERC20(unwrappedToken).approve(newConfig_.token, type(uint256).max);
-        }
-
-        // Remove old allowance
-        if (isConfigAdded && (isTokenChanged || isGatewayChanged)) {
-            address tokenGateway = IGatewayRouter(oldConfig.gateway).getGateway(oldConfig.token);
-            IERC20(oldConfig.token).approve(tokenGateway, 0);
-        }
-
-        // Add new allowance
-        if (isTokenChanged || isGatewayChanged) {
-            address tokenGateway = IGatewayRouter(newConfig_.gateway).getGateway(newConfig_.token);
-            IERC20(newConfig_.token).approve(tokenGateway, type(uint256).max);
-        }
+        _replaceDepositToken(oldConfig.token, newConfig_.token);
+        _replaceDepositTokenGateway(oldConfig.gateway, newConfig_.gateway, oldConfig.token, newConfig_.token);
 
         depositTokenConfig = newConfig_;
+    }
+
+    function _replaceDepositToken(address oldToken_, address newToken_) private {
+        bool isTokenChanged = oldToken_ != newToken_;
+
+        if (oldToken_ != address(0) && isTokenChanged) {
+            // Remove allowance from stETH to wstETH
+            IERC20(unwrappedDepositToken).approve(oldToken_, 0);
+        }
+
+        if (isTokenChanged) {
+            // Get stETH from wstETH
+            address unwrappedToken = IWStETH(newToken_).stETH();
+            // Increase allowance from stETH to wstETH. To exchange stETH for wstETH
+            IERC20(unwrappedToken).approve(newToken_, type(uint256).max);
+
+            unwrappedDepositToken = unwrappedToken;
+        }
+    }
+
+    function _replaceDepositTokenGateway(
+        address oldGateway_,
+        address newGateway_,
+        address oldToken_,
+        address newToken_
+    ) private {
+        bool isTokenChanged = oldToken_ != newToken_;
+        bool isGatewayChanged = oldGateway_ != newGateway_;
+
+        if (oldGateway_ != address(0) && (isTokenChanged || isGatewayChanged)) {
+            IERC20(oldToken_).approve(oldGateway_, 0);
+        }
+
+        if (isTokenChanged || isGatewayChanged) {
+            IERC20(newToken_).approve(newGateway_, type(uint256).max);
+        }
     }
 
     function sendDepositToken(
@@ -62,7 +79,7 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
         DepositTokenConfig storage config = depositTokenConfig;
 
         // Get current stETH balance
-        uint256 amountUnwrappedToken = IERC20(unwrappedToken).balanceOf(address(this));
+        uint256 amountUnwrappedToken = IERC20(unwrappedDepositToken).balanceOf(address(this));
         // Wrap all stETH to wstETH
         uint256 amount_ = IWStETH(config.token).wrap(amountUnwrappedToken);
 

@@ -1,3 +1,7 @@
+import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
+
+import { parseConfig } from './helpers/config-parser';
+
 import {
   ISwap,
   L2Receiver__factory,
@@ -11,8 +15,6 @@ import {
 } from '@/generated-types/ethers';
 import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
-import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
-import { parseConfig } from './helpers/config-parser';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig();

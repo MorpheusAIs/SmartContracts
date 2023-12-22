@@ -1,8 +1,9 @@
-import { MOR } from '@/generated-types/ethers';
-import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
-import { Reverter } from '../helpers/reverter';
+
+import { MOR } from '@/generated-types/ethers';
+import { wei } from '@/scripts/utils/utils';
+import { Reverter } from '@/test/helpers/reverter';
 
 describe('MOR', () => {
   const reverter = new Reverter();
@@ -40,7 +41,7 @@ describe('MOR', () => {
 
   describe('supportsInterface', () => {
     it('should support IMOR', async () => {
-      expect(await mor.supportsInterface('0xbaa0dcc0')).to.be.true;
+      expect(await mor.supportsInterface('0x3705179b')).to.be.true;
     });
     it('should support IERC20', async () => {
       expect(await mor.supportsInterface('0x36372b07')).to.be.true;
@@ -98,4 +99,5 @@ describe('MOR', () => {
   });
 });
 
-// npx hardhat test "test/tokens/MOR.test.ts"
+// npx hardhat test "test/MOR.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/MOR.test.ts"

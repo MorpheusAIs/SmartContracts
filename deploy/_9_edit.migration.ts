@@ -1,7 +1,8 @@
+import { Deployer } from '@solarity/hardhat-migrate';
+
 import { Distribution__factory, IDistribution } from '@/generated-types/ethers';
 import { SECONDS_IN_DAY } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
-import { Deployer } from '@solarity/hardhat-migrate';
 
 module.exports = async function (deployer: Deployer) {
   const distribution = Distribution__factory.connect(

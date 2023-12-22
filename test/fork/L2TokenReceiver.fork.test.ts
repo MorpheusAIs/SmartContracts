@@ -1,3 +1,9 @@
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { ethers, expect } from 'hardhat';
+
+import { getDefaultSwapParams } from '../helpers/distribution-helper';
+import { Reverter } from '../helpers/reverter';
+
 import {
   INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
@@ -10,10 +16,6 @@ import {
   WStETHMock__factory,
 } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
-import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { ethers, expect } from 'hardhat';
-import { getDefaultSwapParams } from '../helpers/distribution-helper';
-import { Reverter } from '../helpers/reverter';
 
 describe('L2TokenReceiver Fork', () => {
   const reverter = new Reverter();

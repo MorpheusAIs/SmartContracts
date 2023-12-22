@@ -1,6 +1,7 @@
+import { Deployer } from '@solarity/hardhat-migrate';
+
 import { L1Sender__factory, L2Receiver__factory } from '@/generated-types/ethers';
 import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
-import { Deployer } from '@solarity/hardhat-migrate';
 
 module.exports = async function (deployer: Deployer) {
   const l2Receiver = await deployer.deployed(L2Receiver__factory);

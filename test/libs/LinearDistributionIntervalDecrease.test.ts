@@ -1,41 +1,27 @@
-import { Distribution, IDistribution } from '@/generated-types/ethers';
-import { wei } from '@/scripts/utils/utils';
-import { Reverter } from '@/test/helpers/reverter';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { getDefaultPool, getDefaultSwapParams, oneHour } from '../helpers/distribution-helper';
+
+import { DistributionV2, IDistribution } from '@/generated-types/ethers';
+import { wei } from '@/scripts/utils/utils';
+import { getDefaultPool, oneHour } from '@/test/helpers/distribution-helper';
+import { Reverter } from '@/test/helpers/reverter';
 
 describe('LinearDistributionIntervalDecrease', () => {
   const reverter = new Reverter();
 
-  let distribution: Distribution;
+  let distribution: DistributionV2;
 
   before(async () => {
-    const [libFactory, stETHMockFactory, L2TokenReceiver] = await Promise.all([
-      ethers.getContractFactory('LinearDistributionIntervalDecrease'),
-      ethers.getContractFactory('StETHMock'),
-      ethers.getContractFactory('L2TokenReceiver'),
-    ]);
-
-    const stETHMock = await stETHMockFactory.deploy();
+    const [libFactory] = await Promise.all([ethers.getContractFactory('LinearDistributionIntervalDecrease')]);
     const lib = await libFactory.deploy();
-    const l2TokenReceiver = await L2TokenReceiver.deploy(
-      await stETHMock.getAddress(),
-      await stETHMock.getAddress(),
-      getDefaultSwapParams(await stETHMock.getAddress(), await stETHMock.getAddress(), await stETHMock.getAddress()),
-    );
 
-    // START deploy distribution contract
-    const distributionFactory = await ethers.getContractFactory('Distribution', {
+    const distributionFactory = await ethers.getContractFactory('DistributionV2', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
       },
     });
 
     distribution = await distributionFactory.deploy();
-    // END
-
-    await distribution.Distribution_init(await stETHMock.getAddress(), l2TokenReceiver, []);
 
     await reverter.snapshot();
   });
@@ -71,6 +57,18 @@ describe('LinearDistributionIntervalDecrease', () => {
       const pool: IDistribution.PoolStruct = {
         ...pool0,
         rewardDecrease: 0,
+        decreaseInterval: 0,
+      };
+
+      await distribution.createPool(pool);
+
+      const reward = await distribution.getPeriodReward(0, pool.payoutStart, 99999);
+      expect(reward).to.eq(wei(0));
+    });
+
+    it('should return 0 if interval == 0', async () => {
+      const pool: IDistribution.PoolStruct = {
+        ...pool0,
         decreaseInterval: 0,
       };
 
@@ -262,7 +260,7 @@ describe('LinearDistributionIntervalDecrease', () => {
   });
 });
 
-const _testRewardsCalculation = async (distribution: Distribution, poolId: number, payoutStart: number) => {
+const _testRewardsCalculation = async (distribution: DistributionV2, poolId: number, payoutStart: number) => {
   let reward;
 
   // Range in one interval, first interval
@@ -345,3 +343,4 @@ const _testRewardsCalculation = async (distribution: Distribution, poolId: numbe
 };
 
 // npx hardhat test "test/libs/LinearDistributionIntervalDecrease.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/libs/LinearDistributionIntervalDecrease.test.ts"

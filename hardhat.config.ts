@@ -5,14 +5,13 @@ import '@nomiclabs/hardhat-web3';
 import '@solarity/hardhat-markup';
 import '@solarity/hardhat-migrate';
 import '@typechain/hardhat';
+import * as dotenv from 'dotenv';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
+import { HardhatUserConfig } from 'hardhat/config';
 import 'solidity-coverage';
 import 'tsconfig-paths/register';
 
-import { HardhatUserConfig } from 'hardhat/config';
-
-import * as dotenv from 'dotenv';
 dotenv.config();
 
 function privateKey() {

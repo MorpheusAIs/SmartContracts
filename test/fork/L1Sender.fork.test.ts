@@ -1,3 +1,9 @@
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
+
+import { Reverter } from '../helpers/reverter';
+
 import {
   IGatewayRouter,
   IGatewayRouter__factory,
@@ -8,10 +14,6 @@ import {
   L1Sender,
 } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
-import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { Reverter } from '../helpers/reverter';
 
 describe('L1Sender Fork', () => {
   const reverter = new Reverter();

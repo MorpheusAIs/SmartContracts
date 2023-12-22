@@ -1,3 +1,7 @@
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
+
 import {
   Distribution,
   DistributionV2,
@@ -17,12 +21,9 @@ import {
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
+import { getCurrentBlockTime, setNextTime, setTime } from '@/test/helpers/block-helper';
+import { getDefaultPool, oneDay, oneHour } from '@/test/helpers/distribution-helper';
 import { Reverter } from '@/test/helpers/reverter';
-import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { getCurrentBlockTime, setNextTime, setTime } from './helpers/block-helper';
-import { getDefaultPool, oneDay, oneHour } from './helpers/distribution-helper';
 
 describe('Distribution', () => {
   const senderChainId = 101;
@@ -104,7 +105,7 @@ describe('Distribution', () => {
       stETHMockFactory.deploy(),
       LZEndpointMock.deploy(senderChainId),
       LZEndpointMock.deploy(receiverChainId),
-      gatewayRouterMock.deploy(SECOND),
+      gatewayRouterMock.deploy(),
       L2MessageReceiver.deploy(),
       SwapRouterMock.deploy(),
       NonfungiblePositionManagerMock.deploy(),
@@ -1519,7 +1520,6 @@ describe('Distribution', () => {
       await distribution.createPool(pool);
       await distribution.createPool(pool);
     });
-
     it('should return 0 if deposit token is not changed', async () => {
       await distribution.stake(0, wei(1));
 
@@ -1528,7 +1528,6 @@ describe('Distribution', () => {
       const overplus = await distribution.overplus();
       expect(overplus).to.eq(0);
     });
-
     it('should return 0 if deposited token decreased', async () => {
       await distribution.stake(0, wei(1));
 
@@ -1539,7 +1538,6 @@ describe('Distribution', () => {
       const overplus = await distribution.overplus();
       expect(overplus).to.eq(0);
     });
-
     it('should return overplus if deposited token increased', async () => {
       await distribution.stake(0, wei(1));
 
@@ -1565,50 +1563,38 @@ describe('Distribution', () => {
     });
   });
 
-  // describe('#swapAndBurnOverplus', () => {
-  //   beforeEach(async () => {
-  //     await depositToken.mint(OWNER, wei(100));
-  //     await _getRewardTokenFromPool(distribution, wei(100), OWNER);
-  //     await rewardToken.transfer(swapRouter, wei(20));
+  describe('#bridgeOverplus', () => {
+    beforeEach(async () => {
+      await depositToken.mint(OWNER, wei(100));
+      await _getRewardTokenFromPool(distribution, wei(100), OWNER);
 
-  //     await depositToken.approve(await swapRouter.getAddress(), wei(5));
+      const pool = getDefaultPool();
 
-  //     await rewardToken.approve(await swapRouter.getAddress(), wei(10));
+      await distribution.createPool(pool);
+    });
+    it('should bridge overplus', async () => {
+      const l2TokenReceiverAddress = await l2TokenReceiver.getAddress();
 
-  //     await depositToken.approve(swap.getAddress(), wei(10));
+      await distribution.stake(1, wei(1));
 
-  //     const pool = getDefaultPool();
+      await depositToken.setTotalPooledEther(wei(2, 25));
 
-  //     await distribution.createPool(pool);
-  //   });
+      const overplus = await distribution.overplus();
+      expect(overplus).to.eq(wei(1));
 
-  //   it('should revert if caller is not owner', async () => {
-  //     await expect(distribution.connect(SECOND).swapAndBurnOverplus(0)).to.be.revertedWith(
-  //       'Ownable: caller is not the owner',
-  //     );
-  //   });
-
-  //   it('should revert if overplus is <= 0', async () => {
-  //     await expect(distribution.swapAndBurnOverplus(0)).to.be.revertedWith('DS: overplus is zero');
-  //   });
-
-  //   it('should burn overplus', async () => {
-  //     await distribution.stake(1, wei(1));
-
-  //     await depositToken.setTotalPooledEther(wei(2, 25));
-
-  //     const rewardTokenTotalSupplyBefore = await rewardToken.totalSupply();
-
-  //     const overplus = await distribution.overplus();
-  //     expect(overplus).to.eq(wei(1));
-
-  //     const tx = await distribution.swapAndBurnOverplus(0);
-  //     await expect(tx).to.changeTokenBalance(depositToken, distribution, wei(-1));
-
-  //     const rewardTokenTotalSupplyAfter = await rewardToken.totalSupply();
-  //     expect(rewardTokenTotalSupplyAfter).to.eq(rewardTokenTotalSupplyBefore - wei(1));
-  //   });
-  // });
+      const tx = await distribution.bridgeOverplus(1, 1, 1);
+      await expect(tx).to.changeTokenBalance(depositToken, distribution, wei(-1));
+      expect(await wstETH.balanceOf(l2TokenReceiverAddress)).to.eq(wei(1));
+    });
+    it('should revert if caller is not owner', async () => {
+      await expect(distribution.connect(SECOND).bridgeOverplus(1, 1, 1)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
+    it('should revert if overplus is <= 0', async () => {
+      await expect(distribution.bridgeOverplus(1, 1, 1)).to.be.revertedWith('DS: overplus is zero');
+    });
+  });
 });
 
 // @dev: should be called before other pool creation
@@ -1658,4 +1644,4 @@ const _comparePoolStructs = (a: IDistribution.PoolStruct, b: IDistribution.PoolS
 };
 
 // npx hardhat test "test/Distribution.test.ts"
-// npx hardhat coverage --testfiles "test/Payment.test.js"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/Distribution.test.ts"

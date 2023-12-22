@@ -1,3 +1,10 @@
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
+
+import { getDefaultSwapParams } from './helpers/distribution-helper';
+import { Reverter } from './helpers/reverter';
+
 import {
   IL2TokenReceiver,
   L2TokenReceiver,
@@ -8,11 +15,6 @@ import {
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
-import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { getDefaultSwapParams } from './helpers/distribution-helper';
-import { Reverter } from './helpers/reverter';
 
 describe('L2TokenReceiver', () => {
   const reverter = new Reverter();

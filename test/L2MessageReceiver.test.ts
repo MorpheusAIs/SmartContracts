@@ -1,10 +1,11 @@
-import { L2MessageReceiver, MOR } from '@/generated-types/ethers';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
-import { wei } from '@/scripts/utils/utils';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { Reverter } from './helpers/reverter';
+
+import { L2MessageReceiver, MOR } from '@/generated-types/ethers';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
+import { wei } from '@/scripts/utils/utils';
+import { Reverter } from '@/test/helpers/reverter';
 
 describe('L2MessageReceiver', () => {
   const reverter = new Reverter();
@@ -79,6 +80,38 @@ describe('L2MessageReceiver', () => {
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(1));
       expect(await l2MessageReceiver.nonce()).to.be.equal(5);
     });
+    it('should update nonce and mint tokens', async () => {
+      const address = ethers.solidityPacked(
+        ['address', 'address'],
+        [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
+      );
+      let payload = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256'],
+        [await SECOND.getAddress(), wei(99)],
+      );
+
+      let tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(99));
+      expect(await l2MessageReceiver.nonce()).to.be.equal(5);
+
+      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
+
+      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 6, payload);
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(1));
+      expect(await l2MessageReceiver.nonce()).to.be.equal(6);
+
+      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
+
+      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 7, payload);
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
+      expect(await l2MessageReceiver.nonce()).to.be.equal(7);
+
+      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(0)]);
+
+      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 8, payload);
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
+      expect(await l2MessageReceiver.nonce()).to.be.equal(8);
+    });
     it('should revert if provided wrong nonce', async () => {
       await expect(l2MessageReceiver.lzReceive(1, '0x', 0, '0x')).to.be.revertedWith('L2MR: invalid nonce');
     });
@@ -97,3 +130,6 @@ describe('L2MessageReceiver', () => {
     });
   });
 });
+
+// npx hardhat test "test/L2MessageReceiver.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/L2MessageReceiver.test.ts"

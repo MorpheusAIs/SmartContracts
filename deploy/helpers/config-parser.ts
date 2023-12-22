@@ -1,7 +1,8 @@
-import { IDistribution } from '@/generated-types/ethers';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { BigNumberish } from 'ethers';
 import { readFileSync } from 'fs';
+
+import { IDistribution } from '@/generated-types/ethers';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
 
 export type Config = {
   cap: number;
