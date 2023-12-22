@@ -5,13 +5,13 @@ import { getDefaultSwapParams } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
 import {
+  IERC20,
+  IERC20__factory,
   INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
   ISwapRouter,
   ISwapRouter__factory,
   L2TokenReceiver,
-  MOR,
-  MOR__factory,
   WStETHMock,
   WStETHMock__factory,
 } from '@/generated-types/ethers';
@@ -37,7 +37,7 @@ describe('L2TokenReceiver Fork', () => {
   let nonfungiblePositionManager: INonfungiblePositionManager;
 
   let inputToken: WStETHMock;
-  let outputToken: MOR;
+  let outputToken: IERC20;
 
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
@@ -54,7 +54,7 @@ describe('L2TokenReceiver Fork', () => {
     nonfungiblePositionManager = INonfungiblePositionManager__factory.connect(nonfungiblePositionManagerAddress, OWNER);
 
     inputToken = WStETHMock__factory.connect(wstethAddress, OWNER);
-    outputToken = MOR__factory.connect(usdcAddress, OWNER);
+    outputToken = IERC20__factory.connect(usdcAddress, OWNER);
 
     const L2TokenReceiver = await ethers.getContractFactory('L2TokenReceiver', OWNER);
     l2TokenReceiver = await L2TokenReceiver.deploy(
@@ -85,6 +85,31 @@ describe('L2TokenReceiver Fork', () => {
 
       expect(tx).to.changeTokenBalance(outputToken, OWNER, amount);
       expect(tx).to.changeTokenBalance(inputToken, OWNER, -amount * wstethToUsdcRatio);
+    });
+  });
+
+  describe('#increaseLiquidityCurrentRange', () => {
+    const amountInputToken = wei(0.0001);
+    const amoutOutputToken = 541774411822;
+
+    // const poolId = '0x4622df6fb2d9bee0dcdacf545acdb6a2b2f4f863';
+    const poolId = 376582;
+    beforeEach('setup', async () => {
+      await inputToken.transfer(l2TokenReceiver, amountInputToken);
+      await outputToken.transfer(l2TokenReceiver, amoutOutputToken);
+    });
+
+    it('should increase liquidity', async () => {
+      const tx = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
+        poolId,
+        amountInputToken,
+        amoutOutputToken,
+      );
+
+      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amoutOutputToken);
+
+      expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[1]);
+      expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[2]);
     });
   });
 });
