@@ -52,8 +52,6 @@ interface IDistribution {
         uint256 pendingRewards;
     }
 
-    event Staked(address user, uint256 poolId, uint256 amount, uint256 userStakeTotal, bool isStaked);
-
     /**
      * The function to initialize the contract.
      * @param depositToken_ The address of deposit token.
@@ -71,7 +69,7 @@ interface IDistribution {
     /**
      * The function to edit the pool's data.
      * @param poolId The pool's id.
-     * @param pool_ The new     pool's data.
+     * @param pool_ The new pool's data.
      */
     function editPool(uint256 poolId, Pool calldata pool_) external;
 
@@ -151,6 +149,12 @@ interface IDistribution {
      * @return The address of deposit token.
      */
     function depositToken() external view returns (address);
+
+    /**
+     * The function to get the address of bridge contract.
+     * @return The address of bridge contract.
+     */
+    function l1Sender() external view returns (address);
 
     /**
      * The function to get the amount of deposit tokens that are staked in the pool.

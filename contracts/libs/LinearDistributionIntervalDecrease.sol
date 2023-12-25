@@ -28,7 +28,7 @@ library LinearDistributionIntervalDecrease {
             return 0;
         }
 
-        // `startTime_` can't be less than `payoutStart_`
+        // 'startTime_' can't be less than 'payoutStart_'
         if (startTime_ < payoutStart_) {
             startTime_ = payoutStart_;
         }
@@ -39,12 +39,12 @@ library LinearDistributionIntervalDecrease {
             endTime_ = maxEndTime_;
         }
 
-        // Return 0 when calculation `startTime_` is bigger then `endTime_`...
+        // Return 0 when calculation 'startTime_' is bigger then 'endTime_'...
         if (startTime_ >= endTime_) {
             return 0;
         }
 
-        // Calculate interval that less then `interval_` range
+        // Calculate interval that less then 'interval_' range
         uint256 timePassedBefore_ = startTime_ - payoutStart_;
         if ((timePassedBefore_ / interval_) == ((endTime_ - payoutStart_) / interval_)) {
             uint256 intervalsPassed_ = timePassedBefore_ / interval_;
@@ -53,7 +53,7 @@ library LinearDistributionIntervalDecrease {
             return (intervalFullReward_ * (endTime_ - startTime_)) / interval_;
         }
 
-        // Calculate interval that more then `interval_` range
+        // Calculate interval that more then 'interval_' range
         uint256 firstPeriodReward_ = _calculatePartPeriodReward(
             payoutStart_,
             startTime_,
@@ -142,7 +142,7 @@ library LinearDistributionIntervalDecrease {
 
         uint256 decreaseRewardAmount_ = intervalsPassedBefore_ * decreaseAmount_;
 
-        // Overflow impossible because `endTime_` can't be more then `maxEndTime_`
+        // Overflow impossible because 'endTime_' can't be more then 'maxEndTime_'
         uint256 initialReward_ = initialAmount_ - decreaseRewardAmount_;
         // END
 

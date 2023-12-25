@@ -28,8 +28,7 @@ interface IL2TokenReceiver is IERC165 {
     function editParams(SwapParams memory params_) external;
 
     /**
-     * The function to swap tokens.
-     * @dev Firstly the tokens are wrapped to the intermediate token and then swapped via Uniswap V3.
+     * The function to swap current contract's tokens specified in the params.
      * @param amountIn_ The amount of tokens to swap.
      * @param amountOutMinimum_ The minimum amount of tokens to receive.
      * @return The amount of tokens received.
