@@ -85,6 +85,11 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
       timeout: 60000,
     },
+    arbitrum_goerli: {
+      url: `https://arbitrum-goerli.infura.io/v3/${process.env.INFURA_KEY}`,
+      accounts: privateKey(),
+      gasMultiplier: 1.2,
+    },
   },
   solidity: {
     version: '0.8.20',
@@ -107,11 +112,12 @@ const config: HardhatUserConfig = {
       polygon: `${process.env.POLYGONSCAN_KEY}`,
       avalancheFujiTestnet: `${process.env.AVALANCHE_KEY}`,
       avalanche: `${process.env.AVALANCHE_KEY}`,
+      arbitrumGoerli: `${process.env.ETHERSCAN_KEY}`,
     },
   },
   migrate: {
     pathToMigrations: './deploy/',
-    // only: 3,
+    only: 3,
   },
   mocha: {
     timeout: 1000000,

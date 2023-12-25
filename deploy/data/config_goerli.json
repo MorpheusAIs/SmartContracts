@@ -6,17 +6,17 @@
   },
   "pools": [
     {
-      "payoutStart": 1701443580,
-      "decreaseInterval": 28800,
-      "withdrawLockPeriod": 10,
-      "claimLockPeriod": 10,
-      "initialReward": "100000000000000000",
-      "rewardDecrease": "10000000000000000",
+      "payoutStart": 1703278783,
+      "decreaseInterval": 86400,
+      "withdrawLockPeriod": 120,
+      "claimLockPeriod": 60,
+      "initialReward": "14400000000000000000000",
+      "rewardDecrease": "2468994701000000000",
       "minimalStake": "1000000000000000",
       "isPublic": true
     },
     {
-      "payoutStart": 1701443580,
+      "payoutStart": 1703278783,
       "decreaseInterval": 60,
       "withdrawLockPeriod": 1,
       "claimLockPeriod": 1,
@@ -31,12 +31,14 @@
       "amounts": ["1", "1"]
     }
   ],
-  "swapAddresses": {
+  "L1": {
     "stEth": "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
-    "wStEth": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+    "wStEth": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f"
+  },
+  "L2": {
     "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     "nonfungiblePositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-    "wStEthOnL2": "0x"
+    "wStEth": "0xbED18985eC648Ce4b0C5Fc3061d1323116702BC4"
   },
   "swapParams": {
     "fee": 10000,
@@ -46,7 +48,7 @@
     "arbitrumBridgeGatewayRouter": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"
   },
   "lzConfig": {
-    "senderLzEndpoint": "0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23",
-    "receiverLzEndpoint": "0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab"
+    "lzEndpointL1": "0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23",
+    "lzEndpointL2": "0x6aB5Ae6822647046626e83ee6dB8187151E1d5ab"
   }
 }

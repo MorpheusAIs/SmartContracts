@@ -24,6 +24,7 @@
     "deploy-bsc": "npx hardhat migrate --network bsc --verify --confirmations 2",
     "deploy-polygon": "npx hardhat migrate --network polygon --verify --confirmations 10",
     "deploy-avalanche": "npx hardhat migrate --network avalanche --verify --confirmations 5",
+    "deploy-arbitrum-goerli": "npx hardhat migrate --network arbitrum_goerli --verify",
     "generate-types": "TYPECHAIN_FORCE=true npx hardhat typechain",
     "generate-docs": "npx hardhat markup",
     "lint-fix": "npm run lint-sol-fix && npm run lint-ts-fix && npm run lint-json-fix",

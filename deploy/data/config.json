@@ -7,11 +7,11 @@
   "pools": [
     {
       "payoutStart": 1765790236,
-      "decreaseInterval": 28800,
-      "withdrawLockPeriod": 10,
-      "claimLockPeriod": 10,
-      "initialReward": "100000000000000000",
-      "rewardDecrease": "10000000000000000",
+      "decreaseInterval": 86400,
+      "withdrawLockPeriod": 120,
+      "claimLockPeriod": 60,
+      "initialReward": "14400000000000000000000",
+      "rewardDecrease": "2468994701000000000",
       "minimalStake": "1000000000000000",
       "isPublic": true
     },

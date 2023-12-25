@@ -5,6 +5,9 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 import {IDistribution, LinearDistributionIntervalDecrease} from "../Distribution.sol";
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {LZEndpointMock} from "@layerzerolabs/solidity-examples/contracts/lzApp/mocks/LZEndpointMock.sol";
+
 contract DistributionV2 is UUPSUpgradeable {
     IDistribution.Pool[] public pools;
 

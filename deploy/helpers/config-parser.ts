@@ -11,12 +11,14 @@ export type Config = {
     receiverChainId: number;
   };
   pools?: PoolInitInfo[];
-  swapAddresses?: {
+  L1?: {
     stEth: string;
     wStEth: string;
+  };
+  L2?: {
     swapRouter: string;
     nonfungiblePositionManager: string;
-    wStEthOnL2: string;
+    wStEth: string;
   };
   swapParams: {
     fee: string;
@@ -26,8 +28,8 @@ export type Config = {
     arbitrumBridgeGatewayRouter: string;
   };
   lzConfig?: {
-    senderLzEndpoint: string;
-    receiverLzEndpoint: string;
+    lzEndpointL1: string;
+    lzEndpointL2: string;
   };
 };
 
@@ -36,7 +38,7 @@ type PoolInitInfo = IDistribution.PoolStruct & {
   amounts: BigNumberish[];
 };
 
-export function parseConfig(configPath: string = 'deploy/data/config.json'): Config {
+export function parseConfig(configPath: string = 'deploy/data/config_goerli.json'): Config {
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
 
   if (config.cap == undefined) {
@@ -57,25 +59,27 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
     validatePools(config.pools);
   }
 
-  if (config.swapAddresses != undefined) {
-    if (config.swapAddresses.stEth == undefined) {
-      nonZeroAddr(config.swapAddresses.stEth, 'swapAddresses.stEth');
+  if (config.L1 != undefined) {
+    if (config.L1.stEth == undefined) {
+      nonZeroAddr(config.L1.stEth, 'L1.stEth');
     }
 
-    if (config.swapAddresses.wStEth == undefined) {
-      nonZeroAddr(config.swapAddresses.wStEth, 'swapAddresses.wStEth');
+    if (config.L1.wStEth == undefined) {
+      nonZeroAddr(config.L1.wStEth, 'L1.wStEth');
+    }
+  }
+
+  if (config.L2 != undefined) {
+    if (config.L2.swapRouter == undefined) {
+      nonZeroAddr(config.L2.swapRouter, 'L2.swapRouter');
     }
 
-    if (config.swapAddresses.swapRouter == undefined) {
-      nonZeroAddr(config.swapAddresses.swapRouter, 'swapAddresses.swapRouter');
+    if (config.L2.nonfungiblePositionManager == undefined) {
+      nonZeroAddr(config.L2.nonfungiblePositionManager, 'L2.nonfungiblePositionManager');
     }
 
-    if (config.swapAddresses.nonfungiblePositionManager == undefined) {
-      nonZeroAddr(config.swapAddresses.nonfungiblePositionManager, 'swapAddresses.nonfungiblePositionManager');
-    }
-
-    if (config.swapAddresses.wStEthOnL2 == undefined) {
-      nonZeroAddr(config.swapAddresses.wStEthOnL2, 'swapAddresses.wStEthOnL2');
+    if (config.L2.wStEth == undefined) {
+      nonZeroAddr(config.L2.wStEth, 'L2.wStEth');
     }
   }
 
@@ -88,11 +92,11 @@ export function parseConfig(configPath: string = 'deploy/data/config.json'): Con
   }
 
   if (config.lzConfig != undefined) {
-    if (config.lzConfig.senderLzEndpoint == undefined) {
-      throw new Error('Invalid `lzConfig.senderLzEndpoint`');
+    if (config.lzConfig.lzEndpointL1 == undefined) {
+      throw new Error('Invalid `lzConfig.lzEndpointL1`');
     }
-    if (config.lzConfig.receiverLzEndpoint == undefined) {
-      throw new Error('Invalid `lzConfig.receiverLzEndpoint`');
+    if (config.lzConfig.lzEndpointL2 == undefined) {
+      throw new Error('Invalid `lzConfig.lzEndpointL2`');
     }
   }
 
