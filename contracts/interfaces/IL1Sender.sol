@@ -48,6 +48,7 @@ interface IL1Sender {
      * @param gasLimit_ The gas limit for the L2 transaction.
      * @param maxFeePerGas_ The max fee per gas for the L2 transaction.
      * @param maxSubmissionCost_ The max submission cost for the L2 transaction.
+     * @return The unique identifier for withdrawal.
      */
     function sendDepositToken(
         uint256 gasLimit_,

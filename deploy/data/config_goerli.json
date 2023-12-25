@@ -6,7 +6,7 @@
   },
   "pools": [
     {
-      "payoutStart": 1703278783,
+      "payoutStart": 1703618736,
       "decreaseInterval": 86400,
       "withdrawLockPeriod": 120,
       "claimLockPeriod": 60,
@@ -16,7 +16,7 @@
       "isPublic": true
     },
     {
-      "payoutStart": 1703278783,
+      "payoutStart": 1703618736,
       "decreaseInterval": 60,
       "withdrawLockPeriod": 1,
       "claimLockPeriod": 1,
@@ -45,7 +45,7 @@
     "sqrtPriceLimitX96": 0
   },
   "arbitrumConfig": {
-    "arbitrumBridgeGatewayRouter": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"
+    "arbitrumBridgeGatewayRouter": "0x0ecCFbBEe34f04187361818832385EB4cC11b678"
   },
   "lzConfig": {
     "lzEndpointL1": "0xbfD2135BFfbb0B5378b56643c2Df8a87552Bfa23",

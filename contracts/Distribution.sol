@@ -305,13 +305,17 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return depositTokenContractBalance_ - totalDepositedInPublicPools;
     }
 
-    function bridgeOverplus(uint256 gasLimit_, uint256 maxFeePerGas_, uint256 maxSubmissionCost_) external onlyOwner {
+    function bridgeOverplus(
+        uint256 gasLimit_,
+        uint256 maxFeePerGas_,
+        uint256 maxSubmissionCost_
+    ) external payable onlyOwner returns (bytes memory) {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        L1Sender(l1Sender).sendDepositToken(gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        return L1Sender(l1Sender).sendDepositToken(gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

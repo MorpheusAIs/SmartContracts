@@ -55,8 +55,6 @@ module.exports = async function (deployer: Deployer) {
 
   const l1Sender = await deployer.deploy(L1Sender__factory);
 
-  l1Sender.transferOwnership(distribution.address);
-
   const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
     gateway: lzEndpointL1,
     // receiver: DefaultStorage.get('l2MessageReceiver'),

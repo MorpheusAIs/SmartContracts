@@ -130,8 +130,13 @@ interface IDistribution {
      * @param gasLimit_ The gas limit.
      * @param maxFeePerGas_ The max fee per gas.
      * @param maxSubmissionCost_ The max submission cost.
+     * @return The unique identifier for withdrawal.
      */
-    function bridgeOverplus(uint256 gasLimit_, uint256 maxFeePerGas_, uint256 maxSubmissionCost_) external;
+    function bridgeOverplus(
+        uint256 gasLimit_,
+        uint256 maxFeePerGas_,
+        uint256 maxSubmissionCost_
+    ) external payable returns (bytes memory);
 
     /**
      * The function to remove upgradeability.
