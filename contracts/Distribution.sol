@@ -38,6 +38,11 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         _;
     }
 
+    modifier poolPublic(uint256 poolId_) {
+        require(pools[poolId_].isPublic, "DS: pool isn't public");
+        _;
+    }
+
     /**********************************************************************************************/
     /*** Init                                                                                   ***/
     /**********************************************************************************************/
@@ -135,9 +140,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** Stake, claim, withdraw                                                                 ***/
     /**********************************************************************************************/
-    function stake(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
-        require(pools[poolId_].isPublic, "DS: pool isn't public");
-
+    function stake(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
         _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
@@ -164,9 +167,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         L1Sender(l1Sender).sendMintMessage{value: msg.value}(user_, pendingRewards_, _msgSender());
     }
 
-    function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) {
-        require(pools[poolId_].isPublic, "DS: pool isn't public");
-
+    function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
@@ -232,9 +233,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
                 "DS: pool withdraw is locked"
             );
 
-            uint256 depositTokenContractBalance = IERC20(depositToken).balanceOf(address(this));
-            if (amount_ > depositTokenContractBalance) {
-                amount_ = depositTokenContractBalance;
+            uint256 depositTokenContractBalance_ = IERC20(depositToken).balanceOf(address(this));
+            if (amount_ > depositTokenContractBalance_) {
+                amount_ = depositTokenContractBalance_;
             }
 
             newDeposited_ = deposited_ - amount_;
@@ -296,12 +297,12 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
 
     function overplus() public view returns (uint256) {
-        uint256 depositTokenContractBalance = IERC20(depositToken).balanceOf(address(this));
-        if (depositTokenContractBalance <= totalDepositedInPublicPools) {
+        uint256 depositTokenContractBalance_ = IERC20(depositToken).balanceOf(address(this));
+        if (depositTokenContractBalance_ <= totalDepositedInPublicPools) {
             return 0;
         }
 
-        return depositTokenContractBalance - totalDepositedInPublicPools;
+        return depositTokenContractBalance_ - totalDepositedInPublicPools;
     }
 
     function bridgeOverplus(uint256 gasLimit_, uint256 maxFeePerGas_, uint256 maxSubmissionCost_) external onlyOwner {

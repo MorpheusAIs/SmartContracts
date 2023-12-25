@@ -61,14 +61,14 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
         uint256 tokenId_,
         uint256 depositTokenAmountAdd_,
         uint256 rewardTokenAmountAdd_
-    ) external onlyOwner returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
+    ) external onlyOwner returns (uint128 liquidity_, uint256 amount0_, uint256 amount1_) {
         uint256 amountAdd0_;
         uint256 amountAdd1_;
 
-        (, , address token0, , , , , , , , , ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
+        (, , address token0_, , , , , , , , , ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
             tokenId_
         );
-        if (token0 == params.tokenIn) {
+        if (token0_ == params.tokenIn) {
             amountAdd0_ = depositTokenAmountAdd_;
             amountAdd1_ = rewardTokenAmountAdd_;
         } else {
@@ -86,7 +86,7 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
                 deadline: block.timestamp
             });
 
-        (liquidity, amount0, amount1) = INonfungiblePositionManager(nonfungiblePositionManager).increaseLiquidity(
+        (liquidity_, amount0_, amount1_) = INonfungiblePositionManager(nonfungiblePositionManager).increaseLiquidity(
             params_
         );
     }

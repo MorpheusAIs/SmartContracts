@@ -40,15 +40,15 @@ interface IL2TokenReceiver is IERC165 {
      * @param tokenId The ID of the position.
      * @param amountAdd0_ The amount of tokenIn to add.
      * @param amountAdd1_ The amount of tokenOut to add.
-     * @return liquidity The amount of liquidity added.
-     * @return amount0 The amount of token0 added.
-     * @return amount1 The amount of token1 added.
+     * @return liquidity_ The amount of liquidity added.
+     * @return amount0_ The amount of token0 added.
+     * @return amount1_ The amount of token1 added.
      */
     function increaseLiquidityCurrentRange(
         uint256 tokenId,
         uint256 amountAdd0_,
         uint256 amountAdd1_
-    ) external returns (uint128 liquidity, uint256 amount0, uint256 amount1);
+    ) external returns (uint128 liquidity_, uint256 amount0_, uint256 amount1_);
 
     /**
      * The function to get the router address.

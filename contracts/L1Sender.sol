@@ -36,20 +36,20 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
     }
 
     function _replaceDepositToken(address oldToken_, address newToken_) private {
-        bool isTokenChanged = oldToken_ != newToken_;
+        bool isTokenChanged_ = oldToken_ != newToken_;
 
-        if (oldToken_ != address(0) && isTokenChanged) {
+        if (oldToken_ != address(0) && isTokenChanged_) {
             // Remove allowance from stETH to wstETH
             IERC20(unwrappedDepositToken).approve(oldToken_, 0);
         }
 
-        if (isTokenChanged) {
+        if (isTokenChanged_) {
             // Get stETH from wstETH
-            address unwrappedToken = IWStETH(newToken_).stETH();
+            address unwrappedToken_ = IWStETH(newToken_).stETH();
             // Increase allowance from stETH to wstETH. To exchange stETH for wstETH
-            IERC20(unwrappedToken).approve(newToken_, type(uint256).max);
+            IERC20(unwrappedToken_).approve(newToken_, type(uint256).max);
 
-            unwrappedDepositToken = unwrappedToken;
+            unwrappedDepositToken = unwrappedToken_;
         }
     }
 
@@ -59,14 +59,14 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
         address oldToken_,
         address newToken_
     ) private {
-        bool isTokenChanged = oldToken_ != newToken_;
-        bool isGatewayChanged = oldGateway_ != newGateway_;
+        bool isTokenChanged_ = oldToken_ != newToken_;
+        bool isGatewayChanged_ = oldGateway_ != newGateway_;
 
-        if (oldGateway_ != address(0) && (isTokenChanged || isGatewayChanged)) {
+        if (oldGateway_ != address(0) && (isTokenChanged_ || isGatewayChanged_)) {
             IERC20(oldToken_).approve(oldGateway_, 0);
         }
 
-        if (isTokenChanged || isGatewayChanged) {
+        if (isTokenChanged_ || isGatewayChanged_) {
             IERC20(newToken_).approve(newGateway_, type(uint256).max);
         }
     }
@@ -79,9 +79,9 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
         DepositTokenConfig storage config = depositTokenConfig;
 
         // Get current stETH balance
-        uint256 amountUnwrappedToken = IERC20(unwrappedDepositToken).balanceOf(address(this));
+        uint256 amountUnwrappedToken_ = IERC20(unwrappedDepositToken).balanceOf(address(this));
         // Wrap all stETH to wstETH
-        uint256 amount_ = IWStETH(config.token).wrap(amountUnwrappedToken);
+        uint256 amount_ = IWStETH(config.token).wrap(amountUnwrappedToken_);
 
         bytes memory data_ = abi.encode(maxSubmissionCost_, "");
 
