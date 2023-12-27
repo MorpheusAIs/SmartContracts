@@ -1,7 +1,5 @@
 import { ethers } from 'hardhat';
 
-import { fromWei } from './utils/utils';
-
 import { ERC20 } from '@/generated-types/ethers';
 
 async function main() {
