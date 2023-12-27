@@ -57,8 +57,8 @@ module.exports = async function (deployer: Deployer) {
 
   const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
     gateway: lzEndpointL1,
-    // receiver: DefaultStorage.get('l2MessageReceiver'),
-    receiver: '0x00df74062DCFe5D708eA34170319377fD1EDB9Ce',
+    receiver: DefaultStorage.get('l2MessageReceiver'),
+    // receiver: '0xc37fF39e5A50543AD01E42C4Cd88c2939dD13002',
     receiverChainId: config.chainsConfig.receiverChainId,
   };
   await l1Sender.setRewardTokenConfig(rewardTokenConfig);
@@ -66,10 +66,12 @@ module.exports = async function (deployer: Deployer) {
   const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
     token: wStEth,
     gateway: arbitrumBridgeGatewayRouter,
-    // receiver: DefaultStorage.get('l2TokenReceiver'),
-    receiver: '0xb6067C1B07e3Fe12d18C11a0cc6F1366BD70EC95',
+    receiver: DefaultStorage.get('l2TokenReceiver'),
+    // receiver: '0x56c7db3D200c92eAAb8a2c4a9C1DcB8c50D4041F',
   };
   await l1Sender.setDepositTokenConfig(depositTokenConfig);
+
+  await l1Sender.transferOwnership(await distribution.getAddress());
 
   await distribution.Distribution_init(stETH, l1Sender, config.pools || []);
 

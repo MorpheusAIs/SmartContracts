@@ -90,6 +90,11 @@ const config: HardhatUserConfig = {
       accounts: privateKey(),
       gasMultiplier: 1.2,
     },
+    arbitrum_sepolia: {
+      url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      accounts: privateKey(),
+      gasMultiplier: 1.2,
+    },
   },
   solidity: {
     version: '0.8.20',
@@ -113,11 +118,12 @@ const config: HardhatUserConfig = {
       avalancheFujiTestnet: `${process.env.AVALANCHE_KEY}`,
       avalanche: `${process.env.AVALANCHE_KEY}`,
       arbitrumGoerli: `${process.env.ETHERSCAN_KEY}`,
+      arbitrumSepolia: `${process.env.ETHERSCAN_KEY}`,
     },
   },
   migrate: {
     pathToMigrations: './deploy/',
-    only: 3,
+    // only: 1,
   },
   mocha: {
     timeout: 1000000,

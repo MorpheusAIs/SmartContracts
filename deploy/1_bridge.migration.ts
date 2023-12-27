@@ -61,7 +61,7 @@ module.exports = async function (deployer: Deployer) {
 
   Reporter.reportContracts(
     ['L2TokenReceiver', l2TokenReceiver.address],
-    ['l2MessageReceiver', l2MessageReceiver.address],
+    ['L2MessageReceiver', l2MessageReceiver.address],
     ['MOR', MOR.address],
   );
 };

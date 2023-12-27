@@ -26,14 +26,14 @@ module.exports = async function (deployer: Deployer) {
 
   const l2MessageReceiver = await deployer.deployed(
     L2MessageReceiver__factory,
-    '0x00df74062dcfe5d708ea34170319377fd1edb9ce',
+    // '0xc37fF39e5A50543AD01E42C4Cd88c2939dD13002',
   );
 
-  // const l1SenderAddress = (await deployer.deployed(L1Sender__factory)).address;
-  const l1SenderAddress = '0x3C7bA5cBC373a480531fDb4F63610383263120Db';
+  const l1SenderAddress = (await deployer.deployed(L1Sender__factory)).address;
+  // const l1SenderAddress = '0xEec0DF0991458274fF0ede917E9827fFc67a8332';
 
-  // const morAddress = (await deployer.deployed(MOR__factory)).address;
-  const morAddress = '0xCF84E18F1a2803C15675622B24600910dc2a1E13';
+  const morAddress = (await deployer.deployed(MOR__factory)).address;
+  // const morAddress = '0x26BCDEb3E4e7EDf5657daF543132cAF792728908';
 
   const l2MessageReceiverConfig: IL2MessageReceiver.ConfigStruct = {
     gateway: lzEndpointL2,
