@@ -1,0 +1,27 @@
+{
+  "overrides": [
+    {
+      "files": "*.sol",
+      "options": {
+        "plugins": ["prettier-plugin-solidity"],
+        "printWidth": 120,
+        "tabWidth": 4,
+        "useTabs": false,
+        "singleQuote": false,
+        "bracketSpacing": false
+      }
+    },
+    {
+      "files": "*.ts",
+      "options": {
+        "plugins": ["@trivago/prettier-plugin-sort-imports"],
+        "printWidth": 120,
+        "tabWidth": 2,
+        "singleQuote": true,
+        "importOrder": ["^[./]", "^@/(.*)$"],
+        "importOrderSeparation": true,
+        "importOrderSortSpecifiers": true
+      }
+    }
+  ]
+}
