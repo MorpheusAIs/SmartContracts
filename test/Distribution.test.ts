@@ -90,6 +90,9 @@ describe('Distribution', () => {
     let gatewayRouter: GatewayRouterMock;
     let swapRouter: SwapRouterMock;
     let nonfungiblePositionManager: NonfungiblePositionManagerMock;
+    let l2TokenReceiverImplementation: L2TokenReceiver;
+    let l2MessageReceiverImplementation: L2MessageReceiver;
+    let l1SenderImplementation: L1Sender;
     // START deploy contracts without deps
     [
       lib,
@@ -97,38 +100,55 @@ describe('Distribution', () => {
       lZEndpointMockSender,
       lZEndpointMockReceiver,
       gatewayRouter,
-      l2MessageReceiver,
       swapRouter,
       nonfungiblePositionManager,
+      l2TokenReceiverImplementation,
+      l2MessageReceiverImplementation,
+      l1SenderImplementation,
     ] = await Promise.all([
       libFactory.deploy(),
       stETHMockFactory.deploy(),
       LZEndpointMock.deploy(senderChainId),
       LZEndpointMock.deploy(receiverChainId),
       gatewayRouterMock.deploy(),
-      L2MessageReceiver.deploy(),
       SwapRouterMock.deploy(),
       NonfungiblePositionManagerMock.deploy(),
+      L2TokenReceiver.deploy(),
+      L2MessageReceiver.deploy(),
+      l1SenderFactory.deploy(),
     ]);
+
+    distributionFactory = await ethers.getContractFactory('Distribution', {
+      libraries: {
+        LinearDistributionIntervalDecrease: await lib.getAddress(),
+      },
+    });
+    const distributionImplementation = await distributionFactory.deploy();
     // END
 
     wstETH = await wstETHMockFactory.deploy(depositToken);
 
-    l2TokenReceiver = await L2TokenReceiver.deploy(swapRouter, nonfungiblePositionManager, {
+    const l2MessageReceiverProxy = await ERC1967ProxyFactory.deploy(l2MessageReceiverImplementation, '0x');
+    l2MessageReceiver = L2MessageReceiver.attach(l2MessageReceiverProxy) as L2MessageReceiver;
+    l2MessageReceiver.L2MessageReceiver__init();
+
+    const l2TokenReceiverProxy = await ERC1967ProxyFactory.deploy(l2TokenReceiverImplementation, '0x');
+    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiver;
+    await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, {
       tokenIn: depositToken,
       tokenOut: depositToken,
       fee: 3000,
       sqrtPriceLimitX96: 0,
     });
 
-    l1Sender = await l1SenderFactory.deploy();
-
+    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
+    l1Sender = l1SenderFactory.attach(l1SenderProxy) as L1Sender;
+    await l1Sender.L1Sender__init();
     await l1Sender.setDepositTokenConfig({
       token: wstETH,
       gateway: gatewayRouter,
       receiver: l2TokenReceiver,
     });
-
     await l1Sender.setRewardTokenConfig({
       gateway: lZEndpointMockSender,
       receiver: l2MessageReceiver,
@@ -136,19 +156,9 @@ describe('Distribution', () => {
     });
 
     // START deploy distribution contract
-    distributionFactory = await ethers.getContractFactory('Distribution', {
-      libraries: {
-        LinearDistributionIntervalDecrease: await lib.getAddress(),
-      },
-    });
-
-    const distributionImplementation = await distributionFactory.deploy();
     const distributionProxy = await ERC1967ProxyFactory.deploy(await distributionImplementation.getAddress(), '0x');
     distribution = distributionFactory.attach(await distributionProxy.getAddress()) as Distribution;
     // END
-
-    // Get contract addresses
-    const [distributionAddress] = await Promise.all([distribution.getAddress()]);
 
     // Deploy reward token
     rewardToken = await MORFactory.deploy(wei(1000000000));
@@ -166,11 +176,11 @@ describe('Distribution', () => {
 
     await Promise.all([depositToken.mint(ownerAddress, wei(1000)), depositToken.mint(secondAddress, wei(1000))]);
     await Promise.all([
-      depositToken.approve(distributionAddress, wei(1000)),
-      depositToken.connect(SECOND).approve(distributionAddress, wei(1000)),
+      depositToken.approve(distribution, wei(1000)),
+      depositToken.connect(SECOND).approve(distribution, wei(1000)),
     ]);
 
-    await l1Sender.transferOwnership(distributionAddress);
+    await l1Sender.transferOwnership(distribution);
 
     await reverter.snapshot();
   });

@@ -11,7 +11,7 @@ import {
   WStETHMock__factory,
 } from '@/generated-types/ethers';
 import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
-import { ETHER_ADDR } from '@/scripts/utils/constants';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
@@ -46,14 +46,21 @@ module.exports = async function (deployer: Deployer) {
   if (config.arbitrumConfig) {
     arbitrumBridgeGatewayRouter = config.arbitrumConfig.arbitrumBridgeGatewayRouter;
   } else {
-    arbitrumBridgeGatewayRouter = ETHER_ADDR;
+    arbitrumBridgeGatewayRouter = ZERO_ADDR;
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
-  const ERC1967Proxy = await deployer.deploy(ERC1967Proxy__factory, [distributionImpl, '0x']);
-  const distribution = Distribution__factory.connect(ERC1967Proxy.address, await deployer.getSigner());
+  const distributionProxy = await deployer.deploy(ERC1967Proxy__factory, [distributionImpl, '0x'], {
+    name: 'Distribution Proxy',
+  });
+  const distribution = Distribution__factory.connect(distributionProxy.address, await deployer.getSigner());
 
-  const l1Sender = await deployer.deploy(L1Sender__factory);
+  const l1SenderImpl = await deployer.deploy(L1Sender__factory);
+  const l1SenderProxy = await deployer.deploy(ERC1967Proxy__factory, [l1SenderImpl, '0x'], {
+    name: 'L1Sender Proxy',
+  });
+  const l1Sender = L1Sender__factory.connect(l1SenderProxy.address, await deployer.getSigner());
+  await l1Sender.L1Sender__init();
 
   const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
     gateway: lzEndpointL1,
@@ -86,5 +93,8 @@ module.exports = async function (deployer: Deployer) {
     }
   }
 
-  Reporter.reportContracts(['Distribution', await distribution.getAddress()], ['L1Sender', l1Sender.address]);
+  Reporter.reportContracts(
+    ['Distribution', await distribution.getAddress()],
+    ['L1Sender', await l1Sender.getAddress()],
+  );
 };

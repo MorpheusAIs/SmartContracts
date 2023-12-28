@@ -5,6 +5,7 @@ import { ethers } from 'hardhat';
 import {
   GatewayRouterMock,
   L1Sender,
+  L1SenderV2,
   L2MessageReceiver,
   LZEndpointMock,
   MOR,
@@ -39,48 +40,73 @@ describe('L1Sender', () => {
   before(async () => {
     [OWNER, SECOND] = await ethers.getSigners();
 
-    const [LZEndpointMock, Mor, L1Sender, GatewayRouterMock, StETHMock, WStETHMock, L2MessageReceiver] =
-      await Promise.all([
-        ethers.getContractFactory('LZEndpointMock'),
-        ethers.getContractFactory('MOR'),
-        ethers.getContractFactory('L1Sender'),
-        ethers.getContractFactory('GatewayRouterMock'),
-        ethers.getContractFactory('StETHMock'),
-        ethers.getContractFactory('WStETHMock'),
-        ethers.getContractFactory('L2MessageReceiver'),
-      ]);
+    const [
+      ERC1967ProxyFactory,
+      LZEndpointMock,
+      Mor,
+      L1Sender,
+      GatewayRouterMock,
+      StETHMock,
+      WStETHMock,
+      L2MessageReceiver,
+    ] = await Promise.all([
+      ethers.getContractFactory('ERC1967Proxy'),
+      ethers.getContractFactory('LZEndpointMock'),
+      ethers.getContractFactory('MOR'),
+      ethers.getContractFactory('L1Sender'),
+      ethers.getContractFactory('GatewayRouterMock'),
+      ethers.getContractFactory('StETHMock'),
+      ethers.getContractFactory('WStETHMock'),
+      ethers.getContractFactory('L2MessageReceiver'),
+    ]);
 
-    [lZEndpointMockL1, lZEndpointMockL2, rewardToken, l1Sender, unwrappedToken, l2MessageReceiver, gatewayRouter] =
-      await Promise.all([
-        LZEndpointMock.deploy(senderChainId),
-        LZEndpointMock.deploy(receiverChainId),
-        Mor.deploy(wei(100)),
-        L1Sender.deploy(),
-        StETHMock.deploy(),
-        L2MessageReceiver.deploy(),
-        GatewayRouterMock.deploy(),
-      ]);
+    let l1SenderImplementation: L1Sender;
+    let l2MessageReceiverImplementation: L2MessageReceiver;
 
+    [
+      lZEndpointMockL1,
+      lZEndpointMockL2,
+      rewardToken,
+      l1SenderImplementation,
+      unwrappedToken,
+      l2MessageReceiverImplementation,
+      gatewayRouter,
+    ] = await Promise.all([
+      LZEndpointMock.deploy(senderChainId),
+      LZEndpointMock.deploy(receiverChainId),
+      Mor.deploy(wei(100)),
+      L1Sender.deploy(),
+      StETHMock.deploy(),
+      L2MessageReceiver.deploy(),
+      GatewayRouterMock.deploy(),
+    ]);
     depositToken = await WStETHMock.deploy(unwrappedToken);
 
+    const l2MessageReceiverProxy = await ERC1967ProxyFactory.deploy(l2MessageReceiverImplementation, '0x');
+    l2MessageReceiver = L2MessageReceiver.attach(l2MessageReceiverProxy) as L2MessageReceiver;
+    await l2MessageReceiver.L2MessageReceiver__init();
+
+    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
+    l1Sender = L1Sender.attach(l1SenderProxy) as L1Sender;
+    await l1Sender.L1Sender__init();
     await l1Sender.setDepositTokenConfig({
       token: depositToken,
       gateway: gatewayRouter,
       receiver: SECOND,
     });
-
     await l1Sender.setRewardTokenConfig({
       gateway: lZEndpointMockL1,
       receiver: l2MessageReceiver,
       receiverChainId: receiverChainId,
     });
 
-    await lZEndpointMockL1.setDestLzEndpoint(l2MessageReceiver, lZEndpointMockL2);
     await l2MessageReceiver.setParams(rewardToken, {
       gateway: lZEndpointMockL2,
       sender: l1Sender,
       senderChainId: senderChainId,
     });
+
+    await lZEndpointMockL1.setDestLzEndpoint(l2MessageReceiver, lZEndpointMockL2);
 
     await rewardToken.transferOwnership(l2MessageReceiver);
 
@@ -89,6 +115,34 @@ describe('L1Sender', () => {
 
   beforeEach(async () => {
     await reverter.revert();
+  });
+
+  describe('UUPS proxy functionality', () => {
+    describe('#Distribution_init', () => {
+      it('should revert if try to call init function twice', async () => {
+        const reason = 'Initializable: contract is already initialized';
+
+        await expect(l1Sender.L1Sender__init()).to.be.rejectedWith(reason);
+      });
+    });
+
+    describe('#_authorizeUpgrade', () => {
+      it('should correctly upgrade', async () => {
+        const l1SenderV2Factory = await ethers.getContractFactory('L1SenderV2');
+        const l1SenderV2Implementation = await l1SenderV2Factory.deploy();
+
+        await l1Sender.upgradeTo(l1SenderV2Implementation);
+
+        const l1SenderV2 = l1SenderV2Factory.attach(l1Sender) as L1SenderV2;
+
+        expect(await l1SenderV2.version()).to.eq(2);
+      });
+      it('should revert if caller is not the owner', async () => {
+        await expect(l1Sender.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
+        );
+      });
+    });
   });
 
   describe('setRewardTokenConfig', () => {

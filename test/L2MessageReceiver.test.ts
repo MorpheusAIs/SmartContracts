@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { L2MessageReceiver, MOR } from '@/generated-types/ethers';
+import { L2MessageReceiver, L2MessageReceiverV2, MOR } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
@@ -19,13 +19,18 @@ describe('L2MessageReceiver', () => {
   before(async () => {
     [OWNER, SECOND, THIRD] = await ethers.getSigners();
 
-    const [L2MessageReceiver, Mor] = await Promise.all([
+    const [ERC1967ProxyFactory, L2MessageReceiver, Mor] = await Promise.all([
+      ethers.getContractFactory('ERC1967Proxy'),
       ethers.getContractFactory('L2MessageReceiver'),
       ethers.getContractFactory('MOR'),
-      ethers.getContractFactory('LZEndpointMock'),
     ]);
 
-    [mor, l2MessageReceiver] = await Promise.all([Mor.deploy(wei(100)), L2MessageReceiver.deploy()]);
+    mor = await Mor.deploy(wei(100));
+
+    const l2MessageReceiverImplementation = await L2MessageReceiver.deploy();
+    const l2MessageReceiverProxy = await ERC1967ProxyFactory.deploy(l2MessageReceiverImplementation, '0x');
+    l2MessageReceiver = L2MessageReceiver.attach(l2MessageReceiverProxy) as L2MessageReceiver;
+    await l2MessageReceiver.L2MessageReceiver__init();
 
     await l2MessageReceiver.setParams(mor, {
       gateway: THIRD,
@@ -40,6 +45,34 @@ describe('L2MessageReceiver', () => {
 
   beforeEach(async () => {
     await reverter.revert();
+  });
+
+  describe('UUPS proxy functionality', () => {
+    describe('#Distribution_init', () => {
+      it('should revert if try to call init function twice', async () => {
+        const reason = 'Initializable: contract is already initialized';
+
+        await expect(l2MessageReceiver.L2MessageReceiver__init()).to.be.rejectedWith(reason);
+      });
+    });
+
+    describe('#_authorizeUpgrade', () => {
+      it('should correctly upgrade', async () => {
+        const l2MessageReceiverV2Factory = await ethers.getContractFactory('L2MessageReceiverV2');
+        const l2MessageReceiverV2Implementation = await l2MessageReceiverV2Factory.deploy();
+
+        await l2MessageReceiver.upgradeTo(l2MessageReceiverV2Implementation);
+
+        const l2MessageReceiverV2 = l2MessageReceiverV2Factory.attach(l2MessageReceiver) as L2MessageReceiverV2;
+
+        expect(await l2MessageReceiverV2.version()).to.eq(2);
+      });
+      it('should revert if caller is not the owner', async () => {
+        await expect(l2MessageReceiver.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
+        );
+      });
+    });
   });
 
   describe('setParams', () => {

@@ -8,6 +8,7 @@ import { Reverter } from './helpers/reverter';
 import {
   IL2TokenReceiver,
   L2TokenReceiver,
+  L2TokenReceiverV2,
   MOR,
   NonfungiblePositionManagerMock,
   StETHMock,
@@ -19,6 +20,7 @@ import { wei } from '@/scripts/utils/utils';
 describe('L2TokenReceiver', () => {
   const reverter = new Reverter();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
@@ -31,22 +33,30 @@ describe('L2TokenReceiver', () => {
   before(async () => {
     [OWNER, SECOND] = await ethers.getSigners();
 
-    const [L2TokenReceiver, StETHMock, Mor, SwapRouterMock, NonfungiblePositionManagerMock] = await Promise.all([
-      ethers.getContractFactory('L2TokenReceiver', OWNER),
-      ethers.getContractFactory('StETHMock'),
-      ethers.getContractFactory('MOR'),
-      ethers.getContractFactory('SwapRouterMock'),
-      ethers.getContractFactory('NonfungiblePositionManagerMock'),
-    ]);
+    const [ERC1967ProxyFactory, L2TokenReceiver, StETHMock, Mor, SwapRouterMock, NonfungiblePositionManagerMock] =
+      await Promise.all([
+        ethers.getContractFactory('ERC1967Proxy'),
+        ethers.getContractFactory('L2TokenReceiver'),
+        ethers.getContractFactory('StETHMock'),
+        ethers.getContractFactory('MOR'),
+        ethers.getContractFactory('SwapRouterMock'),
+        ethers.getContractFactory('NonfungiblePositionManagerMock'),
+      ]);
 
-    [inputToken, outputToken, swapRouter, nonfungiblePositionManager] = await Promise.all([
-      StETHMock.deploy(),
-      Mor.deploy(wei(100)),
-      SwapRouterMock.deploy(),
-      NonfungiblePositionManagerMock.deploy(),
-    ]);
+    let l2TokenReceiverImplementation: L2TokenReceiver;
 
-    l2TokenReceiver = await L2TokenReceiver.deploy(swapRouter, nonfungiblePositionManager, {
+    [inputToken, outputToken, swapRouter, nonfungiblePositionManager, l2TokenReceiverImplementation] =
+      await Promise.all([
+        StETHMock.deploy(),
+        Mor.deploy(wei(100)),
+        SwapRouterMock.deploy(),
+        NonfungiblePositionManagerMock.deploy(),
+        L2TokenReceiver.deploy(),
+      ]);
+
+    const l2TokenReceiverProxy = await ERC1967ProxyFactory.deploy(l2TokenReceiverImplementation, '0x');
+    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiver;
+    await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, {
       tokenIn: inputToken,
       tokenOut: outputToken,
       fee: 500,
@@ -59,25 +69,59 @@ describe('L2TokenReceiver', () => {
   beforeEach(async () => {
     await reverter.revert();
   });
-  describe('constructor', () => {
-    it('should set router', async () => {
-      expect(await l2TokenReceiver.router()).to.equal(await swapRouter.getAddress());
+
+  describe('UUPS proxy functionality', () => {
+    describe('#Distribution_init', () => {
+      it('should revert if try to call init function twice', async () => {
+        const reason = 'Initializable: contract is already initialized';
+
+        await expect(
+          l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, {
+            tokenIn: inputToken,
+            tokenOut: outputToken,
+            fee: 500,
+            sqrtPriceLimitX96: 0,
+          }),
+        ).to.be.rejectedWith(reason);
+      });
+
+      it('should set router', async () => {
+        expect(await l2TokenReceiver.router()).to.equal(await swapRouter.getAddress());
+      });
+
+      it('should set params', async () => {
+        const defaultParams = getDefaultSwapParams(await inputToken.getAddress(), await outputToken.getAddress());
+        const params = await l2TokenReceiver.params();
+
+        expect(params.tokenIn).to.equal(defaultParams.tokenIn);
+        expect(params.tokenOut).to.equal(defaultParams.tokenOut);
+        expect(params.fee).to.equal(defaultParams.fee);
+        expect(params.sqrtPriceLimitX96).to.equal(defaultParams.sqrtPriceLimitX96);
+      });
+
+      it('should give allowance', async () => {
+        expect(await inputToken.allowance(l2TokenReceiver, swapRouter)).to.equal(ethers.MaxUint256);
+        expect(await inputToken.allowance(l2TokenReceiver, nonfungiblePositionManager)).to.equal(ethers.MaxUint256);
+        expect(await outputToken.allowance(l2TokenReceiver, nonfungiblePositionManager)).to.equal(ethers.MaxUint256);
+      });
     });
 
-    it('should set params', async () => {
-      const defaultParams = getDefaultSwapParams(await inputToken.getAddress(), await outputToken.getAddress());
-      const params = await l2TokenReceiver.params();
+    describe('#_authorizeUpgrade', () => {
+      it('should correctly upgrade', async () => {
+        const l2TokenReceiverV2Factory = await ethers.getContractFactory('L2TokenReceiverV2');
+        const l2TokenReceiverV2Implementation = await l2TokenReceiverV2Factory.deploy();
 
-      expect(params.tokenIn).to.equal(defaultParams.tokenIn);
-      expect(params.tokenOut).to.equal(defaultParams.tokenOut);
-      expect(params.fee).to.equal(defaultParams.fee);
-      expect(params.sqrtPriceLimitX96).to.equal(defaultParams.sqrtPriceLimitX96);
-    });
+        await l2TokenReceiver.upgradeTo(l2TokenReceiverV2Implementation);
 
-    it('should give allowance', async () => {
-      expect(await inputToken.allowance(l2TokenReceiver, swapRouter)).to.equal(ethers.MaxUint256);
-      expect(await inputToken.allowance(l2TokenReceiver, nonfungiblePositionManager)).to.equal(ethers.MaxUint256);
-      expect(await outputToken.allowance(l2TokenReceiver, nonfungiblePositionManager)).to.equal(ethers.MaxUint256);
+        const l2TokenReceiverV2 = l2TokenReceiverV2Factory.attach(l2TokenReceiver) as L2TokenReceiverV2;
+
+        expect(await l2TokenReceiverV2.version()).to.eq(2);
+      });
+      it('should revert if caller is not the owner', async () => {
+        await expect(l2TokenReceiver.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
+        );
+      });
     });
   });
 
