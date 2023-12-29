@@ -105,9 +105,11 @@ describe('L2TokenReceiver Fork', () => {
         poolId,
         amountInputToken,
         amountOutputToken,
+        0,
+        0,
       );
 
-      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken);
+      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken, 0, 0);
 
       expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[1]);
       expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[2]);
@@ -126,8 +128,10 @@ describe('L2TokenReceiver Fork', () => {
         poolId,
         amountInputToken,
         amountOutputToken,
+        0,
+        0,
       );
-      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken);
+      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken, 0, 0);
 
       expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[1]);
       expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[2]);

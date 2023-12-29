@@ -60,10 +60,14 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
     function increaseLiquidityCurrentRange(
         uint256 tokenId_,
         uint256 depositTokenAmountAdd_,
-        uint256 rewardTokenAmountAdd_
+        uint256 rewardTokenAmountAdd_,
+        uint256 depositTokenAmountMin_,
+        uint256 rewardTokenAmountMin_
     ) external onlyOwner returns (uint128 liquidity_, uint256 amount0_, uint256 amount1_) {
         uint256 amountAdd0_;
         uint256 amountAdd1_;
+        uint256 amountMin0_;
+        uint256 amountMin1_;
 
         (, , address token0_, , , , , , , , , ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
             tokenId_
@@ -71,9 +75,13 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
         if (token0_ == params.tokenIn) {
             amountAdd0_ = depositTokenAmountAdd_;
             amountAdd1_ = rewardTokenAmountAdd_;
+            amountMin0_ = depositTokenAmountMin_;
+            amountMin1_ = rewardTokenAmountMin_;
         } else {
             amountAdd0_ = rewardTokenAmountAdd_;
             amountAdd1_ = depositTokenAmountAdd_;
+            amountMin0_ = rewardTokenAmountMin_;
+            amountMin1_ = depositTokenAmountMin_;
         }
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params_ = INonfungiblePositionManager
