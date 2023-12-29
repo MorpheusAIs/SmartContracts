@@ -39,8 +39,9 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, Ownable {
 
         (address user_, uint256 amount_) = abi.decode(payload_, (address, uint256));
 
-        nonce = nonce_;
         _mintRewardTokens(user_, amount_);
+
+        nonce = nonce_;
     }
 
     function _mintRewardTokens(address user_, uint256 amount_) private {

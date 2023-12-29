@@ -247,6 +247,62 @@ describe('L1Sender', () => {
         l1Sender.connect(SECOND).sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') }),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
+    it('should not revert if not L2MessageReceiver sender', async () => {
+      await l2MessageReceiver.setParams(rewardToken, {
+        gateway: lZEndpointMockL2,
+        sender: OWNER,
+        senderChainId: senderChainId,
+      });
+
+      await l1Sender.sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') });
+      expect(await rewardToken.balanceOf(SECOND)).to.eq(0);
+    });
+    it('should retryPayload if not L2MessageReceiver sender', async () => {
+      await l2MessageReceiver.setParams(rewardToken, {
+        gateway: lZEndpointMockL2,
+        sender: OWNER,
+        senderChainId: senderChainId,
+      });
+
+      await l1Sender.sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') });
+
+      await l2MessageReceiver.setParams(rewardToken, {
+        gateway: lZEndpointMockL2,
+        sender: l1Sender,
+        senderChainId: senderChainId,
+      });
+
+      const remoteAndLocal = ethers.solidityPacked(
+        ['address', 'address'],
+        [await l1Sender.getAddress(), await l2MessageReceiver.getAddress()],
+      );
+
+      const payload = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256'],
+        [await SECOND.getAddress(), 999],
+      );
+
+      await lZEndpointMockL2.retryPayload(senderChainId, remoteAndLocal, payload);
+    });
+    it('should block message if another message in the queue', async () => {
+      await l2MessageReceiver.setParams(rewardToken, {
+        gateway: lZEndpointMockL2,
+        sender: OWNER,
+        senderChainId: senderChainId,
+      });
+
+      await l1Sender.sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') });
+
+      await l2MessageReceiver.setParams(rewardToken, {
+        gateway: lZEndpointMockL2,
+        sender: l1Sender,
+        senderChainId: senderChainId,
+      });
+
+      await l1Sender.sendMintMessage(SECOND, '888', OWNER, { value: ethers.parseEther('0.1') });
+
+      expect(await rewardToken.balanceOf(SECOND)).to.eq('0');
+    });
   });
 });
 
