@@ -23,7 +23,7 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, Ownable {
 
     function lzReceive(
         uint16 senderChainId_,
-        bytes memory receiverAndSenderAddresses_,
+        bytes memory senderAndReceiverAddresses_,
         uint64 nonce_,
         bytes memory payload_
     ) external {
@@ -33,7 +33,7 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, Ownable {
 
         address sender_;
         assembly {
-            sender_ := mload(add(receiverAndSenderAddresses_, 20))
+            sender_ := mload(add(senderAndReceiverAddresses_, 20))
         }
         require(sender_ == config.sender, "L2MR: invalid sender address");
 

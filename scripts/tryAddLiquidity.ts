@@ -20,7 +20,7 @@ async function main() {
   console.log(`wsteth balance of ${l2MessageReceiverAddress}: ${wstethBalance}`);
   console.log(`mor balance of ${l2MessageReceiverAddress}:    ${morBalance}`);
 
-  const tx = await l2TokenReceiver.increaseLiquidityCurrentRange(86416, wstethBalance, morBalance);
+  const tx = await l2TokenReceiver.increaseLiquidityCurrentRange(86416, wstethBalance, morBalance, 0, 0);
   await tx.wait();
 
   console.log('liquidity added');

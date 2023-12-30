@@ -40,6 +40,8 @@ interface IL2TokenReceiver is IERC165 {
      * @param tokenId The ID of the position.
      * @param amountAdd0_ The amount of tokenIn to add.
      * @param amountAdd1_ The amount of tokenOut to add.
+     * @param depositTokenAmountMin_ The minimum amount of deposit token to add.
+     * @param rewardTokenAmountMin_ The minimum amount of reward token to add.
      * @return liquidity_ The amount of liquidity added.
      * @return amount0_ The amount of token0 added.
      * @return amount1_ The amount of token1 added.
@@ -47,7 +49,9 @@ interface IL2TokenReceiver is IERC165 {
     function increaseLiquidityCurrentRange(
         uint256 tokenId,
         uint256 amountAdd0_,
-        uint256 amountAdd1_
+        uint256 amountAdd1_,
+        uint256 depositTokenAmountMin_,
+        uint256 rewardTokenAmountMin_
     ) external returns (uint128 liquidity_, uint256 amount0_, uint256 amount1_);
 
     /**

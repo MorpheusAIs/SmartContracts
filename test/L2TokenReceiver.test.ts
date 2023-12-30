@@ -83,7 +83,7 @@ describe('L2TokenReceiver', () => {
 
   describe('supportsInterface', () => {
     it('should support IL2TokenReceiver', async () => {
-      expect(await l2TokenReceiver.supportsInterface('0x79f94a20')).to.be.true;
+      expect(await l2TokenReceiver.supportsInterface('0x42861043')).to.be.true;
     });
     it('should support IERC165', async () => {
       expect(await l2TokenReceiver.supportsInterface('0x01ffc9a7')).to.be.true;
@@ -152,7 +152,7 @@ describe('L2TokenReceiver', () => {
 
   describe('#increaseLiquidityCurrentRange', () => {
     it('should return if caller is not the owner', async () => {
-      await expect(l2TokenReceiver.connect(SECOND).increaseLiquidityCurrentRange(1, 1, 1)).to.be.revertedWith(
+      await expect(l2TokenReceiver.connect(SECOND).increaseLiquidityCurrentRange(1, 1, 1, 0, 0)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
