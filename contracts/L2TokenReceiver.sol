@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
@@ -10,13 +12,20 @@ import {INonfungiblePositionManager} from "./interfaces/uniswap-v3/INonfungibleP
 import {IL2TokenReceiver, IERC165} from "./interfaces/IL2TokenReceiver.sol";
 import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
 
-contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
-    address public immutable router;
-    address public immutable nonfungiblePositionManager;
+contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUpgradeable {
+    address public router;
+    address public nonfungiblePositionManager;
 
     SwapParams public params;
 
-    constructor(address router_, address nonfungiblePositionManager_, SwapParams memory params_) {
+    function L2TokenReceiver__init(
+        address router_,
+        address nonfungiblePositionManager_,
+        SwapParams memory params_
+    ) external initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
         router = router_;
         nonfungiblePositionManager = nonfungiblePositionManager_;
 
@@ -110,4 +119,6 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
 
         params = newParams_;
     }
+
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 }

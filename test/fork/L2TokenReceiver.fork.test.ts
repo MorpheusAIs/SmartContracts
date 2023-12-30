@@ -57,8 +57,15 @@ describe('L2TokenReceiver Fork', () => {
     inputToken = WStETHMock__factory.connect(wstethAddress, OWNER);
     outputToken = IERC20__factory.connect(usdcAddress, OWNER);
 
-    const L2TokenReceiver = await ethers.getContractFactory('L2TokenReceiver', OWNER);
-    l2TokenReceiver = await L2TokenReceiver.deploy(
+    const [ERC1967ProxyFactory, L2TokenReceiver] = await Promise.all([
+      ethers.getContractFactory('ERC1967Proxy', OWNER),
+      ethers.getContractFactory('L2TokenReceiver', OWNER),
+    ]);
+
+    const l2TokenReceiverImplementation = await L2TokenReceiver.deploy();
+    const l2TokenReceiverProxy = await ERC1967ProxyFactory.deploy(l2TokenReceiverImplementation, '0x');
+    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiver;
+    await l2TokenReceiver.L2TokenReceiver__init(
       swapRouter,
       nonfungiblePositionManager,
       getDefaultSwapParams(await inputToken.getAddress(), await outputToken.getAddress()),

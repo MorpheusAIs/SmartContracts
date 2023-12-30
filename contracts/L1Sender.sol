@@ -5,7 +5,8 @@ import {ILayerZeroEndpoint} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/int
 
 import {IGatewayRouter} from "@arbitrum/token-bridge-contracts/contracts/tokenbridge/libraries/gateway/IGatewayRouter.sol";
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -14,11 +15,16 @@ import {IStETH} from "./interfaces/tokens/IStETH.sol";
 import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
-contract L1Sender is IL1Sender, ERC165, Ownable {
+contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
     address public unwrappedDepositToken;
 
     DepositTokenConfig public depositTokenConfig;
     RewardTokenConfig public rewardTokenConfig;
+
+    function L1Sender__init() external initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
 
     function setRewardTokenConfig(RewardTokenConfig calldata newConfig_) external onlyOwner {
         rewardTokenConfig = newConfig_;
@@ -111,4 +117,6 @@ contract L1Sender is IL1Sender, ERC165, Ownable {
             bytes("") // adapterParams (see "Advanced Features")
         );
     }
+
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 }
