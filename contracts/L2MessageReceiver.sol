@@ -5,17 +5,23 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {ILayerZeroReceiver} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/interfaces/ILayerZeroReceiver.sol";
+import {ExcessivelySafeCall} from "@layerzerolabs/solidity-examples/contracts/libraries/ExcessivelySafeCall.sol";
 
 import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 import {IL2MessageReceiver} from "./interfaces/IL2MessageReceiver.sol";
 
-contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, OwnableUpgradeable, UUPSUpgradeable {
-    uint64 public nonce;
+import "hardhat/console.sol";
+
+contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgradeable {
+    using ExcessivelySafeCall for address;
+
+    mapping(uint64 => bool) public isNonceUsed;
     address public rewardToken;
 
     Config public config;
+
+    mapping(uint16 => mapping(bytes => mapping(uint64 => bytes32))) public failedMessages;
 
     function L2MessageReceiver__init() external initializer {
         __Ownable_init();
@@ -33,8 +39,71 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, OwnableUpg
         uint64 nonce_,
         bytes memory payload_
     ) external {
-        require(nonce_ > nonce, "L2MR: invalid nonce");
         require(_msgSender() == config.gateway, "L2MR: invalid gateway");
+
+        _blockingLzReceive(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+    }
+
+    function nonblockingLzReceive(
+        uint16 senderChainId_,
+        bytes memory senderAndReceiverAddresses_,
+        uint64 nonce_,
+        bytes memory payload_
+    ) public {
+        require(_msgSender() == address(this), "L2MR: invalid caller");
+
+        _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+    }
+
+    function retryMessage(
+        uint16 senderChainId_,
+        bytes memory senderAndReceiverAddresses_,
+        uint64 nonce_,
+        bytes memory payload_
+    ) public {
+        bytes32 payloadHash_ = failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_];
+        require(payloadHash_ != bytes32(0), "L2MR: no stored message");
+        require(keccak256(payload_) == payloadHash_, "L2MR: invalid payload");
+
+        failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_] = bytes32(0);
+
+        _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+
+        emit RetryMessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_, payloadHash_);
+    }
+
+    function _blockingLzReceive(
+        uint16 senderChainId_,
+        bytes memory senderAndReceiverAddresses_,
+        uint64 nonce_,
+        bytes memory payload_
+    ) private {
+        (bool success_, bytes memory reason_) = address(this).excessivelySafeCall(
+            gasleft(),
+            150,
+            abi.encodeWithSelector(
+                this.nonblockingLzReceive.selector,
+                senderChainId_,
+                senderAndReceiverAddresses_,
+                nonce_,
+                payload_
+            )
+        );
+
+        if (!success_) {
+            failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_] = keccak256(payload_);
+
+            emit MessageFailed(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_, reason_);
+        }
+    }
+
+    function _nonblockingLzReceive(
+        uint16 senderChainId_,
+        bytes memory senderAndReceiverAddresses_,
+        uint64 nonce_,
+        bytes memory payload_
+    ) private {
+        require(!isNonceUsed[nonce_], "L2MR: invalid nonce");
         require(senderChainId_ == config.senderChainId, "L2MR: invalid sender chain ID");
 
         address sender_;
@@ -47,7 +116,7 @@ contract L2MessageReceiver is IL2MessageReceiver, ILayerZeroReceiver, OwnableUpg
 
         _mintRewardTokens(user_, amount_);
 
-        nonce = nonce_;
+        isNonceUsed[nonce_] = true;
     }
 
     function _mintRewardTokens(address user_, uint256 amount_) private {
