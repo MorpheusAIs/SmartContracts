@@ -15,7 +15,7 @@ import {
 import { IL2TokenReceiver } from '@/generated-types/ethers/contracts/L2TokenReceiver';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig();
+  const config = parseConfig(await deployer.getChainId());
 
   let WStETH: string;
   let swapRouter: string;

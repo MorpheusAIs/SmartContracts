@@ -11,7 +11,7 @@ import {
 import { IL2MessageReceiver } from '@/generated-types/ethers/contracts/L2MessageReceiver';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig();
+  const config = parseConfig(await deployer.getChainId());
 
   let lzEndpointL2: string;
   if (config.lzConfig) {

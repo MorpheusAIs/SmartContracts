@@ -38,7 +38,19 @@ type PoolInitInfo = IDistribution.PoolStruct & {
   amounts: BigNumberish[];
 };
 
-export function parseConfig(configPath: string = 'deploy/data/config.json'): Config {
+export function parseConfig(chainId: bigint): Config {
+  let configPath: string;
+
+  if (chainId === 31337n) {
+    configPath = `deploy/data/config.json`;
+  } else if (chainId === 5n || chainId === 421613n) {
+    configPath = `deploy/data/config-goerli.json`;
+  } else if (chainId === 11155111n || chainId === 421614n) {
+    configPath = `deploy/data/config-sepolia.json`;
+  } else {
+    throw new Error(`Invalid chainId`);
+  }
+
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
 
   if (config.cap == undefined) {

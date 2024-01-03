@@ -15,7 +15,7 @@ import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
 import { ETHER_ADDR } from '@/scripts/utils/constants';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig();
+  const config = parseConfig(await deployer.getChainId());
 
   let stETH: string;
   let wStEth: string;
