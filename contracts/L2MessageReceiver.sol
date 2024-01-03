@@ -5,22 +5,18 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {ExcessivelySafeCall} from "@layerzerolabs/solidity-examples/contracts/libraries/ExcessivelySafeCall.sol";
+import {ILayerZeroReceiver} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/interfaces/ILayerZeroReceiver.sol";
 
 import {IMOR} from "./interfaces/IMOR.sol";
 import {IL1Sender} from "./interfaces/IL1Sender.sol";
 import {IL2MessageReceiver} from "./interfaces/IL2MessageReceiver.sol";
 
-import "hardhat/console.sol";
-
-contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgradeable {
-    using ExcessivelySafeCall for address;
-
-    mapping(uint64 => bool) public isNonceUsed;
+contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpgradeable, UUPSUpgradeable {
     address public rewardToken;
 
     Config public config;
 
+    mapping(uint16 => mapping(uint64 => bool)) public isNonceUsed;
     mapping(uint16 => mapping(bytes => mapping(uint64 => bytes32))) public failedMessages;
 
     function L2MessageReceiver__init() external initializer {
@@ -60,14 +56,14 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
         bytes memory senderAndReceiverAddresses_,
         uint64 nonce_,
         bytes memory payload_
-    ) public {
+    ) external {
         bytes32 payloadHash_ = failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_];
         require(payloadHash_ != bytes32(0), "L2MR: no stored message");
         require(keccak256(payload_) == payloadHash_, "L2MR: invalid payload");
 
-        failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_] = bytes32(0);
-
         _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+
+        delete failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_];
 
         emit RetryMessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_, payloadHash_);
     }
@@ -78,19 +74,14 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
         uint64 nonce_,
         bytes memory payload_
     ) private {
-        (bool success_, bytes memory reason_) = address(this).excessivelySafeCall(
-            gasleft(),
-            150,
-            abi.encodeWithSelector(
-                this.nonblockingLzReceive.selector,
+        try
+            IL2MessageReceiver(address(this)).nonblockingLzReceive(
                 senderChainId_,
                 senderAndReceiverAddresses_,
                 nonce_,
                 payload_
             )
-        );
-
-        if (!success_) {
+        {} catch (bytes memory reason_) {
             failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_] = keccak256(payload_);
 
             emit MessageFailed(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_, reason_);
@@ -103,7 +94,7 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
         uint64 nonce_,
         bytes memory payload_
     ) private {
-        require(!isNonceUsed[nonce_], "L2MR: invalid nonce");
+        require(!isNonceUsed[senderChainId_][nonce_], "L2MR: invalid nonce");
         require(senderChainId_ == config.senderChainId, "L2MR: invalid sender chain ID");
 
         address sender_;
@@ -116,7 +107,7 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
 
         _mintRewardTokens(user_, amount_);
 
-        isNonceUsed[nonce_] = true;
+        isNonceUsed[senderChainId_][nonce_] = true;
     }
 
     function _mintRewardTokens(address user_, uint256 amount_) private {

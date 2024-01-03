@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { L2MessageReceiver, L2MessageReceiverV2, MOR } from '@/generated-types/ethers';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
+import { ZERO_ADDR, ZERO_BYTES32 } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 
@@ -110,7 +110,7 @@ describe('L2MessageReceiver', () => {
       );
       const tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(1));
-      expect(await l2MessageReceiver.isNonceUsed(5)).to.be.equal(true);
+      expect(await l2MessageReceiver.isNonceUsed(2, 5)).to.be.equal(true);
     });
     it('should update nonce and mint tokens', async () => {
       const address = ethers.solidityPacked(
@@ -123,22 +123,37 @@ describe('L2MessageReceiver', () => {
       );
       let tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(99));
-      expect(await l2MessageReceiver.isNonceUsed(5)).to.be.equal(true);
+      expect(await l2MessageReceiver.isNonceUsed(2, 5)).to.be.equal(true);
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 6, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(1));
-      expect(await l2MessageReceiver.isNonceUsed(6)).to.be.equal(true);
+      expect(await l2MessageReceiver.isNonceUsed(2, 6)).to.be.equal(true);
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 7, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
-      expect(await l2MessageReceiver.isNonceUsed(7)).to.be.equal(true);
+      expect(await l2MessageReceiver.isNonceUsed(2, 7)).to.be.equal(true);
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(0)]);
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 8, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
-      expect(await l2MessageReceiver.isNonceUsed(8)).to.be.equal(true);
+      expect(await l2MessageReceiver.isNonceUsed(2, 8)).to.be.equal(true);
     });
     it('should revert if provided wrong lzEndpoint', async () => {
       await expect(l2MessageReceiver.lzReceive(0, '0x', 1, '0x')).to.be.revertedWith('L2MR: invalid gateway');
+    });
+    it('should fail if provided wrong nonce', async () => {
+      const address = ethers.solidityPacked(
+        ['address', 'address'],
+        [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
+      );
+      const payload = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256'],
+        [await SECOND.getAddress(), wei(99)],
+      );
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ZERO_BYTES32);
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ethers.keccak256(payload));
     });
   });
 
@@ -166,7 +181,7 @@ describe('L2MessageReceiver', () => {
       await l2MessageReceiver.connect(THIRD).lzReceive(chainId, senderAndReceiverAddresses, 999, payload);
     });
     it('should have one blocked message', async () => {
-      await expect(await l2MessageReceiver.failedMessages(chainId, senderAndReceiverAddresses, 999)).to.eq(
+      expect(await l2MessageReceiver.failedMessages(chainId, senderAndReceiverAddresses, 999)).to.eq(
         ethers.keccak256(payload),
       );
     });
@@ -179,6 +194,8 @@ describe('L2MessageReceiver', () => {
 
       const tx = await l2MessageReceiver.retryMessage(chainId, senderAndReceiverAddresses, 999, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(99));
+
+      expect(await l2MessageReceiver.failedMessages(chainId, senderAndReceiverAddresses, 999)).to.eq(ZERO_BYTES32);
     });
     it('should revert if invalid caller', async () => {
       await expect(l2MessageReceiver.nonblockingLzReceive(chainId, '0x', 999, '0x')).to.be.revertedWith(
@@ -200,6 +217,29 @@ describe('L2MessageReceiver', () => {
       await expect(
         l2MessageReceiver.retryMessage(chainId, senderAndReceiverAddresses, 999, payload),
       ).to.be.revertedWith('L2MR: invalid sender address');
+    });
+    it('should revert if provided wrong message', async () => {
+      await expect(
+        l2MessageReceiver.retryMessage(chainId, senderAndReceiverAddresses, 998, payload),
+      ).to.be.revertedWith('L2MR: no stored message');
+    });
+    it('should revert if provided wrong payload', async () => {
+      await expect(l2MessageReceiver.retryMessage(chainId, senderAndReceiverAddresses, 999, '0x')).to.be.revertedWith(
+        'L2MR: invalid payload',
+      );
+    });
+    it('should revert if try to retry already retried message', async () => {
+      await l2MessageReceiver.setParams(mor, {
+        gateway: THIRD,
+        sender: SECOND,
+        senderChainId: 2,
+      });
+
+      await l2MessageReceiver.retryMessage(chainId, senderAndReceiverAddresses, 999, payload);
+
+      await expect(
+        l2MessageReceiver.retryMessage(chainId, senderAndReceiverAddresses, 999, payload),
+      ).to.be.revertedWith('L2MR: no stored message');
     });
   });
 });
