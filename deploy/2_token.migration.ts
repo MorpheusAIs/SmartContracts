@@ -1,4 +1,4 @@
-import { Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { Deployer, Reporter, UserStorage } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -71,6 +71,7 @@ module.exports = async function (deployer: Deployer) {
   const l1SenderProxy = await deployer.deploy(ERC1967Proxy__factory, [l1SenderImpl, '0x'], {
     name: 'L1Sender Proxy',
   });
+  if (!UserStorage.has('L1Sender Proxy')) UserStorage.set('L1Sender Proxy', await l1SenderProxy.getAddress());
   const l1Sender = L1Sender__factory.connect(await l1SenderProxy.getAddress(), await deployer.getSigner());
   await l1Sender.L1Sender__init(distribution, rewardTokenConfig, depositTokenConfig);
 

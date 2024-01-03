@@ -44,9 +44,9 @@ export function parseConfig(chainId: bigint): Config {
   if (chainId === 31337n) {
     configPath = `deploy/data/config.json`;
   } else if (chainId === 5n || chainId === 421613n) {
-    configPath = `deploy/data/config-goerli.json`;
+    configPath = `deploy/data/config_goerli.json`;
   } else if (chainId === 11155111n || chainId === 421614n) {
-    configPath = `deploy/data/config-sepolia.json`;
+    configPath = `deploy/data/config_sepolia.json`;
   } else {
     throw new Error(`Invalid chainId`);
   }

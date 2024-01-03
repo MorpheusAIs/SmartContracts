@@ -1,4 +1,4 @@
-import { Deployer } from '@solarity/hardhat-migrate';
+import { Deployer, UserStorage } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -24,11 +24,14 @@ module.exports = async function (deployer: Deployer) {
     lzEndpointL2 = await lzEndpointL2Mock.getAddress();
   }
 
-  const l2MessageReceiver = await deployer.deployed(L2MessageReceiver__factory, 'L2MessageReceiver Proxy');
+  const l2MessageReceiver = L2MessageReceiver__factory.connect(
+    UserStorage.get('L2MessageReceiver Proxy'),
+    await deployer.getSigner(),
+  );
 
-  const l1Sender = await deployer.deployed(L1Sender__factory, 'L1Sender Proxy');
+  const l1Sender = L1Sender__factory.connect(UserStorage.get('L1Sender Proxy'), await deployer.getSigner());
 
-  const mor = await deployer.deployed(MOR__factory);
+  const mor = MOR__factory.connect(UserStorage.get('MOR'), await deployer.getSigner());
 
   const l2MessageReceiverConfig: IL2MessageReceiver.ConfigStruct = {
     gateway: lzEndpointL2,
