@@ -370,51 +370,49 @@ describe('L1Sender', () => {
       await l1Sender.sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') });
       expect(await rewardToken.balanceOf(SECOND)).to.eq(0);
     });
-    it('should retryPayload if not L2MessageReceiver sender', async () => {
+    it('should `retryMessage` for failed message on the `L2MessageReceiver`', async () => {
+      const amount = '998';
+
+      // START send invalid call to L2MessageReceiver
+      // Set invalid sender in config
       await l2MessageReceiver.setParams(rewardToken, {
         gateway: lZEndpointMockL2,
-        sender: OWNER,
+        sender: ZERO_ADDR,
         senderChainId: senderChainId,
       });
 
-      await l1Sender.sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') });
+      await l1Sender.sendMintMessage(SECOND, amount, OWNER, { value: ethers.parseEther('0.1') });
+      expect(await rewardToken.balanceOf(SECOND)).to.eq('0');
+      // END
 
+      // Set valid sender in config
       await l2MessageReceiver.setParams(rewardToken, {
         gateway: lZEndpointMockL2,
         sender: l1Sender,
         senderChainId: senderChainId,
       });
 
-      const remoteAndLocal = ethers.solidityPacked(
+      // Must send messages even though the previous one may be blocked
+      await l1Sender.sendMintMessage(SECOND, '1', OWNER, { value: ethers.parseEther('0.1') });
+      expect(await rewardToken.balanceOf(SECOND)).to.eq('1');
+
+      // START retry to send invalid message
+      const senderAndReceiverAddress = ethers.solidityPacked(
         ['address', 'address'],
         [await l1Sender.getAddress(), await l2MessageReceiver.getAddress()],
       );
-
       const payload = ethers.AbiCoder.defaultAbiCoder().encode(
         ['address', 'uint256'],
-        [await SECOND.getAddress(), 999],
+        [await SECOND.getAddress(), amount],
       );
 
-      await lZEndpointMockL2.retryPayload(senderChainId, remoteAndLocal, payload);
-    });
-    it('should block message if another message in the queue', async () => {
-      await l2MessageReceiver.setParams(rewardToken, {
-        gateway: lZEndpointMockL2,
-        sender: OWNER,
-        senderChainId: senderChainId,
-      });
+      await l2MessageReceiver.retryMessage(senderChainId, senderAndReceiverAddress, 1, payload);
+      expect(await rewardToken.balanceOf(SECOND)).to.eq(Number(amount) + 1);
+      // END
 
-      await l1Sender.sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') });
-
-      await l2MessageReceiver.setParams(rewardToken, {
-        gateway: lZEndpointMockL2,
-        sender: l1Sender,
-        senderChainId: senderChainId,
-      });
-
-      await l1Sender.sendMintMessage(SECOND, '888', OWNER, { value: ethers.parseEther('0.1') });
-
-      expect(await rewardToken.balanceOf(SECOND)).to.eq('0');
+      // Next messages shouldn't fail
+      await l1Sender.sendMintMessage(SECOND, '1', OWNER, { value: ethers.parseEther('0.1') });
+      expect(await rewardToken.balanceOf(SECOND)).to.eq(Number(amount) + 2);
     });
   });
 });
