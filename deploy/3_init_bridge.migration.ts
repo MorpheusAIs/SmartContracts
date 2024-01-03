@@ -24,22 +24,17 @@ module.exports = async function (deployer: Deployer) {
     lzEndpointL2 = await lzEndpointL2Mock.getAddress();
   }
 
-  const l2MessageReceiver = await deployer.deployed(
-    L2MessageReceiver__factory,
-    // '0xc37fF39e5A50543AD01E42C4Cd88c2939dD13002',
-  );
+  const l2MessageReceiver = await deployer.deployed(L2MessageReceiver__factory, 'L2MessageReceiver Proxy');
 
-  const l1SenderAddress = (await deployer.deployed(L1Sender__factory)).address;
-  // const l1SenderAddress = '0xEec0DF0991458274fF0ede917E9827fFc67a8332';
+  const l1Sender = await deployer.deployed(L1Sender__factory, 'L1Sender Proxy');
 
-  const morAddress = (await deployer.deployed(MOR__factory)).address;
-  // const morAddress = '0x26BCDEb3E4e7EDf5657daF543132cAF792728908';
+  const mor = await deployer.deployed(MOR__factory);
 
   const l2MessageReceiverConfig: IL2MessageReceiver.ConfigStruct = {
     gateway: lzEndpointL2,
-    sender: l1SenderAddress,
+    sender: l1Sender,
     senderChainId: config.chainsConfig.senderChainId,
   };
 
-  await l2MessageReceiver.setParams(morAddress, l2MessageReceiverConfig);
+  await l2MessageReceiver.setParams(mor, l2MessageReceiverConfig);
 };

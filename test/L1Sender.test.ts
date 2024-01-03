@@ -4,6 +4,7 @@ import { ethers } from 'hardhat';
 
 import {
   GatewayRouterMock,
+  IL1Sender,
   L1Sender,
   L1SenderV2,
   L2MessageReceiver,
@@ -86,19 +87,20 @@ describe('L1Sender', () => {
     l2MessageReceiver = L2MessageReceiver.attach(l2MessageReceiverProxy) as L2MessageReceiver;
     await l2MessageReceiver.L2MessageReceiver__init();
 
-    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
-    l1Sender = L1Sender.attach(l1SenderProxy) as L1Sender;
-    await l1Sender.L1Sender__init();
-    await l1Sender.setDepositTokenConfig({
-      token: depositToken,
-      gateway: gatewayRouter,
-      receiver: SECOND,
-    });
-    await l1Sender.setRewardTokenConfig({
+    const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
       gateway: lZEndpointMockL1,
       receiver: l2MessageReceiver,
       receiverChainId: receiverChainId,
-    });
+    };
+    const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
+      token: depositToken,
+      gateway: gatewayRouter,
+      receiver: SECOND,
+    };
+
+    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
+    l1Sender = L1Sender.attach(l1SenderProxy) as L1Sender;
+    await l1Sender.L1Sender__init(OWNER, rewardTokenConfig, depositTokenConfig);
 
     await l2MessageReceiver.setParams(rewardToken, {
       gateway: lZEndpointMockL2,
@@ -122,7 +124,36 @@ describe('L1Sender', () => {
       it('should revert if try to call init function twice', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        await expect(l1Sender.L1Sender__init()).to.be.rejectedWith(reason);
+        const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
+          gateway: lZEndpointMockL1,
+          receiver: l2MessageReceiver,
+          receiverChainId: receiverChainId,
+        };
+        const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
+          token: depositToken,
+          gateway: gatewayRouter,
+          receiver: SECOND,
+        };
+
+        await expect(l1Sender.L1Sender__init(OWNER, rewardTokenConfig, depositTokenConfig)).to.be.rejectedWith(reason);
+      });
+      it('should setup config', async () => {
+        expect(await l1Sender.distribution()).to.be.equal(await OWNER.getAddress());
+
+        expect(await l1Sender.rewardTokenConfig()).to.be.deep.equal([
+          await lZEndpointMockL1.getAddress(),
+          await l2MessageReceiver.getAddress(),
+          receiverChainId,
+        ]);
+
+        expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
+          await depositToken.getAddress(),
+          await gatewayRouter.getAddress(),
+          await SECOND.getAddress(),
+        ]);
+
+        expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(ethers.MaxUint256);
+        expect(await depositToken.allowance(l1Sender, gatewayRouter)).to.be.equal(ethers.MaxUint256);
       });
     });
 
@@ -145,12 +176,32 @@ describe('L1Sender', () => {
     });
   });
 
+  describe('setDistribution', () => {
+    it('should set distribution', async () => {
+      await l1Sender.setDistribution(SECOND);
+      expect(await l1Sender.distribution()).to.be.equal(await SECOND.getAddress());
+    });
+    it('should revert if not called by the owner', async () => {
+      await expect(l1Sender.connect(SECOND).setDistribution(SECOND)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
+  });
+
   describe('setRewardTokenConfig', () => {
-    it('check config', async () => {
+    it('should set new config', async () => {
+      const newConfig = {
+        gateway: l2MessageReceiver,
+        receiver: lZEndpointMockL1,
+        receiverChainId: 0,
+      };
+
+      await l1Sender.setRewardTokenConfig(newConfig);
+
       expect(await l1Sender.rewardTokenConfig()).to.be.deep.equal([
-        await lZEndpointMockL1.getAddress(),
         await l2MessageReceiver.getAddress(),
-        receiverChainId,
+        await lZEndpointMockL1.getAddress(),
+        0,
       ]);
     });
     it('should revert if not called by the owner', async () => {
@@ -165,16 +216,6 @@ describe('L1Sender', () => {
   });
 
   describe('setDepositTokenConfig', () => {
-    it('check config', async () => {
-      expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
-        await depositToken.getAddress(),
-        await gatewayRouter.getAddress(),
-        await SECOND.getAddress(),
-      ]);
-
-      expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(ethers.MaxUint256);
-      expect(await depositToken.allowance(l1Sender, gatewayRouter)).to.be.equal(ethers.MaxUint256);
-    });
     it('should reset allowances when token and gateway changed', async () => {
       const [WStETHMock, GatewayRouterMock, StETHMock] = await Promise.all([
         ethers.getContractFactory('WStETHMock'),
@@ -260,6 +301,24 @@ describe('L1Sender', () => {
       expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(ethers.MaxUint256);
       expect(await depositToken.allowance(l1Sender, newGatewayRouter)).to.be.equal(ethers.MaxUint256);
     });
+    it('should not change allowances when only receiver changed', async () => {
+      const newConfig = {
+        token: depositToken,
+        gateway: gatewayRouter,
+        receiver: SECOND,
+      };
+
+      await l1Sender.setDepositTokenConfig(newConfig);
+
+      expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
+        await depositToken.getAddress(),
+        await gatewayRouter.getAddress(),
+        await SECOND.getAddress(),
+      ]);
+
+      expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(ethers.MaxUint256);
+      expect(await depositToken.allowance(l1Sender, gatewayRouter)).to.be.equal(ethers.MaxUint256);
+    });
     it('should revert if not called by the owner', async () => {
       await expect(
         l1Sender.connect(OWNER).setDepositTokenConfig({
@@ -299,7 +358,7 @@ describe('L1Sender', () => {
     it('should revert if not called by the owner', async () => {
       await expect(
         l1Sender.connect(SECOND).sendMintMessage(SECOND, '999', OWNER, { value: ethers.parseEther('0.1') }),
-      ).to.be.revertedWith('Ownable: caller is not the owner');
+      ).to.be.revertedWith('L1S: invalid sender');
     });
     it('should not revert if not L2MessageReceiver sender', async () => {
       await l2MessageReceiver.setParams(rewardToken, {

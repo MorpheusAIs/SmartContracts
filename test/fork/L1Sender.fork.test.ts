@@ -7,6 +7,7 @@ import { Reverter } from '../helpers/reverter';
 import {
   IGatewayRouter,
   IGatewayRouter__factory,
+  IL1Sender,
   IStETH,
   IStETH__factory,
   IWStETH,
@@ -54,20 +55,21 @@ describe('L1Sender Fork', () => {
       ethers.getContractFactory('L1Sender', OWNER),
     ]);
 
-    const l1SenderImplementation = await L1Sender.deploy();
-    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
-    l1Sender = L1Sender.attach(l1SenderProxy) as L1Sender;
-    l1Sender.L1Sender__init();
-    await l1Sender.setDepositTokenConfig({
-      token: wsteth,
-      gateway: arbitrumBridgeGatewayRouter,
-      receiver: SECOND,
-    });
-    await l1Sender.setRewardTokenConfig({
+    const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
       gateway: lzEndpointAddress,
       receiver: SECOND,
       receiverChainId: 110,
-    });
+    };
+    const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
+      token: wsteth,
+      gateway: arbitrumBridgeGatewayRouter,
+      receiver: SECOND,
+    };
+
+    const l1SenderImplementation = await L1Sender.deploy();
+    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
+    l1Sender = L1Sender.attach(l1SenderProxy) as L1Sender;
+    await l1Sender.L1Sender__init(OWNER, rewardTokenConfig, depositTokenConfig);
 
     await reverter.snapshot();
   });

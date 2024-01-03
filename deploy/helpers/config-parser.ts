@@ -38,7 +38,7 @@ type PoolInitInfo = IDistribution.PoolStruct & {
   amounts: BigNumberish[];
 };
 
-export function parseConfig(configPath: string = 'deploy/data/config_goerli.json'): Config {
+export function parseConfig(configPath: string = 'deploy/data/config.json'): Config {
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
 
   if (config.cap == undefined) {

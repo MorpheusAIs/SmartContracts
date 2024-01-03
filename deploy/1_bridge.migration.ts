@@ -1,4 +1,4 @@
-import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { Deployer, Reporter } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -44,7 +44,7 @@ module.exports = async function (deployer: Deployer) {
 
   const swapParams: IL2TokenReceiver.SwapParamsStruct = {
     tokenIn: WStETH,
-    tokenOut: MOR.address,
+    tokenOut: MOR,
     fee: config.swapParams.fee,
     sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
   };
@@ -53,20 +53,21 @@ module.exports = async function (deployer: Deployer) {
   const l2TokenReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2TokenReceiverImpl, '0x'], {
     name: 'L2TokenReceiver Proxy',
   });
-  const l2TokenReceiver = L2TokenReceiver__factory.connect(l2TokenReceiverProxy.address, await deployer.getSigner());
+  const l2TokenReceiver = L2TokenReceiver__factory.connect(
+    await l2TokenReceiverProxy.getAddress(),
+    await deployer.getSigner(),
+  );
   await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, swapParams);
-  DefaultStorage.set('l2TokenReceiver', l2TokenReceiver.address);
 
   const l2MessageReceiverImpl = await deployer.deploy(L2MessageReceiver__factory);
   const l2MessageReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2MessageReceiverImpl, '0x'], {
     name: 'L2MessageReceiver Proxy',
   });
   const l2MessageReceiver = L2MessageReceiver__factory.connect(
-    l2MessageReceiverProxy.address,
+    await l2MessageReceiverProxy.getAddress(),
     await deployer.getSigner(),
   );
   await l2MessageReceiver.L2MessageReceiver__init();
-  DefaultStorage.set('l2MessageReceiver', l2MessageReceiver.address);
 
   await MOR.transferOwnership(l2MessageReceiver);
 

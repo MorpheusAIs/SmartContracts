@@ -1,4 +1,4 @@
-import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { Deployer, Reporter } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -6,12 +6,13 @@ import {
   Distribution__factory,
   ERC1967Proxy__factory,
   L1Sender__factory,
+  L2MessageReceiver__factory,
   LZEndpointMock__factory,
   StETHMock__factory,
   WStETHMock__factory,
 } from '@/generated-types/ethers';
 import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
+import { ETHER_ADDR } from '@/scripts/utils/constants';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig();
@@ -46,39 +47,32 @@ module.exports = async function (deployer: Deployer) {
   if (config.arbitrumConfig) {
     arbitrumBridgeGatewayRouter = config.arbitrumConfig.arbitrumBridgeGatewayRouter;
   } else {
-    arbitrumBridgeGatewayRouter = ZERO_ADDR;
+    arbitrumBridgeGatewayRouter = ETHER_ADDR;
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
   const distributionProxy = await deployer.deploy(ERC1967Proxy__factory, [distributionImpl, '0x'], {
     name: 'Distribution Proxy',
   });
-  const distribution = Distribution__factory.connect(distributionProxy.address, await deployer.getSigner());
+  const distribution = Distribution__factory.connect(await distributionProxy.getAddress(), await deployer.getSigner());
+
+  const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
+    gateway: lzEndpointL1,
+    receiver: await deployer.deployed(L2MessageReceiver__factory, 'L2MessageReceiver Proxy'),
+    receiverChainId: config.chainsConfig.receiverChainId,
+  };
+  const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
+    token: wStEth,
+    gateway: arbitrumBridgeGatewayRouter,
+    receiver: await deployer.deployed(L2MessageReceiver__factory, 'L2MessageReceiver Proxy'),
+  };
 
   const l1SenderImpl = await deployer.deploy(L1Sender__factory);
   const l1SenderProxy = await deployer.deploy(ERC1967Proxy__factory, [l1SenderImpl, '0x'], {
     name: 'L1Sender Proxy',
   });
-  const l1Sender = L1Sender__factory.connect(l1SenderProxy.address, await deployer.getSigner());
-  await l1Sender.L1Sender__init();
-
-  const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
-    gateway: lzEndpointL1,
-    receiver: DefaultStorage.get('l2MessageReceiver'),
-    // receiver: '0xc37fF39e5A50543AD01E42C4Cd88c2939dD13002',
-    receiverChainId: config.chainsConfig.receiverChainId,
-  };
-  await l1Sender.setRewardTokenConfig(rewardTokenConfig);
-
-  const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
-    token: wStEth,
-    gateway: arbitrumBridgeGatewayRouter,
-    receiver: DefaultStorage.get('l2TokenReceiver'),
-    // receiver: '0x56c7db3D200c92eAAb8a2c4a9C1DcB8c50D4041F',
-  };
-  await l1Sender.setDepositTokenConfig(depositTokenConfig);
-
-  await l1Sender.transferOwnership(await distribution.getAddress());
+  const l1Sender = L1Sender__factory.connect(await l1SenderProxy.getAddress(), await deployer.getSigner());
+  await l1Sender.L1Sender__init(distribution, rewardTokenConfig, depositTokenConfig);
 
   await distribution.Distribution_init(stETH, l1Sender, config.pools || []);
 
