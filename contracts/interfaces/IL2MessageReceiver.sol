@@ -1,7 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IL2MessageReceiver {
+import {ILayerZeroReceiver} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/interfaces/ILayerZeroReceiver.sol";
+
+interface IL2MessageReceiver is ILayerZeroReceiver {
+    event MessageFailed(
+        uint16 senderChainId,
+        bytes senderAndReceiverAddresses,
+        uint64 nonce,
+        bytes payload,
+        bytes reason
+    );
+    event RetryMessageSuccess(
+        uint16 senderChainId,
+        bytes senderAndReceiverAddresses,
+        uint64 nonce,
+        bytes32 payloadHash
+    );
+
     /**
      * The structure that stores the config data.
      * @param gateway The address of token's gateway.
@@ -15,12 +31,6 @@ interface IL2MessageReceiver {
     }
 
     /**
-     * The function to get the nonce of obtained messages.
-     * @return The nonce.
-     */
-    function nonce() external view returns (uint64);
-
-    /**
      * The function to get the reward token's address.
      * @return The address of reward token.
      */
@@ -32,4 +42,32 @@ interface IL2MessageReceiver {
      * @param config_ The config data.
      */
     function setParams(address rewardToken_, Config calldata config_) external;
+
+    /**
+     * LayerZero endpoint call this function to check a transaction capabilities.
+     * @param senderChainId_ The source endpoint identifier.
+     * @param senderAndReceiverAddresses_ The source sending contract address from the source chain.
+     * @param nonce_ The ordered message nonce.
+     * @param payload_ The signed payload is the UA bytes has encoded to be sent.
+     */
+    function nonblockingLzReceive(
+        uint16 senderChainId_,
+        bytes memory senderAndReceiverAddresses_,
+        uint64 nonce_,
+        bytes memory payload_
+    ) external;
+
+    /**
+     * Retry to execute the blocked message.
+     * @param senderChainId_ The source endpoint identifier.
+     * @param senderAndReceiverAddresses_ The source sending contract address from the source chain.
+     * @param nonce_ The ordered message nonce.
+     * @param payload_ The signed payload is the UA bytes has encoded to be sent.
+     */
+    function retryMessage(
+        uint16 senderChainId_,
+        bytes memory senderAndReceiverAddresses_,
+        uint64 nonce_,
+        bytes memory payload_
+    ) external;
 }
