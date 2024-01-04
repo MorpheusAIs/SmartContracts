@@ -81,11 +81,11 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
         bool isAllowedChanged_ = (oldToken_ != newToken_) || (oldGateway_ != newGateway_);
 
         if (oldGateway_ != address(0) && isAllowedChanged_) {
-            IERC20(oldToken_).approve(oldGateway_, 0);
+            IERC20(oldToken_).approve(IGatewayRouter(oldGateway_).getGateway(oldToken_), 0);
         }
 
         if (isAllowedChanged_) {
-            IERC20(newToken_).approve(newGateway_, type(uint256).max);
+            IERC20(newToken_).approve(IGatewayRouter(newGateway_).getGateway(newToken_), type(uint256).max);
         }
     }
 

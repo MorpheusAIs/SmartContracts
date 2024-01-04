@@ -6,7 +6,6 @@ import {
   Distribution__factory,
   ERC1967Proxy__factory,
   L1Sender__factory,
-  L2MessageReceiver__factory,
   LZEndpointMock__factory,
   StETHMock__factory,
   WStETHMock__factory,
@@ -58,13 +57,13 @@ module.exports = async function (deployer: Deployer) {
 
   const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
     gateway: lzEndpointL1,
-    receiver: await deployer.deployed(L2MessageReceiver__factory, 'L2MessageReceiver Proxy'),
+    receiver: UserStorage.get('L2MessageReceiver Proxy'),
     receiverChainId: config.chainsConfig.receiverChainId,
   };
   const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
     token: wStEth,
     gateway: arbitrumBridgeGatewayRouter,
-    receiver: await deployer.deployed(L2MessageReceiver__factory, 'L2MessageReceiver Proxy'),
+    receiver: UserStorage.get('L2TokenReceiver Proxy'),
   };
 
   const l1SenderImpl = await deployer.deploy(L1Sender__factory);
