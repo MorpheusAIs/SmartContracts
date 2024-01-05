@@ -6,23 +6,23 @@
   },
   "pools": [
     {
-      "payoutStart": 1703672149,
+      "payoutStart": 1704360948,
       "decreaseInterval": 86400,
       "withdrawLockPeriod": 120,
       "claimLockPeriod": 60,
       "initialReward": "14400000000000000000000",
       "rewardDecrease": "2468994701000000000",
-      "minimalStake": "1000000000000000",
+      "minimalStake": "10000000000",
       "isPublic": true
     },
     {
-      "payoutStart": 1703672149,
+      "payoutStart": 1704360948,
       "decreaseInterval": 60,
       "withdrawLockPeriod": 1,
       "claimLockPeriod": 1,
       "initialReward": "100000000000000000000",
       "rewardDecrease": "100000000000000000000",
-      "minimalStake": "1000000000000000",
+      "minimalStake": "10000000000",
       "isPublic": false,
       "whitelistedUsers": [
         "0x901F2d23823730fb7F2356920e0E273EFdCdFe17",

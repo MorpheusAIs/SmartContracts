@@ -1,4 +1,4 @@
-import { DefaultStorage, Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { Deployer, Reporter, UserStorage } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -15,7 +15,7 @@ import {
 import { IL2TokenReceiver } from '@/generated-types/ethers/contracts/L2TokenReceiver';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig();
+  const config = parseConfig(await deployer.getChainId());
 
   let WStETH: string;
   let swapRouter: string;
@@ -41,10 +41,11 @@ module.exports = async function (deployer: Deployer) {
   }
 
   const MOR = await deployer.deploy(MOR__factory, [config.cap]);
+  if (!UserStorage.has('MOR')) UserStorage.set('MOR', await MOR.getAddress());
 
   const swapParams: IL2TokenReceiver.SwapParamsStruct = {
     tokenIn: WStETH,
-    tokenOut: MOR.address,
+    tokenOut: MOR,
     fee: config.swapParams.fee,
     sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
   };
@@ -53,20 +54,25 @@ module.exports = async function (deployer: Deployer) {
   const l2TokenReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2TokenReceiverImpl, '0x'], {
     name: 'L2TokenReceiver Proxy',
   });
-  const l2TokenReceiver = L2TokenReceiver__factory.connect(l2TokenReceiverProxy.address, await deployer.getSigner());
+  if (!UserStorage.has('L2TokenReceiver Proxy'))
+    UserStorage.set('L2TokenReceiver Proxy', await l2TokenReceiverProxy.getAddress());
+  const l2TokenReceiver = L2TokenReceiver__factory.connect(
+    await l2TokenReceiverProxy.getAddress(),
+    await deployer.getSigner(),
+  );
   await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, swapParams);
-  DefaultStorage.set('l2TokenReceiver', l2TokenReceiver.address);
 
   const l2MessageReceiverImpl = await deployer.deploy(L2MessageReceiver__factory);
   const l2MessageReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2MessageReceiverImpl, '0x'], {
     name: 'L2MessageReceiver Proxy',
   });
+  if (!UserStorage.has('L2MessageReceiver Proxy'))
+    UserStorage.set('L2MessageReceiver Proxy', await l2MessageReceiverProxy.getAddress());
   const l2MessageReceiver = L2MessageReceiver__factory.connect(
-    l2MessageReceiverProxy.address,
+    await l2MessageReceiverProxy.getAddress(),
     await deployer.getSigner(),
   );
   await l2MessageReceiver.L2MessageReceiver__init();
-  DefaultStorage.set('l2MessageReceiver', l2MessageReceiver.address);
 
   await MOR.transferOwnership(l2MessageReceiver);
 

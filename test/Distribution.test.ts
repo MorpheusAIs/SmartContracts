@@ -8,6 +8,7 @@ import {
   Distribution__factory,
   GatewayRouterMock,
   IDistribution,
+  IL1Sender,
   L1Sender,
   L2MessageReceiver,
   L2TokenReceiver,
@@ -141,24 +142,25 @@ describe('Distribution', () => {
       sqrtPriceLimitX96: 0,
     });
 
-    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
-    l1Sender = l1SenderFactory.attach(l1SenderProxy) as L1Sender;
-    await l1Sender.L1Sender__init();
-    await l1Sender.setDepositTokenConfig({
-      token: wstETH,
-      gateway: gatewayRouter,
-      receiver: l2TokenReceiver,
-    });
-    await l1Sender.setRewardTokenConfig({
-      gateway: lZEndpointMockSender,
-      receiver: l2MessageReceiver,
-      receiverChainId: receiverChainId,
-    });
-
     // START deploy distribution contract
     const distributionProxy = await ERC1967ProxyFactory.deploy(await distributionImplementation.getAddress(), '0x');
     distribution = distributionFactory.attach(await distributionProxy.getAddress()) as Distribution;
     // END
+
+    const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
+      gateway: lZEndpointMockSender,
+      receiver: l2MessageReceiver,
+      receiverChainId: receiverChainId,
+    };
+    const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
+      token: wstETH,
+      gateway: gatewayRouter,
+      receiver: l2TokenReceiver,
+    };
+
+    const l1SenderProxy = await ERC1967ProxyFactory.deploy(l1SenderImplementation, '0x');
+    l1Sender = l1SenderFactory.attach(l1SenderProxy) as L1Sender;
+    await l1Sender.L1Sender__init(distribution, rewardTokenConfig, depositTokenConfig);
 
     // Deploy reward token
     rewardToken = await MORFactory.deploy(wei(1000000000));
@@ -250,6 +252,15 @@ describe('Distribution', () => {
   describe('#createPool', () => {
     it('should create pool with correct data', async () => {
       const pool = getDefaultPool();
+
+      await distribution.createPool(pool);
+
+      const poolData: IDistribution.PoolStruct = await distribution.pools(0);
+      expect(_comparePoolStructs(pool, poolData)).to.be.true;
+    });
+    it('should correctly pool with constant reward', async () => {
+      const pool = getDefaultPool();
+      pool.rewardDecrease = 0;
 
       await distribution.createPool(pool);
 

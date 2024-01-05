@@ -98,8 +98,8 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUp
                 tokenId: tokenId_,
                 amount0Desired: amountAdd0_,
                 amount1Desired: amountAdd1_,
-                amount0Min: 0,
-                amount1Min: 0,
+                amount0Min: amountMin0_,
+                amount1Min: amountMin1_,
                 deadline: block.timestamp
             });
 

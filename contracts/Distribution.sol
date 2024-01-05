@@ -315,7 +315,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        return L1Sender(l1Sender).sendDepositToken(gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        return L1Sender(l1Sender).sendDepositToken{value: msg.value}(gasLimit_, maxFeePerGas_, maxSubmissionCost_);
     }
 
     /**********************************************************************************************/

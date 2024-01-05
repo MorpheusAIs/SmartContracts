@@ -17,20 +17,33 @@ import {IL1Sender} from "./interfaces/IL1Sender.sol";
 
 contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
     address public unwrappedDepositToken;
+    address public distribution;
 
     DepositTokenConfig public depositTokenConfig;
     RewardTokenConfig public rewardTokenConfig;
 
-    function L1Sender__init() external initializer {
+    function L1Sender__init(
+        address distribution_,
+        RewardTokenConfig calldata rewardTokenConfig_,
+        DepositTokenConfig calldata depositTokenConfig_
+    ) external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
+
+        setDistribution(distribution_);
+        setRewardTokenConfig(rewardTokenConfig_);
+        setDepositTokenConfig(depositTokenConfig_);
     }
 
-    function setRewardTokenConfig(RewardTokenConfig calldata newConfig_) external onlyOwner {
+    function setDistribution(address distribution_) public onlyOwner {
+        distribution = distribution_;
+    }
+
+    function setRewardTokenConfig(RewardTokenConfig calldata newConfig_) public onlyOwner {
         rewardTokenConfig = newConfig_;
     }
 
-    function setDepositTokenConfig(DepositTokenConfig calldata newConfig_) external onlyOwner {
+    function setDepositTokenConfig(DepositTokenConfig calldata newConfig_) public onlyOwner {
         require(newConfig_.receiver != address(0), "L1S: invalid receiver");
 
         DepositTokenConfig storage oldConfig = depositTokenConfig;
@@ -65,15 +78,14 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
         address oldToken_,
         address newToken_
     ) private {
-        bool isTokenChanged_ = oldToken_ != newToken_;
-        bool isGatewayChanged_ = oldGateway_ != newGateway_;
+        bool isAllowedChanged_ = (oldToken_ != newToken_) || (oldGateway_ != newGateway_);
 
-        if (oldGateway_ != address(0) && (isTokenChanged_ || isGatewayChanged_)) {
-            IERC20(oldToken_).approve(oldGateway_, 0);
+        if (oldGateway_ != address(0) && isAllowedChanged_) {
+            IERC20(oldToken_).approve(IGatewayRouter(oldGateway_).getGateway(oldToken_), 0);
         }
 
-        if (isTokenChanged_ || isGatewayChanged_) {
-            IERC20(newToken_).approve(newGateway_, type(uint256).max);
+        if (isAllowedChanged_) {
+            IERC20(newToken_).approve(IGatewayRouter(newGateway_).getGateway(newToken_), type(uint256).max);
         }
     }
 
@@ -102,7 +114,9 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
             );
     }
 
-    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable onlyOwner {
+    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable {
+        require(_msgSender() == distribution, "L1S: invalid sender");
+
         RewardTokenConfig storage config = rewardTokenConfig;
 
         bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.receiver, address(this));
