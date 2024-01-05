@@ -53,6 +53,49 @@ interface IDistribution {
     }
 
     /**
+     * The event that is emitted when the pool is created.
+     * @param poolId The pool's id.
+     * @param pool The pool's data.
+     */
+    event PoolCreated(uint256 indexed poolId, Pool pool);
+
+    /**
+     * The event that is emitted when the pool is edited.
+     * @param poolId The pool's id.
+     * @param pool The pool's data.
+     */
+    event PoolEdited(uint256 indexed poolId, Pool pool);
+
+    /**
+     * The event that is emitted when the user stakes tokens in the pool.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param amount The amount of tokens.
+     */
+    event UserStaked(uint256 indexed poolId, address indexed user, uint256 amount);
+
+    /**
+     * The event that is emitted when the user claims rewards from the pool.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param amount The amount of tokens.
+     */
+    event UserClaimed(uint256 indexed poolId, address indexed user, uint256 amount);
+
+    /**
+     * The event that is emitted when the user withdraws tokens from the pool.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param amount The amount of tokens.
+     */
+    event UserWithdrawn(uint256 indexed poolId, address indexed user, uint256 amount);
+
+    /**
+     * The event that is emitted when the overplus of the deposit tokens is bridged.
+     */
+    event OverplusBridged(uint256 amount, bytes uniqueId);
+
+    /**
      * The function to initialize the contract.
      * @param depositToken_ The address of deposit token.
      * @param l1Sender_ The address of bridge contract.
