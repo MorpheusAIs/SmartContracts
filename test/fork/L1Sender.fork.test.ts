@@ -22,7 +22,7 @@ describe('L1Sender Fork', () => {
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
-  const arbitrumBridgeGatewayRouterAddress = '0x0F25c1DC2a9922304f2eac71DCa9B07E310e8E5a';
+  const arbitrumBridgeGatewayRouterAddress = '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef';
   const lzEndpointAddress = '0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675';
   const stethAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
   const wstethAddress = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
