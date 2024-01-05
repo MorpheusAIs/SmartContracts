@@ -65,7 +65,7 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
 
         delete failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_];
 
-        emit RetryMessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_, payloadHash_);
+        emit RetryMessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_);
     }
 
     function _blockingLzReceive(

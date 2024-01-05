@@ -134,13 +134,17 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             uint256 deposited_ = usersData[user_][poolId_].deposited;
 
             if (deposited_ < amount_) {
-                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_);
+                uint256 amountToStake_ = amount_ - deposited_;
 
-                emit UserStaked(poolId_, user_, amount_);
+                _stake(user_, poolId_, amountToStake_, currentPoolRate_);
+
+                emit UserStaked(poolId_, user_, amountToStake_);
             } else if (deposited_ > amount_) {
-                _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
+                uint256 amountToWithdraw_ = deposited_ - amount_;
 
-                emit UserWithdrawn(poolId_, user_, amount_);
+                _withdraw(user_, poolId_, amountToWithdraw_, currentPoolRate_);
+
+                emit UserWithdrawn(poolId_, user_, amountToWithdraw_);
             }
         }
     }
