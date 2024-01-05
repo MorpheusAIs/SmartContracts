@@ -134,17 +134,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             uint256 deposited_ = usersData[user_][poolId_].deposited;
 
             if (deposited_ < amount_) {
-                uint256 amountToStake_ = amount_ - deposited_;
-
-                _stake(user_, poolId_, amountToStake_, currentPoolRate_);
-
-                emit UserStaked(poolId_, user_, amountToStake_);
+                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_);
             } else if (deposited_ > amount_) {
-                uint256 amountToWithdraw_ = deposited_ - amount_;
-
-                _withdraw(user_, poolId_, amountToWithdraw_, currentPoolRate_);
-
-                emit UserWithdrawn(poolId_, user_, amountToWithdraw_);
+                _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
             }
         }
     }
@@ -154,8 +146,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     function stake(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
         _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
-
-        emit UserStaked(poolId_, _msgSender(), amount_);
     }
 
     function claim(uint256 poolId_, address user_) external payable poolExists(poolId_) {
@@ -185,8 +175,6 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
-
-        emit UserWithdrawn(poolId_, _msgSender(), amount_);
     }
 
     function getCurrentUserReward(uint256 poolId_, address user_) external view returns (uint256) {
@@ -230,6 +218,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update user data
         userData.rate = currentPoolRate_;
         userData.deposited += amount_;
+
+        emit UserStaked(poolId_, user_, amount_);
     }
 
     function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
@@ -283,6 +273,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
             IERC20(depositToken).safeTransfer(user_, amount_);
         }
+
+        emit UserWithdrawn(poolId_, user_, amount_);
     }
 
     function _getCurrentUserReward(

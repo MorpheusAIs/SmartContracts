@@ -34,8 +34,9 @@ interface IL2MessageReceiver is ILayerZeroReceiver {
      * @param senderChainId The source endpoint identifier.
      * @param senderAndReceiverAddresses The source sending contract address from the source chain.
      * @param nonce The ordered message nonce.
+     * @param payload The signed payload is the UA bytes has encoded to be sent.
      */
-    event RetryMessageSuccess(uint16 senderChainId, bytes senderAndReceiverAddresses, uint64 nonce);
+    event RetryMessageSuccess(uint16 senderChainId, bytes senderAndReceiverAddresses, uint64 nonce, bytes payload);
 
     /**
      * The structure that stores the config data.

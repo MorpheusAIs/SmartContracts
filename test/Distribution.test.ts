@@ -1199,7 +1199,7 @@ describe('Distribution', () => {
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
       const tx = await distribution.connect(OWNER).withdraw(poolId, wei(999));
-      await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, ownerAddress, wei(999));
+      await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, ownerAddress, wei(3));
       await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(ownerAddress)).to.eq(wei(1000));
