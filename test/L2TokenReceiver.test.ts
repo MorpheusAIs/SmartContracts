@@ -63,7 +63,7 @@ describe('L2TokenReceiver', () => {
       sqrtPriceLimitX96: 0,
     });
 
-    reverter.snapshot();
+    await reverter.snapshot();
   });
 
   beforeEach(async () => {

@@ -21,7 +21,7 @@ describe('MOR', () => {
     const MORFactory = await ethers.getContractFactory('MOR');
     mor = await MORFactory.deploy(cap);
 
-    reverter.snapshot();
+    await reverter.snapshot();
   });
 
   afterEach(async () => {
