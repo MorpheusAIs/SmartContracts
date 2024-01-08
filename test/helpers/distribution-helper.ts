@@ -10,6 +10,7 @@ export const getDefaultPool = (): IDistribution.PoolStruct => {
     decreaseInterval: oneDay,
     withdrawLockPeriod: 12 * oneHour,
     claimLockPeriod: 12 * oneHour,
+    withdrawLockPeriodAfterStake: oneDay,
     initialReward: wei(100),
     rewardDecrease: wei(2),
     minimalStake: wei(0.1),

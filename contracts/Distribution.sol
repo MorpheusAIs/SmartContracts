@@ -216,6 +216,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         poolData.totalDeposited += amount_;
 
         // Update user data
+        userData.lastStake = uint128(block.timestamp);
         userData.rate = currentPoolRate_;
         userData.deposited += amount_;
 
@@ -237,7 +238,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 newDeposited_;
         if (pool.isPublic) {
             require(
-                block.timestamp < pool.payoutStart || block.timestamp > pool.payoutStart + pool.withdrawLockPeriod,
+                block.timestamp < pool.payoutStart ||
+                    (block.timestamp > pool.payoutStart + pool.withdrawLockPeriod &&
+                        block.timestamp > userData.lastStake + pool.withdrawLockPeriodAfterStake),
                 "DS: pool withdraw is locked"
             );
 

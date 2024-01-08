@@ -322,12 +322,6 @@ describe('Distribution', () => {
     it('should revert if try to change pool type', async () => {
       const newPool = {
         ...defaultPool,
-        payoutStart: 10 * oneDay,
-        decreaseInterval: 10 * oneDay,
-        withdrawLockPeriod: 10 * oneDay,
-        initialReward: wei(111),
-        rewardDecrease: wei(222),
-        minimalStake: wei(333),
         isPublic: false,
       };
 
@@ -1184,7 +1178,7 @@ describe('Distribution', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      await distribution.createPool(getDefaultPool());
+      await distribution.createPool({ ...getDefaultPool(), withdrawLockPeriodAfterStake: oneDay - 1 });
     });
 
     it('should correctly withdraw, few users, withdraw all', async () => {
@@ -1372,6 +1366,13 @@ describe('Distribution', () => {
 
       await expect(distribution.withdraw(poolId, wei(0.1))).to.be.revertedWith('DS: pool withdraw is locked');
     });
+    it("should revert if `withdrawLockPeriodAfterStake didn't pass", async () => {
+      await setNextTime(oneDay * 10);
+
+      await distribution.stake(poolId, wei(1));
+
+      await expect(distribution.withdraw(poolId, wei(0.1))).to.be.revertedWith('DS: pool withdraw is locked');
+    });
   });
 
   describe('#removeUpgradeability', () => {
@@ -1516,6 +1517,7 @@ describe('Distribution', () => {
         decreaseInterval: oneDay,
         withdrawLockPeriod: 1,
         claimLockPeriod: 1,
+        withdrawLockPeriodAfterStake: 0,
         initialReward: wei(14400),
         rewardDecrease: wei(2.468994701),
         minimalStake: wei(0.1),
@@ -1656,6 +1658,7 @@ const _getRewardTokenFromPool = async (distribution: Distribution, amount: bigin
     decreaseInterval: 1,
     withdrawLockPeriod: 0,
     claimLockPeriod: 0,
+    withdrawLockPeriodAfterStake: 0,
     isPublic: true,
     minimalStake: 0,
   };
@@ -1685,6 +1688,8 @@ const _comparePoolStructs = (a: IDistribution.PoolStruct, b: IDistribution.PoolS
     a.payoutStart.toString() === b.payoutStart.toString() &&
     a.decreaseInterval.toString() === b.decreaseInterval.toString() &&
     a.withdrawLockPeriod.toString() === b.withdrawLockPeriod.toString() &&
+    a.claimLockPeriod.toString() === b.claimLockPeriod.toString() &&
+    a.withdrawLockPeriodAfterStake.toString() === b.withdrawLockPeriodAfterStake.toString() &&
     a.initialReward.toString() === b.initialReward.toString() &&
     a.rewardDecrease.toString() === b.rewardDecrease.toString() &&
     a.minimalStake.toString() === b.minimalStake.toString() &&
