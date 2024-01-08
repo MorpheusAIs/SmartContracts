@@ -6,19 +6,19 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IMOR, IERC165, IERC20} from "./interfaces/IMOR.sol";
+import {IMOR, IERC20} from "./interfaces/IMOR.sol";
 
 contract MOR is IMOR, ERC165, ERC20Capped, ERC20Burnable, Ownable {
     constructor(uint256 cap_) ERC20("MOR", "MOR") ERC20Capped(cap_) {}
 
-    function supportsInterface(bytes4 interfaceId_) public view override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId_) public view override returns (bool) {
         return
             interfaceId_ == type(IMOR).interfaceId ||
             interfaceId_ == type(IERC20).interfaceId ||
             super.supportsInterface(interfaceId_);
     }
 
-    function cap() public view override(IMOR, ERC20Capped) returns (uint256) {
+    function cap() public view override returns (uint256) {
         return ERC20Capped.cap();
     }
 
@@ -26,7 +26,7 @@ contract MOR is IMOR, ERC165, ERC20Capped, ERC20Burnable, Ownable {
         _mint(account_, amount_);
     }
 
-    function burn(uint256 amount_) public override(IMOR, ERC20Burnable) {
+    function burn(uint256 amount_) public override {
         ERC20Burnable.burn(amount_);
     }
 
