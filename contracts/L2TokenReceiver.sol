@@ -49,7 +49,7 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUp
         _editParams(newParams_);
     }
 
-    function swap(uint256 amountIn_, uint256 amountOutMinimum_) external onlyOwner returns (uint256) {
+    function swap(uint256 amountIn_, uint256 amountOutMinimum_) external onlyOwner returns (uint256 amountOut_) {
         SwapParams memory params_ = params;
 
         ISwapRouter.ExactInputSingleParams memory swapParams_ = ISwapRouter.ExactInputSingleParams({
@@ -63,7 +63,9 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUp
             sqrtPriceLimitX96: params_.sqrtPriceLimitX96
         });
 
-        return ISwapRouter(router).exactInputSingle(swapParams_);
+        amountOut_ = ISwapRouter(router).exactInputSingle(swapParams_);
+
+        emit TokensSwapped(params_.tokenIn, params_.tokenOut, amountIn_, amountOut_, amountOutMinimum_);
     }
 
     function increaseLiquidityCurrentRange(
@@ -106,6 +108,8 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUp
         (liquidity_, amount0_, amount1_) = INonfungiblePositionManager(nonfungiblePositionManager).increaseLiquidity(
             params_
         );
+
+        emit LiquidityIncreased(tokenId_, amount0_, amount1_, liquidity_, amountMin0_, amountMin1_);
     }
 
     function _editParams(SwapParams memory newParams_) internal {

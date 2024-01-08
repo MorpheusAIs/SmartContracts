@@ -70,6 +70,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         _validatePool(pool_);
         pools.push(pool_);
+
+        emit PoolCreated(pools.length - 1, pool_);
     }
 
     function editPool(uint256 poolId_, Pool calldata pool_) external onlyOwner poolExists(poolId_) {
@@ -84,6 +86,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         poolData.lastUpdate = uint128(block.timestamp);
 
         pools[poolId_] = pool_;
+
+        emit PoolEdited(poolId_, pool_);
     }
 
     function getPeriodReward(uint256 poolId_, uint128 startTime_, uint128 endTime_) public view returns (uint256) {
@@ -165,6 +169,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         // Transfer rewards
         L1Sender(l1Sender).sendMintMessage{value: msg.value}(user_, pendingRewards_, _msgSender());
+
+        emit UserClaimed(poolId_, user_, pendingRewards_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
@@ -212,6 +218,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         // Update user data
         userData.rate = currentPoolRate_;
         userData.deposited += amount_;
+
+        emit UserStaked(poolId_, user_, amount_);
     }
 
     function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
@@ -265,6 +273,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
             IERC20(depositToken).safeTransfer(user_, amount_);
         }
+
+        emit UserWithdrawn(poolId_, user_, amount_);
     }
 
     function _getCurrentUserReward(
@@ -309,13 +319,19 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 gasLimit_,
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
-    ) external payable onlyOwner returns (bytes memory) {
+    ) external payable onlyOwner returns (bytes memory bridgeMessageId_) {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        return L1Sender(l1Sender).sendDepositToken{value: msg.value}(gasLimit_, maxFeePerGas_, maxSubmissionCost_);
+        bridgeMessageId_ = L1Sender(l1Sender).sendDepositToken{value: msg.value}(
+            gasLimit_,
+            maxFeePerGas_,
+            maxSubmissionCost_
+        );
+
+        emit OverplusBridged(overplus_, bridgeMessageId_);
     }
 
     /**********************************************************************************************/

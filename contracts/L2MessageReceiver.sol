@@ -65,7 +65,7 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
 
         delete failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_];
 
-        emit RetryMessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_, payloadHash_);
+        emit RetryMessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
     }
 
     function _blockingLzReceive(
@@ -81,7 +81,9 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
                 nonce_,
                 payload_
             )
-        {} catch (bytes memory reason_) {
+        {
+            emit MessageSuccess(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+        } catch (bytes memory reason_) {
             failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_] = keccak256(payload_);
 
             emit MessageFailed(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_, reason_);
