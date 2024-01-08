@@ -8,6 +8,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 interface IMOR is IERC20 {
     /**
+     * The function to get the cap of the token.
+     * @return The cap of the token.
+     */
+    function cap() external view returns (uint256);
+
+    /**
      * The function to mint tokens.
      * @param account_ The address of the account to mint tokens to.
      * @param amount_ The amount of tokens to mint.

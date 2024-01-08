@@ -41,7 +41,7 @@ describe('MOR', () => {
 
   describe('supportsInterface', () => {
     it('should support IMOR', async () => {
-      expect(await mor.supportsInterface('0x3705179b')).to.be.true;
+      expect(await mor.supportsInterface('0x75937bf3')).to.be.true;
     });
     it('should support IERC20', async () => {
       expect(await mor.supportsInterface('0x36372b07')).to.be.true;

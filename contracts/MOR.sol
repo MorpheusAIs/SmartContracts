@@ -18,7 +18,7 @@ contract MOR is IMOR, ERC165, ERC20Capped, ERC20Burnable, Ownable {
             super.supportsInterface(interfaceId_);
     }
 
-    function cap() public view override returns (uint256) {
+    function cap() public view override(IMOR, ERC20Capped) returns (uint256) {
         return ERC20Capped.cap();
     }
 
