@@ -40,7 +40,7 @@ describe('L2MessageReceiver', () => {
 
     await mor.transferOwnership(l2MessageReceiver);
 
-    reverter.snapshot();
+    await reverter.snapshot();
   });
 
   beforeEach(async () => {

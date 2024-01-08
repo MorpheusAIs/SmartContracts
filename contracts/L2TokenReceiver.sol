@@ -9,7 +9,7 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import {INonfungiblePositionManager} from "./interfaces/uniswap-v3/INonfungiblePositionManager.sol";
-import {IL2TokenReceiver, IERC165} from "./interfaces/IL2TokenReceiver.sol";
+import {IL2TokenReceiver} from "./interfaces/IL2TokenReceiver.sol";
 import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
 
 contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUpgradeable {
@@ -32,7 +32,7 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, OwnableUpgradeable, UUPSUp
         _editParams(params_);
     }
 
-    function supportsInterface(bytes4 interfaceId_) public view override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId_) public view override returns (bool) {
         return interfaceId_ == type(IL2TokenReceiver).interfaceId || super.supportsInterface(interfaceId_);
     }
 
