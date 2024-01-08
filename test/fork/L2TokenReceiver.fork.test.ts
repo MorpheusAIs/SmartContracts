@@ -30,7 +30,6 @@ describe('L2TokenReceiver Fork', () => {
 
   const wstethAddress = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
   const usdcAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-  const wstethToUsdcRatio = wei(2399.01);
 
   const richAddress = '0x176F3DAb24a159341c0509bB36B833E7fdd0a132';
 
@@ -89,10 +88,11 @@ describe('L2TokenReceiver Fork', () => {
     });
 
     it('should swap tokens', async () => {
+      const txResult = await l2TokenReceiver.swap.staticCall(amount, wei(0));
       const tx = await l2TokenReceiver.swap(amount, wei(0));
 
-      expect(tx).to.changeTokenBalance(outputToken, OWNER, amount);
-      expect(tx).to.changeTokenBalance(inputToken, OWNER, -amount * wstethToUsdcRatio);
+      await expect(tx).to.changeTokenBalance(outputToken, l2TokenReceiver, txResult);
+      await expect(tx).to.changeTokenBalance(inputToken, l2TokenReceiver, -amount);
     });
   });
 
@@ -108,7 +108,7 @@ describe('L2TokenReceiver Fork', () => {
     });
 
     it('should increase liquidity', async () => {
-      const tx = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
+      const txResult = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
         poolId,
         amountInputToken,
         amountOutputToken,
@@ -116,10 +116,10 @@ describe('L2TokenReceiver Fork', () => {
         0,
       );
 
-      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken, 0, 0);
+      const tx = await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken, 0, 0);
 
-      expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[1]);
-      expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[2]);
+      await expect(tx).to.changeTokenBalance(outputToken, l2TokenReceiver, -txResult[2]);
+      await expect(tx).to.changeTokenBalance(inputToken, l2TokenReceiver, -txResult[1]);
     });
     it('should set the amount correctly besides the tokens order', async () => {
       const newParams: IL2TokenReceiver.SwapParamsStruct = {
@@ -131,17 +131,17 @@ describe('L2TokenReceiver Fork', () => {
 
       await l2TokenReceiver.editParams(newParams);
 
-      const tx = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
+      const txResult = await l2TokenReceiver.increaseLiquidityCurrentRange.staticCall(
         poolId,
         amountInputToken,
         amountOutputToken,
         0,
         0,
       );
-      await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken, 0, 0);
+      const tx = await l2TokenReceiver.increaseLiquidityCurrentRange(poolId, amountInputToken, amountOutputToken, 0, 0);
 
-      expect(tx).to.changeTokenBalance(inputToken, OWNER, -tx[1]);
-      expect(tx).to.changeTokenBalance(outputToken, OWNER, -tx[2]);
+      await expect(tx).to.changeTokenBalance(inputToken, l2TokenReceiver, -txResult[1]);
+      await expect(tx).to.changeTokenBalance(outputToken, l2TokenReceiver, -txResult[2]);
     });
   });
 });
