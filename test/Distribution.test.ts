@@ -1340,7 +1340,7 @@ describe('Distribution', () => {
 
       await distribution.withdraw(poolId, wei(10));
 
-      await expect(distribution.withdraw(poolId, 0)).to.be.revertedWith('DS: invalid withdraw amount');
+      await expect(distribution.withdraw(poolId, 0)).to.be.revertedWith('DS: nothing to withdraw');
     });
     it("should revert if user didn't stake", async () => {
       await expect(distribution.withdraw(poolId, 1)).to.be.revertedWith("DS: user isn't staked");

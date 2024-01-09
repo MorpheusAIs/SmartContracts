@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 /**
  * This is Swap contract that swaps tokens using Uniswap V3.
  */
-interface IL2TokenReceiver {
+interface IL2TokenReceiver is IERC165 {
     /**
      * The structure that stores the swap params.
      * @param tokenIn The address of the token to swap from.

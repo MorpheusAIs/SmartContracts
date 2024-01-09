@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
-import {IDistribution} from "./interfaces/IDistribution.sol";
-import {IMOR} from "./interfaces/IMOR.sol";
 import {L1Sender} from "./L1Sender.sol";
+import {IDistribution} from "./interfaces/IDistribution.sol";
 
 contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
@@ -54,7 +54,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         __Ownable_init();
         __UUPSUpgradeable_init();
 
-        for (uint256 i = 0; i < poolsInfo_.length; i++) {
+        for (uint256 i; i < poolsInfo_.length; ++i) {
             createPool(poolsInfo_[i]);
         }
 
@@ -108,7 +108,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             );
     }
 
-    function _validatePool(Pool calldata pool_) internal pure {
+    function _validatePool(Pool calldata pool_) private pure {
         if (pool_.rewardDecrease > 0) {
             require(pool_.decreaseInterval > 0, "DS: invalid reward decrease");
         }
@@ -127,7 +127,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
 
-        for (uint256 i = 0; i < users_.length; i++) {
+        for (uint256 i; i < users_.length; ++i) {
             address user_ = users_[i];
             uint256 amount_ = amounts_[i];
 
@@ -188,7 +188,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return _getCurrentUserReward(currentPoolRate_, userData);
     }
 
-    function _stake(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
+    function _stake(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) private {
         require(amount_ > 0, "DS: nothing to stake");
 
         Pool storage pool = pools[poolId_];
@@ -222,7 +222,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         emit UserStaked(poolId_, user_, amount_);
     }
 
-    function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) internal {
+    function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) private {
         Pool storage pool = pools[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
@@ -248,10 +248,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
 
             newDeposited_ = deposited_ - amount_;
 
-            require(
-                amount_ > 0 && (newDeposited_ >= pool.minimalStake || newDeposited_ == 0),
-                "DS: invalid withdraw amount"
-            );
+            require(amount_ > 0, "DS: nothing to withdraw");
+            require(newDeposited_ >= pool.minimalStake || newDeposited_ == 0, "DS: invalid withdraw amount");
         } else {
             newDeposited_ = deposited_ - amount_;
         }
@@ -277,16 +275,13 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         emit UserWithdrawn(poolId_, user_, amount_);
     }
 
-    function _getCurrentUserReward(
-        uint256 currentPoolRate_,
-        UserData memory userData_
-    ) internal pure returns (uint256) {
+    function _getCurrentUserReward(uint256 currentPoolRate_, UserData memory userData_) private pure returns (uint256) {
         uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.deposited) / PRECISION;
 
         return userData_.pendingRewards + newRewards_;
     }
 
-    function _getCurrentPoolRate(uint256 poolId_) internal view returns (uint256) {
+    function _getCurrentPoolRate(uint256 poolId_) private view returns (uint256) {
         PoolData storage poolData = poolsData[poolId_];
 
         if (poolData.totalDeposited == 0) {
@@ -298,7 +293,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return poolData.rate + (rewards_ * PRECISION) / poolData.totalDeposited;
     }
 
-    function _poolExists(uint256 poolId_) internal view returns (bool) {
+    function _poolExists(uint256 poolId_) private view returns (bool) {
         return poolId_ < pools.length;
     }
 
@@ -319,19 +314,21 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         uint256 gasLimit_,
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
-    ) external payable onlyOwner returns (bytes memory bridgeMessageId_) {
+    ) external payable onlyOwner returns (bytes memory) {
         uint256 overplus_ = overplus();
         require(overplus_ > 0, "DS: overplus is zero");
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        bridgeMessageId_ = L1Sender(l1Sender).sendDepositToken{value: msg.value}(
+        bytes memory bridgeMessageId_ = L1Sender(l1Sender).sendDepositToken{value: msg.value}(
             gasLimit_,
             maxFeePerGas_,
             maxSubmissionCost_
         );
 
         emit OverplusBridged(overplus_, bridgeMessageId_);
+
+        return bridgeMessageId_;
     }
 
     /**********************************************************************************************/
