@@ -131,7 +131,7 @@ describe('Distribution', () => {
 
     const l2MessageReceiverProxy = await ERC1967ProxyFactory.deploy(l2MessageReceiverImplementation, '0x');
     l2MessageReceiver = L2MessageReceiver.attach(l2MessageReceiverProxy) as L2MessageReceiver;
-    l2MessageReceiver.L2MessageReceiver__init();
+    await l2MessageReceiver.L2MessageReceiver__init();
 
     const l2TokenReceiverProxy = await ERC1967ProxyFactory.deploy(l2TokenReceiverImplementation, '0x');
     l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiver;
@@ -164,7 +164,7 @@ describe('Distribution', () => {
 
     // Deploy reward token
     rewardToken = await MORFactory.deploy(wei(1000000000));
-    rewardToken.transferOwnership(l2MessageReceiver);
+    await rewardToken.transferOwnership(l2MessageReceiver);
 
     await l2MessageReceiver.setParams(rewardToken, {
       gateway: lZEndpointMockReceiver,
@@ -358,7 +358,7 @@ describe('Distribution', () => {
     it('should correctly imitate stake and withdraw process', async () => {
       let userData;
 
-      setNextTime(oneHour * 2);
+      await setNextTime(oneHour * 2);
       let tx = await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
       await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, secondAddress, wei(1));
       await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, ownerAddress, wei(4));
@@ -375,7 +375,7 @@ describe('Distribution', () => {
       expect(userData.deposited).to.eq(wei(4));
       expect(userData.pendingRewards).to.eq(0);
 
-      setNextTime(oneHour * 3);
+      await setNextTime(oneHour * 3);
       tx = await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(10), wei(1)]);
       await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, secondAddress, wei(9));
       await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, ownerAddress, wei(3));
@@ -395,7 +395,7 @@ describe('Distribution', () => {
     it('should correctly calculate and withdraw rewards', async () => {
       let userData;
 
-      setNextTime(oneHour * 2);
+      await setNextTime(oneHour * 2);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       // Claim after 1 day
@@ -416,7 +416,7 @@ describe('Distribution', () => {
       expect(userData.pendingRewards).to.eq(0);
 
       // Withdraw after 2 days
-      setNextTime(oneDay + oneDay * 2);
+      await setNextTime(oneDay + oneDay * 2);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(0), wei(0)]);
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
@@ -436,11 +436,11 @@ describe('Distribution', () => {
     it('should correctly calculate rewards after partial stake', async () => {
       let userData;
 
-      setNextTime(oneHour * 2);
+      await setNextTime(oneHour * 2);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       // Stake after 1 day
-      setNextTime(oneDay + oneDay * 1);
+      await setNextTime(oneDay + oneDay * 1);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(5), wei(5)]);
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
@@ -496,7 +496,7 @@ describe('Distribution', () => {
     it('should correctly calculate rewards if change before distribution end and claim after', async () => {
       let userData;
 
-      setNextTime(oneDay + oneDay * 25);
+      await setNextTime(oneDay + oneDay * 25);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       await setNextTime(oneDay * 20000);
@@ -535,7 +535,7 @@ describe('Distribution', () => {
     it('should correctly calculate rewards if change both at and distribution end', async () => {
       let userData;
 
-      setNextTime(oneDay + oneDay * 25);
+      await setNextTime(oneDay + oneDay * 25);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       await setNextTime(oneDay * 20000);
@@ -556,7 +556,7 @@ describe('Distribution', () => {
     it('should correctly work if multiple changes in one block', async () => {
       let userData;
 
-      setNextTime(oneHour * 2);
+      await setNextTime(oneHour * 2);
 
       await ethers.provider.send('evm_setAutomine', [false]);
 
@@ -591,7 +591,7 @@ describe('Distribution', () => {
       expect(userData.pendingRewards).to.eq(0);
 
       // Withdraw after 2 days
-      setNextTime(oneDay + oneDay * 2);
+      await setNextTime(oneDay + oneDay * 2);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(0), wei(0)]);
       await distribution.claim(poolId, SECOND, { value: wei(0.5) });
       await distribution.claim(poolId, OWNER, { value: wei(0.5) });
@@ -611,7 +611,7 @@ describe('Distribution', () => {
     it('should do nothing id deposited amount is the same', async () => {
       let userData;
 
-      setNextTime(oneHour * 2);
+      await setNextTime(oneHour * 2);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
@@ -626,7 +626,7 @@ describe('Distribution', () => {
       expect(userData.deposited).to.eq(wei(4));
       expect(userData.pendingRewards).to.eq(0);
 
-      setNextTime(oneHour * 3);
+      await setNextTime(oneHour * 3);
       await distribution.manageUsersInPrivatePool(poolId, [secondAddress, ownerAddress], [wei(1), wei(4)]);
 
       expect(await depositToken.balanceOf(secondAddress)).to.eq(wei(1000));
@@ -1334,7 +1334,7 @@ describe('Distribution', () => {
 
       await distribution.withdraw(poolId, wei(10));
 
-      await expect(distribution.withdraw(poolId, 0)).to.be.revertedWith('DS: invalid withdraw amount');
+      await expect(distribution.withdraw(poolId, 0)).to.be.revertedWith('DS: nothing to withdraw');
     });
     it("should revert if user didn't stake", async () => {
       await expect(distribution.withdraw(poolId, 1)).to.be.revertedWith("DS: user isn't staked");

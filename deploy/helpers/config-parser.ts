@@ -42,6 +42,8 @@ export function parseConfig(chainId: bigint): Config {
   let configPath: string;
 
   if (chainId === 31337n) {
+    configPath = `deploy/data/config_localhost.json`;
+  } else if (chainId === 1n || chainId === 42161n) {
     configPath = `deploy/data/config.json`;
   } else if (chainId === 5n || chainId === 421613n) {
     configPath = `deploy/data/config_goerli.json`;

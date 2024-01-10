@@ -23,7 +23,7 @@ library LinearDistributionIntervalDecrease {
         uint128 interval_,
         uint128 startTime_,
         uint128 endTime_
-    ) public pure returns (uint256) {
+    ) external pure returns (uint256) {
         if (interval_ == 0) {
             return 0;
         }
