@@ -11,7 +11,7 @@ contract StETHMock is ERC20, Ownable {
     constructor() ERC20("Staked Ether Mock", "stETHMock") {}
 
     function mint(address account_, uint256 amount_) external {
-        require(amount_ <= 10 * (10 ** decimals()), "StETHMock: amount is too big");
+        require(amount_ <= 1000 * (10 ** decimals()), "StETHMock: amount is too big");
 
         _mint(account_, amount_);
     }
