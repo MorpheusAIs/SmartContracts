@@ -10,6 +10,7 @@
       "decreaseInterval": 86400,
       "withdrawLockPeriod": 120,
       "claimLockPeriod": 60,
+      "withdrawLockPeriodAfterStake": 30,
       "initialReward": "14400000000000000000000",
       "rewardDecrease": "2468994701000000000",
       "minimalStake": "1000000000000000",
