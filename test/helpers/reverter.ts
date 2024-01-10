@@ -1,6 +1,7 @@
 import { network } from 'hardhat';
 
 export class Reverter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private snapshotId: any;
 
   revert = async () => {
