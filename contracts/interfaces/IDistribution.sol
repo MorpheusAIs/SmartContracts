@@ -11,6 +11,7 @@ interface IDistribution {
      * @param payoutStart The timestamp when the pool starts to pay out rewards.
      * @param decreaseInterval The interval in seconds between reward decreases.
      * @param withdrawLockPeriod The period in seconds when the user can't withdraw his stake.
+     * @param withdrawLockPeriodAfterStake The period in seconds when the user can't withdraw his stake after staking.
      * @param claimLockPeriod The period in seconds when the user can't claim his rewards.
      * @param initialReward The initial reward per interval.
      * @param rewardDecrease The reward decrease per interval.
@@ -22,6 +23,7 @@ interface IDistribution {
         uint128 decreaseInterval;
         uint128 withdrawLockPeriod;
         uint128 claimLockPeriod;
+        uint128 withdrawLockPeriodAfterStake;
         uint256 initialReward;
         uint256 rewardDecrease;
         uint256 minimalStake;
@@ -42,11 +44,13 @@ interface IDistribution {
 
     /**
      * The structure that stores the user's rate data of pool.
+     * @param lastStake The timestamp when the user last staked tokens.
      * @param deposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      */
     struct UserData {
+        uint128 lastStake;
         uint256 deposited;
         uint256 rate;
         uint256 pendingRewards;
