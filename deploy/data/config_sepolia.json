@@ -10,6 +10,7 @@
       "decreaseInterval": 86400,
       "withdrawLockPeriod": 120,
       "claimLockPeriod": 60,
+      "withdrawLockPeriodAfterStake": 30,
       "initialReward": "14400000000000000000000",
       "rewardDecrease": "2468994701000000000",
       "minimalStake": "10000000000",
@@ -20,6 +21,7 @@
       "decreaseInterval": 60,
       "withdrawLockPeriod": 1,
       "claimLockPeriod": 1,
+      "withdrawLockPeriodAfterStake": 30,
       "initialReward": "100000000000000000000",
       "rewardDecrease": "100000000000000000000",
       "minimalStake": "10000000000",
@@ -38,7 +40,7 @@
   "L2": {
     "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     "nonfungiblePositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-    "wStEth": "0xed2f149221ECf2Cf4e929560B8E42a94555c3986"
+    "wStEth": "0xfD5d8Dc9918e04673b9F5F332cE63BcC3BE427a2"
   },
   "swapParams": {
     "fee": 10000,

@@ -181,7 +181,6 @@ describe('Distribution', () => {
       depositToken.approve(distribution, wei(1000)),
       depositToken.connect(SECOND).approve(distribution, wei(1000)),
     ]);
-
     await l1Sender.transferOwnership(distribution);
 
     await reverter.snapshot();
@@ -1312,7 +1311,7 @@ describe('Distribution', () => {
       expect(await depositToken.balanceOf(distribution)).to.eq(wei(20));
 
       await setNextTime(oneDay + oneDay);
-      await depositToken.setTotalPooledEther(wei(0.8, 25));
+      await depositToken.setTotalPooledEther(((await depositToken.totalPooledEther()) * 8n) / 10n);
       expect(await depositToken.balanceOf(distribution)).to.eq(wei(16));
 
       let tx = await distribution.withdraw(poolId, wei(999));
@@ -1590,7 +1589,7 @@ describe('Distribution', () => {
     it('should return overplus if deposited token increased', async () => {
       await distribution.stake(0, wei(1));
 
-      await depositToken.setTotalPooledEther(wei(2, 25));
+      await depositToken.setTotalPooledEther((await depositToken.totalPooledEther()) * 2n);
 
       let overplus = await distribution.overplus();
       expect(overplus).to.eq(wei(1));
@@ -1600,12 +1599,12 @@ describe('Distribution', () => {
       overplus = await distribution.overplus();
       expect(overplus).to.eq(wei(1));
 
-      await depositToken.setTotalPooledEther(wei(1, 25));
+      await depositToken.setTotalPooledEther((await depositToken.totalPooledEther()) / 2n);
 
       overplus = await distribution.overplus();
       expect(overplus).to.eq(0);
 
-      await depositToken.setTotalPooledEther(wei(5, 25));
+      await depositToken.setTotalPooledEther((await depositToken.totalPooledEther()) * 5n);
 
       overplus = await distribution.overplus();
       expect(overplus).to.eq(wei(5.5));
@@ -1626,7 +1625,7 @@ describe('Distribution', () => {
 
       await distribution.stake(1, wei(1));
 
-      await depositToken.setTotalPooledEther(wei(2, 25));
+      await depositToken.setTotalPooledEther((await depositToken.totalPooledEther()) * 2n);
 
       const overplus = await distribution.overplus();
       expect(overplus).to.eq(wei(1));

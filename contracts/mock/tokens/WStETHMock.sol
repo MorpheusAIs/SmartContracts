@@ -8,7 +8,7 @@ import {IStETH} from "../../interfaces/tokens/IStETH.sol";
 contract WStETHMock is ERC20 {
     IStETH public stETH;
 
-    constructor(address stETH_) ERC20("Wraped Staked Ether", "WStETH") {
+    constructor(address stETH_) ERC20("Wraped Staked Ether Mock", "WStETHMock") {
         stETH = IStETH(stETH_);
     }
 
