@@ -31,7 +31,10 @@
     "lint-fix": "npm run lint-sol-fix && npm run lint-ts-fix && npm run lint-json-fix",
     "lint-json-fix": "prettier --write \"./**/*.json\"",
     "lint-ts-fix": "prettier --write \"./**/*.ts\"",
-    "lint-sol-fix": "prettier --write \"contracts/**/*.sol\""
+    "lint-sol-fix": "prettier --write \"contracts/**/*.sol\"",
+    "lint": "npm run lint-ts && npm run lint-sol",
+    "lint-ts": "eslint \"./**/*.ts\"",
+    "lint-sol": "solhint \"contracts/**/*.sol\""
   },
   "dependencies": {
     "@arbitrum/token-bridge-contracts": "^1.1.2",
@@ -74,7 +77,9 @@
     "husky": "^8.0.2",
     "mocha": "^10.2.0",
     "prettier": "^3.1.0",
-    "prettier-plugin-solidity": "^1.2.0",
+    "prettier-plugin-solidity": "^1.3.1",
+    "solhint": "^4.0.0",
+    "solhint-plugin-prettier": "^0.1.0",
     "solidity-coverage": "^0.8.5",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
