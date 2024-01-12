@@ -1,33 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
-import {INonfungiblePositionManager} from "./interfaces/uniswap-v3/INonfungiblePositionManager.sol";
 import {IL2TokenReceiver, IERC165} from "./interfaces/IL2TokenReceiver.sol";
-import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
+import {INonfungiblePositionManager} from "./interfaces/uniswap-v3/INonfungiblePositionManager.sol";
 
-contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
-    address public immutable router;
-    address public immutable nonfungiblePositionManager;
+contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeable {
+    address public router;
+    address public nonfungiblePositionManager;
 
     SwapParams public params;
 
-    constructor(address router_, address nonfungiblePositionManager_, SwapParams memory params_) {
+    function L2TokenReceiver__init(
+        address router_,
+        address nonfungiblePositionManager_,
+        SwapParams memory params_
+    ) external initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
         router = router_;
         nonfungiblePositionManager = nonfungiblePositionManager_;
 
         _editParams(params_);
     }
 
-    function supportsInterface(bytes4 interfaceId_) public view override(ERC165, IERC165) returns (bool) {
-        return interfaceId_ == type(IL2TokenReceiver).interfaceId || super.supportsInterface(interfaceId_);
+    function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
+        return interfaceId_ == type(IL2TokenReceiver).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     }
 
-    function editParams(SwapParams memory newParams_) public onlyOwner {
+    function editParams(SwapParams memory newParams_) external onlyOwner {
         if (params.tokenIn != newParams_.tokenIn) {
             TransferHelper.safeApprove(params.tokenIn, router, 0);
             TransferHelper.safeApprove(params.tokenIn, nonfungiblePositionManager, 0);
@@ -54,16 +61,24 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
             sqrtPriceLimitX96: params_.sqrtPriceLimitX96
         });
 
-        return ISwapRouter(router).exactInputSingle(swapParams_);
+        uint256 amountOut_ = ISwapRouter(router).exactInputSingle(swapParams_);
+
+        emit TokensSwapped(params_.tokenIn, params_.tokenOut, amountIn_, amountOut_, amountOutMinimum_);
+
+        return amountOut_;
     }
 
     function increaseLiquidityCurrentRange(
         uint256 tokenId_,
         uint256 depositTokenAmountAdd_,
-        uint256 rewardTokenAmountAdd_
+        uint256 rewardTokenAmountAdd_,
+        uint256 depositTokenAmountMin_,
+        uint256 rewardTokenAmountMin_
     ) external onlyOwner returns (uint128 liquidity_, uint256 amount0_, uint256 amount1_) {
         uint256 amountAdd0_;
         uint256 amountAdd1_;
+        uint256 amountMin0_;
+        uint256 amountMin1_;
 
         (, , address token0_, , , , , , , , , ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
             tokenId_
@@ -71,9 +86,13 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
         if (token0_ == params.tokenIn) {
             amountAdd0_ = depositTokenAmountAdd_;
             amountAdd1_ = rewardTokenAmountAdd_;
+            amountMin0_ = depositTokenAmountMin_;
+            amountMin1_ = rewardTokenAmountMin_;
         } else {
             amountAdd0_ = rewardTokenAmountAdd_;
             amountAdd1_ = depositTokenAmountAdd_;
+            amountMin0_ = rewardTokenAmountMin_;
+            amountMin1_ = depositTokenAmountMin_;
         }
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params_ = INonfungiblePositionManager
@@ -81,17 +100,19 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
                 tokenId: tokenId_,
                 amount0Desired: amountAdd0_,
                 amount1Desired: amountAdd1_,
-                amount0Min: 0,
-                amount1Min: 0,
+                amount0Min: amountMin0_,
+                amount1Min: amountMin1_,
                 deadline: block.timestamp
             });
 
         (liquidity_, amount0_, amount1_) = INonfungiblePositionManager(nonfungiblePositionManager).increaseLiquidity(
             params_
         );
+
+        emit LiquidityIncreased(tokenId_, amount0_, amount1_, liquidity_, amountMin0_, amountMin1_);
     }
 
-    function _editParams(SwapParams memory newParams_) internal {
+    function _editParams(SwapParams memory newParams_) private {
         require(newParams_.tokenIn != address(0), "L2TR: invalid tokenIn");
         require(newParams_.tokenOut != address(0), "L2TR: invalid tokenOut");
 
@@ -102,4 +123,6 @@ contract L2TokenReceiver is IL2TokenReceiver, ERC165, Ownable {
 
         params = newParams_;
     }
+
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 }

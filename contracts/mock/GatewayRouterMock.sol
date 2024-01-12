@@ -16,4 +16,8 @@ contract GatewayRouterMock {
 
         return abi.encode(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
+
+    function getGateway(address) external view returns (address) {
+        return address(this);
+    }
 }

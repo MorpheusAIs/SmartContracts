@@ -23,7 +23,7 @@ library LinearDistributionIntervalDecrease {
         uint128 interval_,
         uint128 startTime_,
         uint128 endTime_
-    ) public pure returns (uint256) {
+    ) external pure returns (uint256) {
         if (interval_ == 0) {
             return 0;
         }
@@ -152,7 +152,7 @@ library LinearDistributionIntervalDecrease {
             return 0;
         }
 
-        return initialReward_ * ip_ - (decreaseAmount_ * ((1 + (ip_ - 1)) * (ip_ - 1))) / 2;
+        return initialReward_ * ip_ - (decreaseAmount_ * (ip_ * (ip_ - 1))) / 2;
     }
 
     function _divideCeil(uint256 a_, uint256 b_) private pure returns (uint256) {

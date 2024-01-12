@@ -1,8 +1,8 @@
 {
   "cap": "1000000000000000000000000",
   "chainsConfig": {
-    "senderChainId": 101,
-    "receiverChainId": 110
+    "senderChainId": 10121,
+    "receiverChainId": 10143
   },
   "pools": [
     {
@@ -33,24 +33,8 @@
       "amounts": ["1", "1"]
     }
   ],
-  "L1": {
-    "stEth": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
-    "wStEth": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
-  },
-  "L2": {
-    "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-    "nonfungiblePositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-    "wStEth": "0x5979D7b546E38E414F7E9822514be443A4800529"
-  },
   "swapParams": {
     "fee": 10000,
     "sqrtPriceLimitX96": 0
-  },
-  "arbitrumConfig": {
-    "arbitrumBridgeGatewayRouter": "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"
-  },
-  "lzConfig": {
-    "lzEndpointL1": "0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675",
-    "lzEndpointL2": "0x3c2269811836af69497E5F486A85D7316753cf62"
   }
 }

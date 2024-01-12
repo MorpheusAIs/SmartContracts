@@ -11,6 +11,7 @@ interface IDistribution {
      * @param payoutStart The timestamp when the pool starts to pay out rewards.
      * @param decreaseInterval The interval in seconds between reward decreases.
      * @param withdrawLockPeriod The period in seconds when the user can't withdraw his stake.
+     * @param withdrawLockPeriodAfterStake The period in seconds when the user can't withdraw his stake after staking.
      * @param claimLockPeriod The period in seconds when the user can't claim his rewards.
      * @param initialReward The initial reward per interval.
      * @param rewardDecrease The reward decrease per interval.
@@ -22,6 +23,7 @@ interface IDistribution {
         uint128 decreaseInterval;
         uint128 withdrawLockPeriod;
         uint128 claimLockPeriod;
+        uint128 withdrawLockPeriodAfterStake;
         uint256 initialReward;
         uint256 rewardDecrease;
         uint256 minimalStake;
@@ -42,15 +44,60 @@ interface IDistribution {
 
     /**
      * The structure that stores the user's rate data of pool.
+     * @param lastStake The timestamp when the user last staked tokens.
      * @param deposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      */
     struct UserData {
+        uint128 lastStake;
         uint256 deposited;
         uint256 rate;
         uint256 pendingRewards;
     }
+
+    /**
+     * The event that is emitted when the pool is created.
+     * @param poolId The pool's id.
+     * @param pool The pool's data.
+     */
+    event PoolCreated(uint256 indexed poolId, Pool pool);
+
+    /**
+     * The event that is emitted when the pool is edited.
+     * @param poolId The pool's id.
+     * @param pool The pool's data.
+     */
+    event PoolEdited(uint256 indexed poolId, Pool pool);
+
+    /**
+     * The event that is emitted when the user stakes tokens in the pool.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param amount The amount of tokens.
+     */
+    event UserStaked(uint256 indexed poolId, address indexed user, uint256 amount);
+
+    /**
+     * The event that is emitted when the user claims rewards from the pool.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param amount The amount of tokens.
+     */
+    event UserClaimed(uint256 indexed poolId, address indexed user, uint256 amount);
+
+    /**
+     * The event that is emitted when the user withdraws tokens from the pool.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param amount The amount of tokens.
+     */
+    event UserWithdrawn(uint256 indexed poolId, address indexed user, uint256 amount);
+
+    /**
+     * The event that is emitted when the overplus of the deposit tokens is bridged.
+     */
+    event OverplusBridged(uint256 amount, bytes uniqueId);
 
     /**
      * The function to initialize the contract.

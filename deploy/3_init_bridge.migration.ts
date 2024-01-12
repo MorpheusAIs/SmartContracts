@@ -1,4 +1,4 @@
-import { Deployer } from '@solarity/hardhat-migrate';
+import { Deployer, UserStorage } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -11,7 +11,7 @@ import {
 import { IL2MessageReceiver } from '@/generated-types/ethers/contracts/L2MessageReceiver';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig();
+  const config = parseConfig(await deployer.getChainId());
 
   let lzEndpointL2: string;
   if (config.lzConfig) {
@@ -24,22 +24,20 @@ module.exports = async function (deployer: Deployer) {
     lzEndpointL2 = await lzEndpointL2Mock.getAddress();
   }
 
-  const l2MessageReceiver = await deployer.deployed(
-    L2MessageReceiver__factory,
-    // '0xc37fF39e5A50543AD01E42C4Cd88c2939dD13002',
+  const l2MessageReceiver = L2MessageReceiver__factory.connect(
+    UserStorage.get('L2MessageReceiver Proxy'),
+    await deployer.getSigner(),
   );
 
-  const l1SenderAddress = (await deployer.deployed(L1Sender__factory)).address;
-  // const l1SenderAddress = '0xEec0DF0991458274fF0ede917E9827fFc67a8332';
+  const l1Sender = L1Sender__factory.connect(UserStorage.get('L1Sender Proxy'), await deployer.getSigner());
 
-  const morAddress = (await deployer.deployed(MOR__factory)).address;
-  // const morAddress = '0x26BCDEb3E4e7EDf5657daF543132cAF792728908';
+  const mor = MOR__factory.connect(UserStorage.get('MOR'), await deployer.getSigner());
 
   const l2MessageReceiverConfig: IL2MessageReceiver.ConfigStruct = {
     gateway: lzEndpointL2,
-    sender: l1SenderAddress,
+    sender: l1Sender,
     senderChainId: config.chainsConfig.senderChainId,
   };
 
-  await l2MessageReceiver.setParams(morAddress, l2MessageReceiverConfig);
+  await l2MessageReceiver.setParams(mor, l2MessageReceiverConfig);
 };
