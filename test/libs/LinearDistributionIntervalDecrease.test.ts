@@ -132,6 +132,9 @@ describe('LinearDistributionIntervalDecrease', () => {
 
       reward = await distribution.getPeriodReward(0, payoutStart - 1 * oneHour, payoutStart + 999 * oneHour);
       expect(reward).to.eq(wei(149));
+
+      reward = await distribution.getPeriodReward(0, payoutStart + 12 * oneHour, payoutStart + 999 * oneHour);
+      expect(reward).to.eq(wei(49 / 2));
     });
     it('should return correct rewards if `rewardDecrease` == 0', async () => {
       const pool: IDistribution.PoolStruct = {
