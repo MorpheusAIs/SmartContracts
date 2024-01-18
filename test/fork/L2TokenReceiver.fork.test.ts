@@ -144,6 +144,31 @@ describe('L2TokenReceiver Fork', () => {
       await expect(tx).to.changeTokenBalance(outputToken, l2TokenReceiver, -txResult[2]);
     });
   });
+
+  describe('#collectFees', () => {
+    const poolId = 376582;
+
+    beforeEach('setup', async () => {
+      const poolOwner = await nonfungiblePositionManager.ownerOf(poolId);
+      const poolOwnerSigner = await ethers.getImpersonatedSigner(poolOwner);
+
+      await OWNER.sendTransaction({ to: poolOwner, value: wei(10) });
+
+      await nonfungiblePositionManager
+        .connect(poolOwnerSigner)
+        ['safeTransferFrom(address,address,uint256)'](poolOwner, l2TokenReceiver, poolId);
+    });
+
+    it('should collect fees', async () => {
+      const outputTokenBalance = await outputToken.balanceOf(l2TokenReceiver);
+      const inputTokenBalance = await inputToken.balanceOf(l2TokenReceiver);
+
+      await l2TokenReceiver.collectFees(poolId);
+
+      expect(await outputToken.balanceOf(l2TokenReceiver)).to.greaterThan(outputTokenBalance);
+      expect(await inputToken.balanceOf(l2TokenReceiver)).to.greaterThan(inputTokenBalance);
+    });
+  });
 });
 
 // npx hardhat test "test/fork/Swap.fork.test.ts"

@@ -56,6 +56,14 @@ interface IL2TokenReceiver is IERC165 {
     );
 
     /**
+     * The event that is emitted when the fees are collected.
+     * @param tokenId The ID of the position.
+     * @param amount0 The amount of token0 collected.
+     * @param amount1 The amount of token1 collected.
+     */
+    event FeesCollected(uint256 indexed tokenId, uint256 amount0, uint256 amount1);
+
+    /**
      * The function to edit the swap params.
      * @param params_ The new swap params.
      */
