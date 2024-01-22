@@ -109,9 +109,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _validatePool(Pool calldata pool_) private pure {
-        if (pool_.rewardDecrease > 0) {
-            require(pool_.decreaseInterval > 0, "DS: invalid reward decrease");
-        }
+        require(pool_.decreaseInterval > 0, "DS: invalid decrease interval");
     }
 
     /**********************************************************************************************/

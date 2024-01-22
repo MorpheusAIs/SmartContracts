@@ -275,11 +275,11 @@ describe('Distribution', () => {
 
         await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid payout start value');
       });
-      it('if `rewardDecrease > 0 && decreaseInterval == 0`', async () => {
+      it('if `decreaseInterval == 0`', async () => {
         const pool = getDefaultPool();
         pool.decreaseInterval = 0;
 
-        await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid reward decrease');
+        await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid decrease interval');
       });
     });
 
@@ -328,10 +328,10 @@ describe('Distribution', () => {
     });
 
     describe('should revert if try to edit pool with incorrect data', () => {
-      it('if `rewardDecrease > 0 && decreaseInterval == 0`', async () => {
+      it('if `decreaseInterval == 0`', async () => {
         const newPool = { ...defaultPool, decreaseInterval: 0 };
 
-        await expect(distribution.editPool(poolId, newPool)).to.be.rejectedWith('DS: invalid reward decrease');
+        await expect(distribution.editPool(poolId, newPool)).to.be.rejectedWith('DS: invalid decrease interval');
       });
     });
 
