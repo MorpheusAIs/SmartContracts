@@ -120,20 +120,35 @@ describe('L1Sender', () => {
   });
 
   describe('UUPS proxy functionality', () => {
-    describe('#Distribution_init', () => {
-      it('should revert if try to call init function twice', async () => {
+    let rewardTokenConfig: IL1Sender.RewardTokenConfigStruct;
+    let depositTokenConfig: IL1Sender.DepositTokenConfigStruct;
+
+    before(async () => {
+      rewardTokenConfig = {
+        gateway: lZEndpointMockL1,
+        receiver: l2MessageReceiver,
+        receiverChainId: receiverChainId,
+      };
+      depositTokenConfig = {
+        token: depositToken,
+        gateway: gatewayRouter,
+        receiver: SECOND,
+      };
+    });
+
+    describe('#constructor', () => {
+      it('should disable initialize function', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
-          gateway: lZEndpointMockL1,
-          receiver: l2MessageReceiver,
-          receiverChainId: receiverChainId,
-        };
-        const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
-          token: depositToken,
-          gateway: gatewayRouter,
-          receiver: SECOND,
-        };
+        const l1Sender = await (await ethers.getContractFactory('L1Sender')).deploy();
+
+        await expect(l1Sender.L1Sender__init(OWNER, rewardTokenConfig, depositTokenConfig)).to.be.rejectedWith(reason);
+      });
+    });
+
+    describe('#L1Sender__init', () => {
+      it('should revert if try to call init function twice', async () => {
+        const reason = 'Initializable: contract is already initialized';
 
         await expect(l1Sender.L1Sender__init(OWNER, rewardTokenConfig, depositTokenConfig)).to.be.rejectedWith(reason);
       });

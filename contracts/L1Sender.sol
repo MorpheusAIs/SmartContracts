@@ -25,6 +25,10 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function L1Sender__init(
         address distribution_,
         RewardTokenConfig calldata rewardTokenConfig_,

@@ -48,7 +48,17 @@ describe('L2MessageReceiver', () => {
   });
 
   describe('UUPS proxy functionality', () => {
-    describe('#Distribution_init', () => {
+    describe('#constructor', () => {
+      it('should disable initialize function', async () => {
+        const reason = 'Initializable: contract is already initialized';
+
+        const l2MessageReceiver = await (await ethers.getContractFactory('L2MessageReceiver')).deploy();
+
+        await expect(l2MessageReceiver.L2MessageReceiver__init()).to.be.rejectedWith(reason);
+      });
+    });
+
+    describe('#L2MessageReceiver__init', () => {
       it('should revert if try to call init function twice', async () => {
         const reason = 'Initializable: contract is already initialized';
 

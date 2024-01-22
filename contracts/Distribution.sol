@@ -46,6 +46,11 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** Init                                                                                   ***/
     /**********************************************************************************************/
+
+    constructor() {
+        _disableInitializers();
+    }
+
     function Distribution_init(
         address depositToken_,
         address l1Sender_,

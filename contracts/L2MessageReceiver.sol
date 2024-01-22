@@ -14,6 +14,10 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
 
     mapping(uint16 => mapping(bytes => mapping(uint64 => bytes32))) public failedMessages;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function L2MessageReceiver__init() external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
