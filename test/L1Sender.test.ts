@@ -348,6 +348,9 @@ describe('L1Sender', () => {
 
       expect(await depositToken.balanceOf(SECOND)).to.eq('100');
     });
+    it('should revert if not called by the owner', async () => {
+      await expect(l1Sender.connect(SECOND).sendDepositToken(1, 1, 1)).to.be.revertedWith('L1S: invalid sender');
+    });
   });
 
   describe('sendMintMessage', () => {

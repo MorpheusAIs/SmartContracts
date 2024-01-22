@@ -20,6 +20,11 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
     DepositTokenConfig public depositTokenConfig;
     RewardTokenConfig public rewardTokenConfig;
 
+    modifier onlyDistribution() {
+        require(_msgSender() == distribution, "L1S: invalid sender");
+        _;
+    }
+
     function L1Sender__init(
         address distribution_,
         RewardTokenConfig calldata rewardTokenConfig_,
@@ -91,7 +96,7 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
         uint256 gasLimit_,
         uint256 maxFeePerGas_,
         uint256 maxSubmissionCost_
-    ) external payable returns (bytes memory) {
+    ) external payable onlyDistribution returns (bytes memory) {
         DepositTokenConfig storage config = depositTokenConfig;
 
         // Get current stETH balance
@@ -112,9 +117,7 @@ contract L1Sender is IL1Sender, ERC165, OwnableUpgradeable, UUPSUpgradeable {
             );
     }
 
-    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable {
-        require(_msgSender() == distribution, "L1S: invalid sender");
-
+    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable onlyDistribution {
         RewardTokenConfig storage config = rewardTokenConfig;
 
         bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.receiver, address(this));
