@@ -160,9 +160,7 @@ describe('L2MessageReceiver', () => {
 
   describe('#nonblockingLzReceive', () => {
     it('should revert if invalid caller', async () => {
-      await expect(l2MessageReceiver.nonblockingLzReceive(2, '0x', 999, '0x')).to.be.revertedWith(
-        'L2MR: invalid caller',
-      );
+      await expect(l2MessageReceiver.nonblockingLzReceive(2, '0x', '0x')).to.be.revertedWith('L2MR: invalid caller');
     });
   });
 
@@ -199,7 +197,7 @@ describe('L2MessageReceiver', () => {
       expect(await l2MessageReceiver.failedMessages(chainId, senderAndReceiverAddresses, 999)).to.eq(ZERO_BYTES32);
     });
     it('should revert if invalid caller', async () => {
-      await expect(l2MessageReceiver.nonblockingLzReceive(chainId, '0x', 999, '0x')).to.be.revertedWith(
+      await expect(l2MessageReceiver.nonblockingLzReceive(chainId, '0x', '0x')).to.be.revertedWith(
         'L2MR: invalid caller',
       );
     });

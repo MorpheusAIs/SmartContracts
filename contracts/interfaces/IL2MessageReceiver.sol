@@ -72,7 +72,6 @@ interface IL2MessageReceiver is ILayerZeroReceiver {
     function nonblockingLzReceive(
         uint16 senderChainId_,
         bytes memory senderAndReceiverAddresses_,
-        uint64,
         bytes memory payload_
     ) external;
 

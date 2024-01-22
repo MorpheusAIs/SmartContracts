@@ -38,7 +38,6 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
     function nonblockingLzReceive(
         uint16 senderChainId_,
         bytes memory senderAndReceiverAddresses_,
-        uint64,
         bytes memory payload_
     ) public {
         require(_msgSender() == address(this), "L2MR: invalid caller");
@@ -73,7 +72,6 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
             IL2MessageReceiver(address(this)).nonblockingLzReceive(
                 senderChainId_,
                 senderAndReceiverAddresses_,
-                nonce_,
                 payload_
             )
         {
