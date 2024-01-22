@@ -14,7 +14,6 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
 
     Config public config;
 
-    mapping(uint16 => mapping(uint64 => bool)) public isNonceUsed;
     mapping(uint16 => mapping(bytes => mapping(uint64 => bytes32))) public failedMessages;
 
     function L2MessageReceiver__init() external initializer {
@@ -41,12 +40,12 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
     function nonblockingLzReceive(
         uint16 senderChainId_,
         bytes memory senderAndReceiverAddresses_,
-        uint64 nonce_,
+        uint64,
         bytes memory payload_
     ) public {
         require(_msgSender() == address(this), "L2MR: invalid caller");
 
-        _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+        _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, payload_);
     }
 
     function retryMessage(
@@ -59,7 +58,7 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
         require(payloadHash_ != bytes32(0), "L2MR: no stored message");
         require(keccak256(payload_) == payloadHash_, "L2MR: invalid payload");
 
-        _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, nonce_, payload_);
+        _nonblockingLzReceive(senderChainId_, senderAndReceiverAddresses_, payload_);
 
         delete failedMessages[senderChainId_][senderAndReceiverAddresses_][nonce_];
 
@@ -91,10 +90,8 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
     function _nonblockingLzReceive(
         uint16 senderChainId_,
         bytes memory senderAndReceiverAddresses_,
-        uint64 nonce_,
         bytes memory payload_
     ) private {
-        require(!isNonceUsed[senderChainId_][nonce_], "L2MR: invalid nonce");
         require(senderChainId_ == config.senderChainId, "L2MR: invalid sender chain ID");
 
         address sender_;
@@ -106,8 +103,6 @@ contract L2MessageReceiver is ILayerZeroReceiver, IL2MessageReceiver, OwnableUpg
         (address user_, uint256 amount_) = abi.decode(payload_, (address, uint256));
 
         _mintRewardTokens(user_, amount_);
-
-        isNonceUsed[senderChainId_][nonce_] = true;
     }
 
     function _mintRewardTokens(address user_, uint256 amount_) private {
