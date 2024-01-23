@@ -126,16 +126,6 @@ describe('L2MessageReceiver', () => {
       expect(await l2MessageReceiver.isNonceUsed(2, 5)).to.be.equal(true);
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 6, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(1));
-      expect(await l2MessageReceiver.isNonceUsed(2, 6)).to.be.equal(true);
-      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
-      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 7, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
-      expect(await l2MessageReceiver.isNonceUsed(2, 7)).to.be.equal(true);
-      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(0)]);
-      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 8, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
-      expect(await l2MessageReceiver.isNonceUsed(2, 8)).to.be.equal(true);
     });
     it('should revert if provided wrong lzEndpoint', async () => {
       await expect(l2MessageReceiver.lzReceive(0, '0x', 1, '0x')).to.be.revertedWith('L2MR: invalid gateway');
@@ -154,6 +144,26 @@ describe('L2MessageReceiver', () => {
       expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ZERO_BYTES32);
       await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
       expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ethers.keccak256(payload));
+    });
+    it('should fail if provided wrong mint amount', async () => {
+      const address = ethers.solidityPacked(
+        ['address', 'address'],
+        [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
+      );
+      const payload = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256'],
+        [await SECOND.getAddress(), wei(100)],
+      );
+
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ZERO_BYTES32);
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ethers.keccak256(payload));
+
+      await mor.connect(SECOND).burn(wei(100));
+
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
     });
   });
 
