@@ -25,7 +25,7 @@ describe('L2MessageReceiver', () => {
       ethers.getContractFactory('MOR'),
     ]);
 
-    mor = await Mor.deploy(wei(200));
+    mor = await Mor.deploy(wei(100));
 
     const l2MessageReceiverImplementation = await L2MessageReceiver.deploy();
     const l2MessageReceiverProxy = await ERC1967ProxyFactory.deploy(l2MessageReceiverImplementation, '0x');
@@ -109,7 +109,7 @@ describe('L2MessageReceiver', () => {
   });
 
   describe('#lzReceive', () => {
-    it('should update nonce and mint tokens', async () => {
+    it('should mint tokens', async () => {
       const address = ethers.solidityPacked(
         ['address', 'address'],
         [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
@@ -121,50 +121,70 @@ describe('L2MessageReceiver', () => {
       const tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(1));
     });
-    it('should and mint tokens', async () => {
+    it('should mint tokens', async () => {
       const address = ethers.solidityPacked(
         ['address', 'address'],
         [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
       );
       let payload = ethers.AbiCoder.defaultAbiCoder().encode(
         ['address', 'uint256'],
-        [await SECOND.getAddress(), wei(195)],
+        [await SECOND.getAddress(), wei(95)],
       );
       let tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(195));
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(95));
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(2)]);
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 6, payload);
       await expect(tx).to.changeTokenBalance(mor, SECOND, wei(2));
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(5)]);
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 7, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(3));
-
-      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(1)]);
-      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 8, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
-      payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [await SECOND.getAddress(), wei(0)]);
-      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 9, payload);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(0));
+      await expect(tx).to.changeTokenBalance(mor, SECOND, 0);
+      expect(await l2MessageReceiver.failedMessages(2, address, 7)).to.eq(ethers.keccak256(payload));
     });
     it('should revert if provided wrong lzEndpoint', async () => {
       await expect(l2MessageReceiver.lzReceive(0, '0x', 1, '0x')).to.be.revertedWith('L2MR: invalid gateway');
     });
-    it('should not fail if provided wrong nonce', async () => {
+    it('should fail if provided wrong mint amount', async () => {
       const address = ethers.solidityPacked(
         ['address', 'address'],
         [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
       );
       const payload = ethers.AbiCoder.defaultAbiCoder().encode(
         ['address', 'uint256'],
-        [await SECOND.getAddress(), wei(99)],
+        [await SECOND.getAddress(), wei(100)],
       );
-      let tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
-      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ZERO_BYTES32);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(99));
 
-      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      let tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(100));
+
       expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ZERO_BYTES32);
-      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(99));
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ethers.keccak256(payload));
+
+      await mor.connect(SECOND).burn(wei(100));
+
+      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 6, payload);
+      expect(await l2MessageReceiver.failedMessages(2, address, 6)).to.eq(ZERO_BYTES32);
+      await expect(tx).to.changeTokenBalance(mor, SECOND, wei(100));
+    });
+    it('should fail if provided wrong mint amount', async () => {
+      const address = ethers.solidityPacked(
+        ['address', 'address'],
+        [await OWNER.getAddress(), await l2MessageReceiver.getAddress()],
+      );
+      const payload = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256'],
+        [await SECOND.getAddress(), wei(100)],
+      );
+
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ZERO_BYTES32);
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
+      expect(await l2MessageReceiver.failedMessages(2, address, 5)).to.eq(ethers.keccak256(payload));
+
+      await mor.connect(SECOND).burn(wei(100));
+
+      await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 5, payload);
     });
   });
 

@@ -102,20 +102,6 @@ contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgrad
 
         (address user_, uint256 amount_) = abi.decode(payload_, (address, uint256));
 
-        _mintRewardTokens(user_, amount_);
-    }
-
-    function _mintRewardTokens(address user_, uint256 amount_) private {
-        uint256 maxAmount_ = IMOR(rewardToken).cap() - IMOR(rewardToken).totalSupply();
-
-        if (amount_ == 0 || maxAmount_ == 0) {
-            return;
-        }
-
-        if (amount_ > maxAmount_) {
-            amount_ = maxAmount_;
-        }
-
         IMOR(rewardToken).mint(user_, amount_);
     }
 
