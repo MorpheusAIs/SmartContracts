@@ -1,12 +1,26 @@
-# SmartContracts
+# Morpheus
 
 Smart Contracts For The Morpheus Network
 
-### How to use
+This repository contains the smart contracts for the Morpheus Network.
+Contains the following contracts:
 
-The template works out of the box. To clean up the repo, you may need to delete the mock contracts, tests and migration files.
+* *MOR* - The Morpheus Network Token.
+* *LinearDistributionIntervalDecrease* - A library for calculating linear distribution intervals with a plenty of options.
+* *Distribution* - The contract that distributes the MOR tokens to the stakers and the team members.
+* *L1Sender* - A contract that allows to communicate between L1 and L2. It is used to send a minting request to the L2 using the Layer Zero. It is also used to transfer deposited tokens from the L1 to the L2.
+* *L2MessageReceiver* - A contract that receives messages from the L1Sender contract.
+* *L2TokenReceiver* - A contract that receives tokens from the L1Sender contract. It is used to Uniswap market making.
 
-#### Compilation
+## Install Dependencies
+
+To install the dependencies, run the following command:
+
+```bash
+npm install
+```
+
+## Compilation
 
 To compile the contracts, use the next script:
 
@@ -14,7 +28,7 @@ To compile the contracts, use the next script:
 npm run compile
 ```
 
-#### Test
+## Test
 
 To run the tests, execute the following command:
 
@@ -22,22 +36,50 @@ To run the tests, execute the following command:
 npm run test
 ```
 
+To run the tests for forked mainnet, run:
+
+```bash
+npm run test-fork
+```
+
+> You need to set the `INFURA_KEY` environment variable to run the tests for forked mainnet.
+
 Or to see the coverage, run:
 
 ```bash
 npm run coverage
 ```
 
-#### Local deployment
+> You need to set the `INFURA_KEY` environment variable to run the coverage.
+
+## Deployment
+
+Before deploying, you need to create an `.env` file following the example of `.env.example`.
+
+Next, you need to fill out config file `deploy/data/config.json` (yoy may choose another file name, based on the network). The example of the config file is already provided. Make sure to fill out all the fields, specifically the `payoutStart` field.
+
+Next, call script located in `deploy/deploy-all.sh` with the following arguments:
+
+```bash
+./deploy/deploy-all.sh <L1 network> <L2 network>
+```
+
+Where the first argument is the L1 network name and the second argument is the L2 network name.
+
+(network is the name of the network, which should be in `hardhat.config.js`)
+
+### Local Deployment
 
 To deploy the contracts locally, run the following commands (in the different terminals):
 
 ```bash
 npm run private-network
-npm run deploy-localhost
+./deploy/deploy-all.sh localhost localhost
 ```
 
-#### Bindings
+> The local deployment is may fail due to the lack of third-party contracts. To fix this, you may run test deployment on the forked mainnet.
+
+## Bindings
 
 The command to generate the bindings is as follows:
 
@@ -46,19 +88,3 @@ npm run generate-types
 ```
 
 > See the full list of available commands in the `package.json` file.
-
-### Integrated plugins
-
-- Hardhat official `ethers` + `ethers-v6`
-- [`Typechain`](https://www.npmjs.com/package/@typechain/hardhat)
-- [`hardhat-migrate`](https://www.npmjs.com/package/@solarity/hardhat-migrate), [`hardhat-markup`](https://www.npmjs.com/package/@solarity/hardhat-markup), [`hardhat-gobind`](https://www.npmjs.com/package/@solarity/hardhat-gobind)
-- [`hardhat-contract-sizer`](https://www.npmjs.com/package/hardhat-contract-sizer)
-- [`hardhat-gas-reporter`](https://www.npmjs.com/package/hardhat-gas-reporter)
-- [`solidity-coverage`](https://www.npmjs.com/package/solidity-coverage)
-
-### Other niceties
-
-- The template comes with presetup `prettier` and `solhint` that lint the project via `husky` before compilation hook.
-- The `.env.example` file is provided to check what is required as ENVs
-- Preinstalled `@openzeppelin/contracts` and `@solarity/solidity-lib`
-
