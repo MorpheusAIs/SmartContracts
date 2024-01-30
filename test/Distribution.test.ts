@@ -189,6 +189,16 @@ describe('Distribution', () => {
   afterEach(reverter.revert);
 
   describe('UUPS proxy functionality', () => {
+    describe('#constructor', () => {
+      it('should disable initialize function', async () => {
+        const reason = 'Initializable: contract is already initialized';
+
+        const distribution = await distributionFactory.deploy();
+
+        await expect(distribution.Distribution_init(depositToken, l1Sender, [])).to.be.revertedWith(reason);
+      });
+    });
+
     describe('#Distribution_init', () => {
       it('should set correct data after creation', async () => {
         const depositToken_ = await distribution.depositToken();
@@ -204,7 +214,12 @@ describe('Distribution', () => {
           decreaseInterval: oneDay * 2,
         };
 
-        const distribution = await distributionFactory.deploy();
+        const distributionProxy = await (
+          await ethers.getContractFactory('ERC1967Proxy')
+        ).deploy(await distributionFactory.deploy(), '0x');
+
+        const distribution = distributionFactory.attach(await distributionProxy.getAddress()) as Distribution;
+
         await distribution.Distribution_init(depositToken, l1Sender, [pool1, pool2]);
 
         const pool1Data: IDistribution.PoolStruct = await distribution.pools(0);
@@ -275,11 +290,11 @@ describe('Distribution', () => {
 
         await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid payout start value');
       });
-      it('if `rewardDecrease > 0 && decreaseInterval == 0`', async () => {
+      it('if `decreaseInterval == 0`', async () => {
         const pool = getDefaultPool();
         pool.decreaseInterval = 0;
 
-        await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid reward decrease');
+        await expect(distribution.createPool(pool)).to.be.rejectedWith('DS: invalid decrease interval');
       });
     });
 
@@ -328,10 +343,10 @@ describe('Distribution', () => {
     });
 
     describe('should revert if try to edit pool with incorrect data', () => {
-      it('if `rewardDecrease > 0 && decreaseInterval == 0`', async () => {
+      it('if `decreaseInterval == 0`', async () => {
         const newPool = { ...defaultPool, decreaseInterval: 0 };
 
-        await expect(distribution.editPool(poolId, newPool)).to.be.rejectedWith('DS: invalid reward decrease');
+        await expect(distribution.editPool(poolId, newPool)).to.be.rejectedWith('DS: invalid decrease interval');
       });
     });
 

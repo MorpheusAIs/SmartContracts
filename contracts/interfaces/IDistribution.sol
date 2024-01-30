@@ -209,7 +209,7 @@ interface IDistribution {
     function l1Sender() external view returns (address);
 
     /**
-     * The function to get the amount of deposit tokens that are staked in the pool.
+     * The function to get the amount of deposit tokens that are staked in all of the public pools.
      * @dev The value accumulates the amount amount despite the rate differences.
      * @return The amount of deposit tokens.
      */

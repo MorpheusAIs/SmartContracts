@@ -142,7 +142,10 @@ library LinearDistributionIntervalDecrease {
 
         uint256 decreaseRewardAmount_ = intervalsPassedBefore_ * decreaseAmount_;
 
-        // Overflow impossible because 'endTime_' can't be more then 'maxEndTime_'
+        if (decreaseRewardAmount_ >= initialAmount_) {
+            return 0;
+        }
+
         uint256 initialReward_ = initialAmount_ - decreaseRewardAmount_;
         // END
 

@@ -17,6 +17,10 @@ contract L2TokenReceiver is IL2TokenReceiver, IERC721Receiver, OwnableUpgradeabl
 
     SwapParams public params;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function L2TokenReceiver__init(
         address router_,
         address nonfungiblePositionManager_,
