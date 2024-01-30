@@ -64,16 +64,14 @@ interface IL2MessageReceiver is ILayerZeroReceiver {
     function setParams(address rewardToken_, Config calldata config_) external;
 
     /**
-     * LayerZero endpoint call this function to check a transaction capabilities.
+     * The function to call the nonblockingLzReceive.
      * @param senderChainId_ The source endpoint identifier.
      * @param senderAndReceiverAddresses_ The source sending contract address from the source chain.
-     * @param nonce_ The ordered message nonce.
      * @param payload_ The signed payload is the UA bytes has encoded to be sent.
      */
     function nonblockingLzReceive(
         uint16 senderChainId_,
         bytes memory senderAndReceiverAddresses_,
-        uint64 nonce_,
         bytes memory payload_
     ) external;
 

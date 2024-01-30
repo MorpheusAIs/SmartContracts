@@ -7,7 +7,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
-import {IL2TokenReceiver, IERC165} from "./interfaces/IL2TokenReceiver.sol";
+import {IL2TokenReceiver, IERC165, IERC721Receiver} from "./interfaces/IL2TokenReceiver.sol";
 import {INonfungiblePositionManager} from "./interfaces/uniswap-v3/INonfungiblePositionManager.sol";
 
 contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeable {
@@ -15,6 +15,10 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
     address public nonfungiblePositionManager;
 
     SwapParams public params;
+
+    constructor() {
+        _disableInitializers();
+    }
 
     function L2TokenReceiver__init(
         address router_,
@@ -31,7 +35,10 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
-        return interfaceId_ == type(IL2TokenReceiver).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+        return
+            interfaceId_ == type(IL2TokenReceiver).interfaceId ||
+            interfaceId_ == type(IERC721Receiver).interfaceId ||
+            interfaceId_ == type(IERC165).interfaceId;
     }
 
     function editParams(SwapParams memory newParams_) external onlyOwner {
@@ -110,6 +117,23 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
         );
 
         emit LiquidityIncreased(tokenId_, amount0_, amount1_, liquidity_, amountMin0_, amountMin1_);
+    }
+
+    function collectFees(uint256 tokenId_) external returns (uint256 amount0_, uint256 amount1_) {
+        INonfungiblePositionManager.CollectParams memory params_ = INonfungiblePositionManager.CollectParams({
+            tokenId: tokenId_,
+            recipient: address(this),
+            amount0Max: type(uint128).max,
+            amount1Max: type(uint128).max
+        });
+
+        (amount0_, amount1_) = INonfungiblePositionManager(nonfungiblePositionManager).collect(params_);
+
+        emit FeesCollected(tokenId_, amount0_, amount1_);
+    }
+
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 
     function _editParams(SwapParams memory newParams_) private {
