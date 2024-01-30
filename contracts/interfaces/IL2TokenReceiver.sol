@@ -2,11 +2,12 @@
 pragma solidity ^0.8.20;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 /**
  * This is Swap contract that swaps tokens using Uniswap V3.
  */
-interface IL2TokenReceiver is IERC165 {
+interface IL2TokenReceiver is IERC165, IERC721Receiver {
     /**
      * The structure that stores the swap params.
      * @param tokenIn The address of the token to swap from.

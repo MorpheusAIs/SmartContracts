@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
-import {IL2TokenReceiver, IERC165} from "./interfaces/IL2TokenReceiver.sol";
+import {IL2TokenReceiver, IERC165, IERC721Receiver} from "./interfaces/IL2TokenReceiver.sol";
 import {INonfungiblePositionManager} from "./interfaces/uniswap-v3/INonfungiblePositionManager.sol";
 
-contract L2TokenReceiver is IL2TokenReceiver, IERC721Receiver, OwnableUpgradeable, UUPSUpgradeable {
+contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeable {
     address public router;
     address public nonfungiblePositionManager;
 
@@ -36,7 +35,10 @@ contract L2TokenReceiver is IL2TokenReceiver, IERC721Receiver, OwnableUpgradeabl
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
-        return interfaceId_ == type(IL2TokenReceiver).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+        return
+            interfaceId_ == type(IL2TokenReceiver).interfaceId ||
+            interfaceId_ == type(IERC721Receiver).interfaceId ||
+            interfaceId_ == type(IERC165).interfaceId;
     }
 
     function editParams(SwapParams memory newParams_) external onlyOwner {
@@ -130,7 +132,7 @@ contract L2TokenReceiver is IL2TokenReceiver, IERC721Receiver, OwnableUpgradeabl
         emit FeesCollected(tokenId_, amount0_, amount1_);
     }
 
-    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
