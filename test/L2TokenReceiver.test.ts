@@ -147,6 +147,9 @@ describe('L2TokenReceiver', () => {
     it('should support IERC165', async () => {
       expect(await l2TokenReceiver.supportsInterface('0x01ffc9a7')).to.be.true;
     });
+    it('should support IERC721Receiver', async () => {
+      expect(await l2TokenReceiver.supportsInterface('0x150b7a02')).to.be.true;
+    });
   });
 
   describe('#editParams', () => {
@@ -217,3 +220,5 @@ describe('L2TokenReceiver', () => {
     });
   });
 });
+
+// npx hardhat test "test/L2TokenReceiver.test.ts"
