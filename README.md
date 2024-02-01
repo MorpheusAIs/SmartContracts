@@ -28,6 +28,10 @@ To compile the contracts, use the next script:
 npm run compile
 ```
 
+## Environment Variables
+
+Before any following steps, you need to create an `.env` file following the example of `.env.example`.
+
 ## Test
 
 To run the tests, execute the following command:
@@ -42,7 +46,7 @@ To run the tests for forked mainnet, run:
 npm run test-fork
 ```
 
-> You need to set the `INFURA_KEY` environment variable to run the tests for forked mainnet.
+> You need to set the `INFURA_KEY` and `PRIVATE_KEY` environment variables to run the tests for forked mainnet.
 
 Or to see the coverage, run:
 
@@ -50,13 +54,11 @@ Or to see the coverage, run:
 npm run coverage
 ```
 
-> You need to set the `INFURA_KEY` environment variable to run the coverage.
+> You need to set the `INFURA_KEY` and `PRIVATE_KEY` environment variables to run the coverage.
 
 ## Deployment
 
-Before deploying, you need to create an `.env` file following the example of `.env.example`.
-
-Next, you need to fill out config file `deploy/data/config.json` (yoy may choose another file name, based on the network). The example of the config file is already provided. Make sure to fill out all the fields, specifically the `payoutStart` field.
+You need to fill out config file `deploy/data/config.json` (yoy may choose another file name, based on the network). The example of the config file is already provided. Make sure to fill out all the fields, specifically the `payoutStart` field.
 
 Next, call script located in `deploy/deploy-all.sh` with the following arguments:
 
