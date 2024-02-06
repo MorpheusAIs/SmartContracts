@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IL1Sender {
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+
+interface IL1Sender is IERC165 {
     /**
      * The structure that stores the deposit token's data.
      * @param token The address of wrapped deposit token.
@@ -19,11 +21,15 @@ interface IL1Sender {
      * @param gateway The address of token's gateway.
      * @param receiver The address of token's receiver on L2.
      * @param receiverChainId The chain id of receiver.
+     * @param zroPaymentAddress The address of ZKSync payment contract.
+     * @param adapterParams The parameters for the adapter.
      */
     struct RewardTokenConfig {
         address gateway;
         address receiver;
         uint16 receiverChainId;
+        address zroPaymentAddress;
+        bytes adapterParams;
     }
 
     /**

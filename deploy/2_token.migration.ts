@@ -11,7 +11,7 @@ import {
   WStETHMock__factory,
 } from '@/generated-types/ethers';
 import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
-import { ETHER_ADDR } from '@/scripts/utils/constants';
+import { ETHER_ADDR, ZERO_ADDR } from '@/scripts/utils/constants';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig(await deployer.getChainId());
@@ -59,6 +59,8 @@ module.exports = async function (deployer: Deployer) {
     gateway: lzEndpointL1,
     receiver: UserStorage.get('L2MessageReceiver Proxy'),
     receiverChainId: config.chainsConfig.receiverChainId,
+    zroPaymentAddress: ZERO_ADDR,
+    adapterParams: '0x',
   };
   const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
     token: wStEth,

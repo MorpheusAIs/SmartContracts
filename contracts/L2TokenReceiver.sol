@@ -54,7 +54,11 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
         _editParams(newParams_);
     }
 
-    function swap(uint256 amountIn_, uint256 amountOutMinimum_) external onlyOwner returns (uint256) {
+    function swap(
+        uint256 amountIn_,
+        uint256 amountOutMinimum_,
+        uint256 deadline_
+    ) external onlyOwner returns (uint256) {
         SwapParams memory params_ = params;
 
         ISwapRouter.ExactInputSingleParams memory swapParams_ = ISwapRouter.ExactInputSingleParams({
@@ -62,7 +66,7 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
             tokenOut: params_.tokenOut,
             fee: params_.fee,
             recipient: address(this),
-            deadline: block.timestamp,
+            deadline: deadline_,
             amountIn: amountIn_,
             amountOutMinimum: amountOutMinimum_,
             sqrtPriceLimitX96: params_.sqrtPriceLimitX96

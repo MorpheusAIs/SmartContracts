@@ -151,6 +151,8 @@ describe('Distribution', () => {
       gateway: lZEndpointMockSender,
       receiver: l2MessageReceiver,
       receiverChainId: receiverChainId,
+      zroPaymentAddress: ZERO_ADDR,
+      adapterParams: '0x',
     };
     const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
       token: wstETH,

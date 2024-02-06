@@ -74,9 +74,10 @@ interface IL2TokenReceiver is IERC165, IERC721Receiver {
      * The function to swap current contract's tokens specified in the params.
      * @param amountIn_ The amount of tokens to swap.
      * @param amountOutMinimum_ The minimum amount of tokens to receive.
+     * @param deadline_ The deadline for the swap.
      * @return The amount of tokens received.
      */
-    function swap(uint256 amountIn_, uint256 amountOutMinimum_) external returns (uint256);
+    function swap(uint256 amountIn_, uint256 amountOutMinimum_, uint256 deadline_) external returns (uint256);
 
     /**
      * The function to increase liquidity in the current price range.
