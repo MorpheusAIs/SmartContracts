@@ -191,6 +191,15 @@ describe('L1Sender', () => {
     });
   });
 
+  describe('supportsInterface', () => {
+    it('should support IL1Sender', async () => {
+      expect(await l1Sender.supportsInterface('0xe18c9b08')).to.be.true;
+    });
+    it('should support IERC165', async () => {
+      expect(await l1Sender.supportsInterface('0x01ffc9a7')).to.be.true;
+    });
+  });
+
   describe('setDistribution', () => {
     it('should set distribution', async () => {
       await l1Sender.setDistribution(SECOND);
