@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
 
+import { getCurrentBlockTime } from '../helpers/block-helper';
 import { getDefaultSwapParams } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
@@ -88,8 +89,8 @@ describe('L2TokenReceiver Fork', () => {
     });
 
     it('should swap tokens', async () => {
-      const txResult = await l2TokenReceiver.swap.staticCall(amount, wei(0));
-      const tx = await l2TokenReceiver.swap(amount, wei(0));
+      const txResult = await l2TokenReceiver.swap.staticCall(amount, wei(0), (await getCurrentBlockTime()) + 100);
+      const tx = await l2TokenReceiver.swap(amount, wei(0), (await getCurrentBlockTime()) + 100);
 
       await expect(tx).to.changeTokenBalance(outputToken, l2TokenReceiver, txResult);
       await expect(tx).to.changeTokenBalance(inputToken, l2TokenReceiver, -amount);
