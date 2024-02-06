@@ -136,8 +136,8 @@ contract L1Sender is IL1Sender, IERC165, OwnableUpgradeable, UUPSUpgradeable {
             receiverAndSenderAddresses_, // send to this address to the communicator
             payload_, // bytes payload
             payable(refundTo_), // refund address
-            address(0x0), // future parameter
-            bytes("") // adapterParams (see "Advanced Features")
+            config.zroPaymentAddress, // future parameter
+            config.adapterParams // adapterParams (see "Advanced Features")
         );
     }
 

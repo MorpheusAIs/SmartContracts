@@ -91,6 +91,8 @@ describe('L1Sender', () => {
       gateway: lZEndpointMockL1,
       receiver: l2MessageReceiver,
       receiverChainId: receiverChainId,
+      zroPaymentAddress: ZERO_ADDR,
+      adapterParams: '0x',
     };
     const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
       token: depositToken,
@@ -128,6 +130,8 @@ describe('L1Sender', () => {
         gateway: lZEndpointMockL1,
         receiver: l2MessageReceiver,
         receiverChainId: receiverChainId,
+        zroPaymentAddress: ZERO_ADDR,
+        adapterParams: '0x',
       };
       depositTokenConfig = {
         token: depositToken,
@@ -159,6 +163,8 @@ describe('L1Sender', () => {
           await lZEndpointMockL1.getAddress(),
           await l2MessageReceiver.getAddress(),
           receiverChainId,
+          ZERO_ADDR,
+          '0x',
         ]);
 
         expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
@@ -193,7 +199,7 @@ describe('L1Sender', () => {
 
   describe('supportsInterface', () => {
     it('should support IL1Sender', async () => {
-      expect(await l1Sender.supportsInterface('0xe18c9b08')).to.be.true;
+      expect(await l1Sender.supportsInterface('0x0d3ba6cb')).to.be.true;
     });
     it('should support IERC165', async () => {
       expect(await l1Sender.supportsInterface('0x01ffc9a7')).to.be.true;
@@ -218,6 +224,8 @@ describe('L1Sender', () => {
         gateway: l2MessageReceiver,
         receiver: lZEndpointMockL1,
         receiverChainId: 0,
+        zroPaymentAddress: ZERO_ADDR,
+        adapterParams: '0x',
       };
 
       await l1Sender.setRewardTokenConfig(newConfig);
@@ -226,6 +234,8 @@ describe('L1Sender', () => {
         await l2MessageReceiver.getAddress(),
         await lZEndpointMockL1.getAddress(),
         0,
+        ZERO_ADDR,
+        '0x',
       ]);
     });
     it('should revert if not called by the owner', async () => {
@@ -234,6 +244,8 @@ describe('L1Sender', () => {
           gateway: lZEndpointMockL1,
           receiver: l2MessageReceiver,
           receiverChainId: receiverChainId,
+          zroPaymentAddress: ZERO_ADDR,
+          adapterParams: '0x',
         }),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });

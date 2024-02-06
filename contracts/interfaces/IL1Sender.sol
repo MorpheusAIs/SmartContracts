@@ -19,11 +19,15 @@ interface IL1Sender {
      * @param gateway The address of token's gateway.
      * @param receiver The address of token's receiver on L2.
      * @param receiverChainId The chain id of receiver.
+     * @param zroPaymentAddress The address of ZKSync payment contract.
+     * @param adapterParams The parameters for the adapter.
      */
     struct RewardTokenConfig {
         address gateway;
         address receiver;
         uint16 receiverChainId;
+        address zroPaymentAddress;
+        bytes adapterParams;
     }
 
     /**

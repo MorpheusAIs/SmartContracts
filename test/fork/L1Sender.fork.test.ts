@@ -14,6 +14,7 @@ import {
   IWStETH__factory,
   L1Sender,
 } from '@/generated-types/ethers';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 
 describe('L1Sender Fork', () => {
@@ -59,6 +60,8 @@ describe('L1Sender Fork', () => {
       gateway: lzEndpointAddress,
       receiver: SECOND,
       receiverChainId: 110,
+      zroPaymentAddress: ZERO_ADDR,
+      adapterParams: '0x',
     };
     const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
       token: wsteth,
