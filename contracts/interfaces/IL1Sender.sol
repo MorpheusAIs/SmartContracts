@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IL1Sender {
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+
+interface IL1Sender is IERC165 {
     /**
      * The structure that stores the deposit token's data.
      * @param token The address of wrapped deposit token.
