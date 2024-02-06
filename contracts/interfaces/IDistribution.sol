@@ -82,9 +82,10 @@ interface IDistribution {
      * The event that is emitted when the user claims rewards from the pool.
      * @param poolId The pool's id.
      * @param user The user's address.
+     * @param receiver The receiver's address.
      * @param amount The amount of tokens.
      */
-    event UserClaimed(uint256 indexed poolId, address indexed user, uint256 amount);
+    event UserClaimed(uint256 indexed poolId, address indexed user, address receiver, uint256 amount);
 
     /**
      * The event that is emitted when the user withdraws tokens from the pool.
@@ -147,9 +148,9 @@ interface IDistribution {
     /**
      * The function to claim rewards from the pool.
      * @param poolId_ The pool's id.
-     * @param user_ The user's address.
+     * @param receiver_ The receiver's address.
      */
-    function claim(uint256 poolId_, address user_) external payable;
+    function claim(uint256 poolId_, address receiver_) external payable;
 
     /**
      * The function to withdraw tokens from the pool.
