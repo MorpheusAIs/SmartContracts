@@ -28,6 +28,9 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
         __Ownable_init();
         __UUPSUpgradeable_init();
 
+        require(router_ != address(0), "L2TR: invalid router_ value");
+        require(nonfungiblePositionManager_ != address(0), "L2TR: invalid nonfungiblePositionManager_ value");
+
         router = router_;
         nonfungiblePositionManager = nonfungiblePositionManager_;
 
@@ -144,12 +147,12 @@ contract L2TokenReceiver is IL2TokenReceiver, OwnableUpgradeable, UUPSUpgradeabl
         require(newParams_.tokenIn != address(0), "L2TR: invalid tokenIn");
         require(newParams_.tokenOut != address(0), "L2TR: invalid tokenOut");
 
+        params = newParams_;
+
         TransferHelper.safeApprove(newParams_.tokenIn, router, type(uint256).max);
         TransferHelper.safeApprove(newParams_.tokenIn, nonfungiblePositionManager, type(uint256).max);
 
         TransferHelper.safeApprove(newParams_.tokenOut, nonfungiblePositionManager, type(uint256).max);
-
-        params = newParams_;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}
