@@ -32,11 +32,15 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       initialDate: '1970-01-01T00:00:00Z',
+      // forking: {
+      //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+      // },
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
       initialDate: '1970-01-01T00:00:00Z',
       gasMultiplier: 1.2,
+      timeout: 1000000000000000,
     },
     goerli: {
       url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
@@ -85,6 +89,11 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
       timeout: 60000,
     },
+    arbitrum: {
+      url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+      accounts: privateKey(),
+      gasMultiplier: 1.2,
+    },
     arbitrum_goerli: {
       url: `https://arbitrum-goerli.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
@@ -117,6 +126,7 @@ const config: HardhatUserConfig = {
       polygon: `${process.env.POLYGONSCAN_KEY}`,
       avalancheFujiTestnet: `${process.env.AVALANCHE_KEY}`,
       avalanche: `${process.env.AVALANCHE_KEY}`,
+      arbitrumOne: `${process.env.ARBITRUM_KEY}`,
       arbitrumGoerli: `${process.env.ETHERSCAN_KEY}`,
       arbitrumSepolia: `${process.env.ETHERSCAN_KEY}`,
     },

@@ -24,6 +24,7 @@
     "deploy-bsc": "npx hardhat migrate --network bsc --verify",
     "deploy-polygon": "npx hardhat migrate --network polygon --verify",
     "deploy-avalanche": "npx hardhat migrate --network avalanche --verify",
+    "deploy-arbitrum": "npx hardhat migrate --network arbitrum --verify",
     "deploy-arbitrum-goerli": "npx hardhat migrate --network arbitrum_goerli --verify",
     "deploy-arbitrum-sepolia": "npx hardhat migrate --network arbitrum_sepolia --verify",
     "generate-types": "TYPECHAIN_FORCE=true npx hardhat typechain",

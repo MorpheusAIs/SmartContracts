@@ -53,6 +53,8 @@ export function parseConfig(chainId: bigint): Config {
     throw new Error(`Invalid chainId`);
   }
 
+  // configPath = `deploy/data/config.json`;
+
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
 
   if (config.cap == undefined) {

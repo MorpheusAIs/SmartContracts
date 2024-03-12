@@ -2,16 +2,9 @@ import { Deployer, Reporter, UserStorage } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
-import {
-  Distribution__factory,
-  ERC1967Proxy__factory,
-  L1Sender__factory,
-  LZEndpointMock__factory,
-  StETHMock__factory,
-  WStETHMock__factory,
-} from '@/generated-types/ethers';
+import { Distribution__factory, ERC1967Proxy__factory, L1Sender__factory } from '@/generated-types/ethers';
 import { IL1Sender } from '@/generated-types/ethers/contracts/L1Sender';
-import { ETHER_ADDR, ZERO_ADDR } from '@/scripts/utils/constants';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
 
 module.exports = async function (deployer: Deployer) {
   const config = parseConfig(await deployer.getChainId());
@@ -24,11 +17,12 @@ module.exports = async function (deployer: Deployer) {
     wStEth = config.L1.wStEth;
   } else {
     // deploy mock
-    const stETHMock = await deployer.deploy(StETHMock__factory, { name: 'StETH on L1' });
-    stETH = await stETHMock.getAddress();
+    // const stETHMock = await deployer.deploy(StETHMock__factory, { name: 'StETH on L1' });
+    // stETH = await stETHMock.getAddress();
 
-    const wStEthMock = await deployer.deploy(WStETHMock__factory, [stETH], { name: 'wStETH on L1' });
-    wStEth = await wStEthMock.getAddress();
+    // const wStEthMock = await deployer.deploy(WStETHMock__factory, [stETH], { name: 'wStETH on L1' });
+    // wStEth = await wStEthMock.getAddress();
+    return;
   }
 
   let lzEndpointL1: string;
@@ -36,17 +30,18 @@ module.exports = async function (deployer: Deployer) {
     lzEndpointL1 = config.lzConfig.lzEndpointL1;
   } else {
     // deploy mock
-    const LzEndpointL1Mock = await deployer.deploy(LZEndpointMock__factory, [config.chainsConfig.senderChainId], {
-      name: 'LZEndpoint on L1',
-    });
-    lzEndpointL1 = await LzEndpointL1Mock.getAddress();
+    // const LzEndpointL1Mock = await deployer.deploy(LZEndpointMock__factory, [config.chainsConfig.senderChainId], {
+    //   name: 'LZEndpoint on L1',
+    // });
+    // lzEndpointL1 = await LzEndpointL1Mock.getAddress();
+    return;
   }
 
   let arbitrumBridgeGatewayRouter: string;
   if (config.arbitrumConfig) {
     arbitrumBridgeGatewayRouter = config.arbitrumConfig.arbitrumBridgeGatewayRouter;
   } else {
-    arbitrumBridgeGatewayRouter = ETHER_ADDR;
+    return;
   }
 
   const distributionImpl = await deployer.deploy(Distribution__factory);
@@ -57,6 +52,7 @@ module.exports = async function (deployer: Deployer) {
 
   const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
     gateway: lzEndpointL1,
+    // receiver: '0xd4a8ECcBe696295e68572A98b1aA70Aa9277d427',
     receiver: UserStorage.get('L2MessageReceiver Proxy'),
     receiverChainId: config.chainsConfig.receiverChainId,
     zroPaymentAddress: ZERO_ADDR,
@@ -65,6 +61,7 @@ module.exports = async function (deployer: Deployer) {
   const depositTokenConfig: IL1Sender.DepositTokenConfigStruct = {
     token: wStEth,
     gateway: arbitrumBridgeGatewayRouter,
+    // receiver: '0x47176B2Af9885dC6C4575d4eFd63895f7Aaa4790',
     receiver: UserStorage.get('L2TokenReceiver Proxy'),
   };
 
@@ -72,7 +69,7 @@ module.exports = async function (deployer: Deployer) {
   const l1SenderProxy = await deployer.deploy(ERC1967Proxy__factory, [l1SenderImpl, '0x'], {
     name: 'L1Sender Proxy',
   });
-  if (!UserStorage.has('L1Sender Proxy')) UserStorage.set('L1Sender Proxy', await l1SenderProxy.getAddress());
+  UserStorage.set('L1Sender Proxy', await l1SenderProxy.getAddress());
   const l1Sender = L1Sender__factory.connect(await l1SenderProxy.getAddress(), await deployer.getSigner());
   await l1Sender.L1Sender__init(distribution, rewardTokenConfig, depositTokenConfig);
 
