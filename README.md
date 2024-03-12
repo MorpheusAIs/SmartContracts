@@ -12,6 +12,8 @@ Contains the following contracts:
 * *L2MessageReceiver* - A contract that receives messages from the L1Sender contract.
 * *L2TokenReceiver* - A contract that receives tokens from the L1Sender contract. It is used to Uniswap market making.
 
+[**Documentation**](https://github.com/MorpheusAIs/Docs/blob/main/Smart%20Contracts/Overview.md)
+
 ## Install Dependencies
 
 To install the dependencies, run the following command:
