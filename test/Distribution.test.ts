@@ -11,7 +11,7 @@ import {
   IL1Sender,
   L1Sender,
   L2MessageReceiver,
-  L2TokenReceiver,
+  L2TokenReceiverV2,
   LZEndpointMock,
   LinearDistributionIntervalDecrease,
   MOR,
@@ -52,7 +52,7 @@ describe('Distribution', () => {
 
   let l1Sender: L1Sender;
   let l2MessageReceiver: L2MessageReceiver;
-  let l2TokenReceiver: L2TokenReceiver;
+  let l2TokenReceiver: L2TokenReceiverV2;
 
   before(async () => {
     await setTime(oneHour);
@@ -82,7 +82,7 @@ describe('Distribution', () => {
       ethers.getContractFactory('L1Sender'),
       ethers.getContractFactory('LZEndpointMock'),
       ethers.getContractFactory('L2MessageReceiver'),
-      ethers.getContractFactory('L2TokenReceiver'),
+      ethers.getContractFactory('L2TokenReceiverV2'),
       ethers.getContractFactory('GatewayRouterMock'),
       ethers.getContractFactory('SwapRouterMock'),
       ethers.getContractFactory('NonfungiblePositionManagerMock'),
@@ -91,7 +91,7 @@ describe('Distribution', () => {
     let gatewayRouter: GatewayRouterMock;
     let swapRouter: SwapRouterMock;
     let nonfungiblePositionManager: NonfungiblePositionManagerMock;
-    let l2TokenReceiverImplementation: L2TokenReceiver;
+    let l2TokenReceiverImplementation: L2TokenReceiverV2;
     let l2MessageReceiverImplementation: L2MessageReceiver;
     let l1SenderImplementation: L1Sender;
     // START deploy contracts without deps
@@ -134,7 +134,7 @@ describe('Distribution', () => {
     await l2MessageReceiver.L2MessageReceiver__init();
 
     const l2TokenReceiverProxy = await ERC1967ProxyFactory.deploy(l2TokenReceiverImplementation, '0x');
-    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiver;
+    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiverV2;
     await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, {
       tokenIn: depositToken,
       tokenOut: depositToken,
