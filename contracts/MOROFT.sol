@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import {OFT} from "./@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IMOROFT, IERC20, IERC165, IOAppCore} from "./interfaces/IMOROFT.sol";
 
@@ -17,7 +16,6 @@ contract MOROFT is IMOROFT, OFT {
         address _minter
     ) OFT("MOR", "MOR", _layerZeroEndpoint, _delegate) {
         require(_cap > 0, "ERC20Capped: cap is 0");
-        require(_minter != address(0), "MOROFT: invalid minter");
 
         cap_ = _cap;
         minter_ = _minter;

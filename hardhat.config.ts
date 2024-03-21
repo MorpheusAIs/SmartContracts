@@ -35,9 +35,9 @@ const config: HardhatUserConfig = {
       // forking: {
       //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
-      forking: {
-        url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
-      },
+      // forking: {
+      //   url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      // },
     },
     localhost: {
       url: 'http://127.0.0.1:8545',

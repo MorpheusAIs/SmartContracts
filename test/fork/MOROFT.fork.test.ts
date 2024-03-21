@@ -57,8 +57,6 @@ describe('MOROFT', () => {
       // Add L2 chain ID to available list
       const l2MorBytes32Address = ethers.zeroPadValue(await l2Mor.getAddress(), 32);
 
-      console.log(ethers.zeroPadValue('0x7D93F6104f91Faa01Aca440333b6AedBedF61625', 32));
-      return;
       await l1Mor.connect(DELEGATE).setPeer(l2ChainId, l2MorBytes32Address);
       expect(await l1Mor.isPeer(l2ChainId, l2MorBytes32Address)).to.be.true;
 

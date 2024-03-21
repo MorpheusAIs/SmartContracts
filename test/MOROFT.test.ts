@@ -2,7 +2,6 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
 
 import { LayerZeroEndpointV2Mock, MOROFT, MOROFT__factory } from '@/generated-types/ethers';
-import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 
@@ -59,12 +58,6 @@ describe('MOROFT', () => {
     it("should revert if cap isn't set", async () => {
       await expect(MOR.deploy(0, lZEndpointMock, DELEGATE.address, MINTER.address)).to.be.revertedWith(
         'ERC20Capped: cap is 0',
-      );
-    });
-
-    it('should revert if minter is zero address', async () => {
-      await expect(MOR.deploy(cap, lZEndpointMock, DELEGATE.address, ZERO_ADDR)).to.be.revertedWith(
-        'MOROFT: invalid minter',
       );
     });
   });
