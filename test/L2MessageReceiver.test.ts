@@ -48,7 +48,7 @@ describe('L2MessageReceiver', () => {
 
     // Setup MOROFT token
     lZEndpointMock = await LayerZeroEndpointV2Mock.deploy(1, SECOND.address);
-    moroft = await MOROFT.deploy(wei(100), await lZEndpointMock.getAddress(), SECOND.address, l2MessageReceiver);
+    moroft = await MOROFT.deploy(await lZEndpointMock.getAddress(), SECOND.address, l2MessageReceiver);
 
     await reverter.snapshot();
   });
@@ -162,9 +162,6 @@ describe('L2MessageReceiver', () => {
       tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 6, payload);
       await expect(tx).to.changeTokenBalance(moroft, SECOND, wei(2));
       payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [SECOND.address, wei(5)]);
-      tx = await l2MessageReceiver.connect(THIRD).lzReceive(2, address, 7, payload);
-      await expect(tx).to.changeTokenBalance(moroft, SECOND, 0);
-      expect(await l2MessageReceiver.failedMessages(2, address, 7)).to.eq(ethers.keccak256(payload));
     });
     it('should revert if provided wrong lzEndpoint', async () => {
       await expect(l2MessageReceiver.lzReceive(0, '0x', 1, '0x')).to.be.revertedWith('L2MR: invalid gateway');

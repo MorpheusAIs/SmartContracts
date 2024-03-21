@@ -27,8 +27,6 @@ describe('MOROFT', () => {
   const l2ChainId = 30110;
   // ***
 
-  const cap = wei('100');
-
   before(async () => {
     [SECOND, MINTER, DELEGATE] = await ethers.getSigners();
 
@@ -38,8 +36,8 @@ describe('MOROFT', () => {
     ]);
 
     optionsBuilderMock = await OptionsBuilderMock.deploy();
-    l1Mor = await MOR.deploy(cap, l1LzEndpointV2Address, DELEGATE.address, MINTER.address);
-    l2Mor = await MOR.deploy(cap, l2LzEndpointV2Address, DELEGATE.address, MINTER.address);
+    l1Mor = await MOR.deploy(l1LzEndpointV2Address, DELEGATE.address, MINTER.address);
+    l2Mor = await MOR.deploy(l2LzEndpointV2Address, DELEGATE.address, MINTER.address);
 
     await reverter.snapshot();
   });

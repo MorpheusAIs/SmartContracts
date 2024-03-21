@@ -6,18 +6,13 @@ import {OFT} from "./@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import {IMOROFT, IERC20, IERC165, IOAppCore} from "./interfaces/IMOROFT.sol";
 
 contract MOROFT is IMOROFT, OFT {
-    uint256 private immutable cap_;
     address private immutable minter_;
 
     constructor(
-        uint256 _cap,
         address _layerZeroEndpoint,
         address _delegate,
         address _minter
     ) OFT("MOR", "MOR", _layerZeroEndpoint, _delegate) {
-        require(_cap > 0, "ERC20Capped: cap is 0");
-
-        cap_ = _cap;
         minter_ = _minter;
 
         transferOwnership(_delegate);
@@ -31,17 +26,12 @@ contract MOROFT is IMOROFT, OFT {
             interfaceId_ == type(IERC165).interfaceId;
     }
 
-    function cap() public view returns (uint256) {
-        return cap_;
-    }
-
     function minter() public view returns (address) {
         return minter_;
     }
 
     function mint(address _account, uint256 _amount) public {
         require(_msgSender() == minter(), "MOROFT: invalid caller");
-        require(totalSupply() + _amount <= cap(), "ERC20Capped: cap exceeded");
 
         _mint(_account, _amount);
     }

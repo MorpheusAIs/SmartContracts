@@ -10,12 +10,6 @@ import {IOAppCore} from ".././@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/inter
  */
 interface IMOROFT is IERC20, IERC165 {
     /**
-     * The function to get the cap of the token.
-     * @return The cap of the token.
-     */
-    function cap() external view returns (uint256);
-
-    /**
      * The function to get the minter address.
      * @return The minter address.
      */
