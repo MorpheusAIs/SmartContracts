@@ -1,4 +1,4 @@
 module.exports = {
-  skipFiles: ['mock', 'interfaces'],
+  skipFiles: ['mock', 'interfaces', '@layerzerolabs'],
   configureYulOptimizer: true,
 };

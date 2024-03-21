@@ -55,16 +55,16 @@ describe('MOR', () => {
     it('should mint tokens', async () => {
       const amount = wei('10');
 
-      const tx = await mor.mint(await SECOND.getAddress(), amount);
+      const tx = await mor.mint(SECOND.address, amount);
       await expect(tx).to.changeTokenBalance(mor, SECOND, amount);
     });
 
     it('should not mint more than the cap', async () => {
-      await expect(mor.mint(await SECOND.getAddress(), cap + 1n)).to.be.revertedWith('ERC20Capped: cap exceeded');
+      await expect(mor.mint(SECOND.address, cap + 1n)).to.be.revertedWith('ERC20Capped: cap exceeded');
     });
 
     it('should revert if not called by the owner', async () => {
-      await expect(mor.connect(SECOND).mint(await SECOND.getAddress(), wei('10'))).to.be.revertedWith(
+      await expect(mor.connect(SECOND).mint(SECOND.address, wei('10'))).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -74,7 +74,7 @@ describe('MOR', () => {
     it('should burn tokens', async () => {
       const amount = wei('10');
 
-      await mor.mint(await OWNER.getAddress(), amount);
+      await mor.mint(OWNER.address, amount);
 
       const tx = await mor.burn(amount);
 
@@ -86,15 +86,15 @@ describe('MOR', () => {
     it('should burn tokens from another account', async () => {
       const amount = wei('10');
 
-      await mor.mint(await OWNER.getAddress(), amount);
+      await mor.mint(OWNER.address, amount);
 
-      await mor.approve(await SECOND.getAddress(), amount);
+      await mor.approve(SECOND.address, amount);
 
-      const tx = await mor.connect(SECOND).burnFrom(await OWNER.getAddress(), amount);
+      const tx = await mor.connect(SECOND).burnFrom(OWNER.address, amount);
 
       await expect(tx).to.changeTokenBalance(mor, OWNER, -amount);
 
-      expect(await mor.allowance(await OWNER.getAddress(), await SECOND.getAddress())).to.equal(0);
+      expect(await mor.allowance(OWNER.address, SECOND.address)).to.equal(0);
     });
   });
 });
