@@ -35,6 +35,9 @@ const config: HardhatUserConfig = {
       // forking: {
       //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
+      // forking: {
+      //   url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      // },
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
@@ -128,8 +131,18 @@ const config: HardhatUserConfig = {
       avalanche: `${process.env.AVALANCHE_KEY}`,
       arbitrumOne: `${process.env.ARBITRUM_KEY}`,
       arbitrumGoerli: `${process.env.ETHERSCAN_KEY}`,
-      arbitrumSepolia: `${process.env.ETHERSCAN_KEY}`,
+      arbitrum_sepolia: `${process.env.ARBITRUM_KEY}`,
     },
+    customChains: [
+      {
+        network: 'arbitrum_sepolia',
+        chainId: 421614,
+        urls: {
+          apiURL: 'https://api-sepolia.arbiscan.io/api',
+          browserURL: 'https://sepolia.arbiscan.io/',
+        },
+      },
+    ],
   },
   migrate: {
     pathToMigrations: './deploy/',

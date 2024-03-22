@@ -157,7 +157,7 @@ describe('L1Sender', () => {
         await expect(l1Sender.L1Sender__init(OWNER, rewardTokenConfig, depositTokenConfig)).to.be.rejectedWith(reason);
       });
       it('should setup config', async () => {
-        expect(await l1Sender.distribution()).to.be.equal(await OWNER.getAddress());
+        expect(await l1Sender.distribution()).to.be.equal(OWNER.address);
 
         expect(await l1Sender.rewardTokenConfig()).to.be.deep.equal([
           await lZEndpointMockL1.getAddress(),
@@ -170,7 +170,7 @@ describe('L1Sender', () => {
         expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
           await depositToken.getAddress(),
           await gatewayRouter.getAddress(),
-          await SECOND.getAddress(),
+          SECOND.address,
         ]);
 
         expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(ethers.MaxUint256);
@@ -209,7 +209,7 @@ describe('L1Sender', () => {
   describe('setDistribution', () => {
     it('should set distribution', async () => {
       await l1Sender.setDistribution(SECOND);
-      expect(await l1Sender.distribution()).to.be.equal(await SECOND.getAddress());
+      expect(await l1Sender.distribution()).to.be.equal(SECOND.address);
     });
     it('should revert if not called by the owner', async () => {
       await expect(l1Sender.connect(SECOND).setDistribution(SECOND)).to.be.revertedWith(
@@ -277,7 +277,7 @@ describe('L1Sender', () => {
       expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
         await newDepositToken.getAddress(),
         await newGatewayRouter.getAddress(),
-        await OWNER.getAddress(),
+        OWNER.address,
       ]);
 
       expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(0);
@@ -306,7 +306,7 @@ describe('L1Sender', () => {
       expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
         await newDepositToken.getAddress(),
         await gatewayRouter.getAddress(),
-        await OWNER.getAddress(),
+        OWNER.address,
       ]);
 
       expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(0);
@@ -329,7 +329,7 @@ describe('L1Sender', () => {
       expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
         await depositToken.getAddress(),
         await newGatewayRouter.getAddress(),
-        await OWNER.getAddress(),
+        OWNER.address,
       ]);
 
       expect(await depositToken.allowance(l1Sender, gatewayRouter)).to.be.equal(0);
@@ -349,7 +349,7 @@ describe('L1Sender', () => {
       expect(await l1Sender.depositTokenConfig()).to.be.deep.equal([
         await depositToken.getAddress(),
         await gatewayRouter.getAddress(),
-        await SECOND.getAddress(),
+        SECOND.address,
       ]);
 
       expect(await unwrappedToken.allowance(l1Sender, depositToken)).to.be.equal(ethers.MaxUint256);
@@ -440,10 +440,7 @@ describe('L1Sender', () => {
         ['address', 'address'],
         [await l1Sender.getAddress(), await l2MessageReceiver.getAddress()],
       );
-      const payload = ethers.AbiCoder.defaultAbiCoder().encode(
-        ['address', 'uint256'],
-        [await SECOND.getAddress(), amount],
-      );
+      const payload = ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [SECOND.address, amount]);
 
       await l2MessageReceiver.retryMessage(senderChainId, senderAndReceiverAddress, 1, payload);
       expect(await rewardToken.balanceOf(SECOND)).to.eq(Number(amount) + 1);
