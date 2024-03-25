@@ -78,7 +78,7 @@ describe('L2TokenReceiverV2 Fork', () => {
     l2TokenReceiver = L2TokenReceiverV2.attach(l2TokenReceiver) as L2TokenReceiverV2;
 
     innerToken = IERC20__factory.connect(wethAddress, OWNER);
-    inputToken = WStETHMock__factory.connect((await l2TokenReceiver.params()).tokenIn, OWNER);
+    inputToken = WStETHMock__factory.connect((await l2TokenReceiver.secondSwapParams()).tokenIn, OWNER);
     outputToken = (await MOR.deploy(l1LzEndpointV2Address, OWNER, OWNER)).connect(OWNER);
 
     await outputToken.mint(OWNER, wei(1000));

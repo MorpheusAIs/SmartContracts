@@ -14,11 +14,10 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
     address public router;
     address public nonfungiblePositionManager;
 
-    SwapParams public params;
+    SwapParams public secondSwapParams;
 
-    // v2
-
-    SwapParams public initialTokenParams;
+    // Storage changes for L2TokenReceiverV2
+    SwapParams public firstSwapParams;
 
     constructor() {
         _disableInitializers();
@@ -35,7 +34,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         router = router_;
         nonfungiblePositionManager = nonfungiblePositionManager_;
 
-        _editParams(params_, false);
+        _addAllowanceUpdateSwapParams(params_, false);
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
@@ -46,18 +45,18 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
     }
 
     function editParams(SwapParams memory newParams_, bool isInitial_) external onlyOwner {
-        SwapParams memory params_ = isInitial_ ? initialTokenParams : params;
+        SwapParams memory params_ = _getSwapParams(isInitial_);
 
         if (params_.tokenIn != address(0) && params_.tokenIn != newParams_.tokenIn) {
             TransferHelper.safeApprove(params_.tokenIn, router, 0);
             TransferHelper.safeApprove(params_.tokenIn, nonfungiblePositionManager, 0);
         }
 
-        if (params_.tokenIn != address(0) && params_.tokenOut != newParams_.tokenOut) {
+        if (params_.tokenOut != address(0) && params_.tokenOut != newParams_.tokenOut) {
             TransferHelper.safeApprove(params_.tokenOut, nonfungiblePositionManager, 0);
         }
 
-        _editParams(newParams_, isInitial_);
+        _addAllowanceUpdateSwapParams(newParams_, isInitial_);
     }
 
     function withdrawToken(address recipient_, address token_, uint256 amount_) external onlyOwner {
@@ -74,7 +73,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         uint256 deadline_,
         bool isInitial_
     ) external onlyOwner returns (uint256) {
-        SwapParams memory params_ = isInitial_ ? initialTokenParams : params;
+        SwapParams memory params_ = _getSwapParams(isInitial_);
 
         ISwapRouter.ExactInputSingleParams memory swapParams_ = ISwapRouter.ExactInputSingleParams({
             tokenIn: params_.tokenIn,
@@ -109,7 +108,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         (, , address token0_, , , , , , , , , ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
             tokenId_
         );
-        if (token0_ == params.tokenIn) {
+        if (token0_ == secondSwapParams.tokenIn) {
             amountAdd0_ = depositTokenAmountAdd_;
             amountAdd1_ = rewardTokenAmountAdd_;
             amountMin0_ = depositTokenAmountMin_;
@@ -159,7 +158,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         return this.onERC721Received.selector;
     }
 
-    function _editParams(SwapParams memory newParams_, bool isInitial_) private {
+    function _addAllowanceUpdateSwapParams(SwapParams memory newParams_, bool isInitial_) private {
         require(newParams_.tokenIn != address(0), "L2TR: invalid tokenIn");
         require(newParams_.tokenOut != address(0), "L2TR: invalid tokenOut");
 
@@ -169,10 +168,14 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         TransferHelper.safeApprove(newParams_.tokenOut, nonfungiblePositionManager, type(uint256).max);
 
         if (isInitial_) {
-            initialTokenParams = newParams_;
+            firstSwapParams = newParams_;
         } else {
-            params = newParams_;
+            secondSwapParams = newParams_;
         }
+    }
+
+    function _getSwapParams(bool isInitial_) internal view returns (SwapParams memory) {
+        return isInitial_ ? firstSwapParams : secondSwapParams;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

@@ -105,7 +105,7 @@ describe('L2TokenReceiverV2', () => {
 
       it('should set params', async () => {
         const defaultParams = getDefaultSwapParams(await inputToken.getAddress(), await outputToken.getAddress());
-        const params = await l2TokenReceiver.params();
+        const params = await l2TokenReceiver.secondSwapParams();
 
         expect(params.tokenIn).to.equal(defaultParams.tokenIn);
         expect(params.tokenOut).to.equal(defaultParams.tokenOut);
@@ -130,6 +130,20 @@ describe('L2TokenReceiverV2', () => {
         const l2TokenReceiverV2 = l2TokenReceiverV2Factory.attach(l2TokenReceiver) as L2TokenReceiverV2;
 
         expect(await l2TokenReceiverV2.version()).to.eq(2);
+        expect(await l2TokenReceiverV2.router()).to.eq(await swapRouter.getAddress());
+        expect(await l2TokenReceiverV2.nonfungiblePositionManager()).to.eq(
+          await nonfungiblePositionManager.getAddress(),
+        );
+        const secondSwapParams = await l2TokenReceiverV2.secondSwapParams();
+        expect(secondSwapParams.tokenIn).to.eq(await inputToken.getAddress());
+        expect(secondSwapParams.tokenOut).to.eq(await outputToken.getAddress());
+        expect(secondSwapParams.fee).to.eq(500);
+        expect(secondSwapParams.sqrtPriceLimitX96).to.eq(0);
+        const firstSwapParams = await l2TokenReceiverV2.firstSwapParams();
+        expect(firstSwapParams.tokenIn).to.eq(ZERO_ADDR);
+        expect(firstSwapParams.tokenOut).to.eq(ZERO_ADDR);
+        expect(firstSwapParams.fee).to.eq(0);
+        expect(firstSwapParams.sqrtPriceLimitX96).to.eq(0);
       });
       it('should revert if caller is not the owner', async () => {
         await expect(l2TokenReceiver.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
@@ -162,7 +176,7 @@ describe('L2TokenReceiverV2', () => {
 
       await l2TokenReceiver.editParams(newParams, false);
 
-      const params = await l2TokenReceiver.params();
+      const params = await l2TokenReceiver.secondSwapParams();
 
       expect(params.tokenIn).to.equal(newParams.tokenIn);
       expect(params.tokenOut).to.equal(newParams.tokenOut);
