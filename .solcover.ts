@@ -1,4 +1,4 @@
 module.exports = {
-  skipFiles: ['mock', 'interfaces', '@layerzerolabs', 'L2TokenReceiver.sol'],
+  skipFiles: ['mock', 'interfaces', '@layerzerolabs'],
   configureYulOptimizer: true,
 };

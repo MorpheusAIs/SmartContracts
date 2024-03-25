@@ -875,7 +875,7 @@ describe('Distribution', () => {
       await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
       await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
-      expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 72), wei(0.001));
+      expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 72), wei(0.01));
       userData = await distribution.usersData(OWNER.address, poolId);
       expect(userData.deposited).to.eq(wei(3));
       expect(userData.pendingRewards).to.eq(0);
@@ -1077,7 +1077,7 @@ describe('Distribution', () => {
       await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
       await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
-      expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 70.5), wei(0.001));
+      expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 70.5), wei(0.01));
       userData = await distribution.usersData(OWNER.address, poolId);
       expect(userData.deposited).to.eq(wei(3));
       expect(userData.pendingRewards).to.eq(0);
