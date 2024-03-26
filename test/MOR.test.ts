@@ -32,7 +32,6 @@ describe('MOR', () => {
     it('should set the cap', async () => {
       expect(await mor.cap()).to.equal(cap);
     });
-
     it('should set the name and symbol', async () => {
       expect(await mor.name()).to.equal('MOR');
       expect(await mor.symbol()).to.equal('MOR');
@@ -58,11 +57,9 @@ describe('MOR', () => {
       const tx = await mor.mint(SECOND.address, amount);
       await expect(tx).to.changeTokenBalance(mor, SECOND, amount);
     });
-
     it('should not mint more than the cap', async () => {
       await expect(mor.mint(SECOND.address, cap + 1n)).to.be.revertedWith('ERC20Capped: cap exceeded');
     });
-
     it('should revert if not called by the owner', async () => {
       await expect(mor.connect(SECOND).mint(SECOND.address, wei('10'))).to.be.revertedWith(
         'Ownable: caller is not the owner',

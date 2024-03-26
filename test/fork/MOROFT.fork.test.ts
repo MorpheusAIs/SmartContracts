@@ -28,6 +28,15 @@ describe('MOROFT', () => {
   // ***
 
   before(async () => {
+    await ethers.provider.send('hardhat_reset', [
+      {
+        forking: {
+          jsonRpcUrl: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+          blockNumber: 190000000,
+        },
+      },
+    ]);
+
     [SECOND, MINTER, DELEGATE] = await ethers.getSigners();
 
     const [MOR, OptionsBuilderMock] = await Promise.all([
@@ -44,6 +53,10 @@ describe('MOROFT', () => {
 
   afterEach(async () => {
     await reverter.revert();
+  });
+
+  after(async () => {
+    await ethers.provider.send('hardhat_reset', []);
   });
 
   describe('send', () => {

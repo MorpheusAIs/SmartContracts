@@ -106,7 +106,6 @@ describe('L2MessageReceiver', () => {
       expect(await l2MessageReceiver.rewardToken()).to.be.equal(await mor.getAddress());
       expect(await l2MessageReceiver.config()).to.be.deep.equal([ZERO_ADDR, SECOND.address, 1n]);
     });
-
     it('should revert if not owner', async () => {
       await expect(
         l2MessageReceiver.connect(SECOND).setParams(ZERO_ADDR, {

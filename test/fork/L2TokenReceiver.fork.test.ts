@@ -45,6 +45,7 @@ describe('L2TokenReceiver Fork', () => {
       {
         forking: {
           jsonRpcUrl: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+          blockNumber: 19000000,
         },
       },
     ]);
