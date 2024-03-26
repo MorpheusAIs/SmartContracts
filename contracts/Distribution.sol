@@ -63,6 +63,9 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             createPool(poolsInfo_[i]);
         }
 
+        require(depositToken_ != address(0), "DS: invalid depositToken_ value");
+        require(l1Sender_ != address(0), "DS: invalid l1Sender_ value");
+
         depositToken = depositToken_;
         l1Sender = l1Sender_;
     }
@@ -172,10 +175,10 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.rate = currentPoolRate_;
         userData.pendingRewards = 0;
 
+        emit UserClaimed(poolId_, user_, receiver_, pendingRewards_);
+
         // Transfer rewards
         L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
-
-        emit UserClaimed(poolId_, user_, receiver_, pendingRewards_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
@@ -257,7 +260,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
             newDeposited_ = deposited_ - amount_;
 
             require(amount_ > 0, "DS: nothing to withdraw");
-            require(newDeposited_ >= pool.minimalStake || newDeposited_ == 0, "DS: invalid withdraw amount");
+            require(newDeposited_ >= pool.minimalStake || newDeposited_ <= 0, "DS: invalid withdraw amount");
         } else {
             newDeposited_ = deposited_ - amount_;
         }
