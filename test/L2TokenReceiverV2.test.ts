@@ -98,11 +98,9 @@ describe('L2TokenReceiverV2', () => {
           }),
         ).to.be.rejectedWith(reason);
       });
-
       it('should set router', async () => {
         expect(await l2TokenReceiver.router()).to.equal(await swapRouter.getAddress());
       });
-
       it('should set params', async () => {
         const defaultParams = getDefaultSwapParams(await inputToken.getAddress(), await outputToken.getAddress());
         const params = await l2TokenReceiver.secondSwapParams();
@@ -112,7 +110,6 @@ describe('L2TokenReceiverV2', () => {
         expect(params.fee).to.equal(defaultParams.fee);
         expect(params.sqrtPriceLimitX96).to.equal(defaultParams.sqrtPriceLimitX96);
       });
-
       it('should give allowance', async () => {
         expect(await inputToken.allowance(l2TokenReceiver, swapRouter)).to.equal(ethers.MaxUint256);
         expect(await inputToken.allowance(l2TokenReceiver, nonfungiblePositionManager)).to.equal(ethers.MaxUint256);
@@ -155,7 +152,7 @@ describe('L2TokenReceiverV2', () => {
 
   describe('supportsInterface', () => {
     it('should support IL2TokenReceiver', async () => {
-      expect(await l2TokenReceiver.supportsInterface('0xb7f566b1')).to.be.true;
+      expect(await l2TokenReceiver.supportsInterface('0x2f958df3')).to.be.true;
     });
     it('should support IERC165', async () => {
       expect(await l2TokenReceiver.supportsInterface('0x01ffc9a7')).to.be.true;
@@ -183,7 +180,6 @@ describe('L2TokenReceiverV2', () => {
       expect(params.fee).to.equal(newParams.fee);
       expect(params.sqrtPriceLimitX96).to.equal(newParams.sqrtPriceLimitX96);
     });
-
     it('should set new allowance', async () => {
       const newParams: IL2TokenReceiverV2.SwapParamsStruct = {
         tokenIn: await outputToken.getAddress(),
@@ -199,19 +195,16 @@ describe('L2TokenReceiverV2', () => {
       expect(await outputToken.allowance(l2TokenReceiver, swapRouter)).to.equal(ethers.MaxUint256);
       expect(await outputToken.allowance(l2TokenReceiver, nonfungiblePositionManager)).to.equal(ethers.MaxUint256);
     });
-
     it('should revert if caller is not owner', async () => {
       await expect(
         l2TokenReceiver.connect(SECOND).editParams(getDefaultSwapParams(ZERO_ADDR, ZERO_ADDR), false),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
-
     it('should revert if tokenIn is zero address', async () => {
       await expect(
         l2TokenReceiver.editParams(getDefaultSwapParams(ZERO_ADDR, await outputToken.getAddress()), false),
       ).to.be.revertedWith('L2TR: invalid tokenIn');
     });
-
     it('should revert if tokenOut is zero address', async () => {
       await expect(
         l2TokenReceiver.editParams(getDefaultSwapParams(await inputToken.getAddress(), ZERO_ADDR), false),
@@ -243,7 +236,6 @@ describe('L2TokenReceiverV2', () => {
 
       await expect(tx).to.changeTokenBalances(inputToken, [l2TokenReceiver, OWNER], [-1, 1]);
     });
-
     it('should return if caller is not the owner', async () => {
       await expect(l2TokenReceiver.connect(SECOND).withdrawToken(OWNER, inputToken, 1)).to.be.revertedWith(
         'Ownable: caller is not the owner',
@@ -260,4 +252,4 @@ describe('L2TokenReceiverV2', () => {
   });
 });
 
-// npx hardhat test "test/L2TokenReceiver.test.ts"
+// npx hardhat test "test/L2TokenReceiverV2.test.ts"

@@ -67,7 +67,6 @@ describe('MOROFT', () => {
       const tx = await mor.connect(MINTER).mint(SECOND.address, amount);
       await expect(tx).to.changeTokenBalance(mor, SECOND, amount);
     });
-
     it('should revert if not called by the owner', async () => {
       await expect(mor.connect(SECOND).mint(SECOND.address, wei('10'))).to.be.revertedWith('MOROFT: invalid caller');
     });

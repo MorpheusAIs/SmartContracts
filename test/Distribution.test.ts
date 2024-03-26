@@ -329,7 +329,6 @@ describe('Distribution', () => {
       const poolData: IDistribution.PoolStruct = await distribution.pools(poolId);
       expect(_comparePoolStructs(newPool, poolData)).to.be.true;
     });
-
     it('should revert if try to change pool type', async () => {
       const newPool = {
         ...defaultPool,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -44,8 +45,8 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
             interfaceId_ == type(IERC165).interfaceId;
     }
 
-    function editParams(SwapParams memory newParams_, bool isInitial_) external onlyOwner {
-        SwapParams memory params_ = _getSwapParams(isInitial_);
+    function editParams(SwapParams memory newParams_, bool isEditFirstParams_) external onlyOwner {
+        SwapParams memory params_ = _getSwapParams(isEditFirstParams_);
 
         if (params_.tokenIn != address(0) && params_.tokenIn != newParams_.tokenIn) {
             TransferHelper.safeApprove(params_.tokenIn, router, 0);
@@ -56,7 +57,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
             TransferHelper.safeApprove(params_.tokenOut, nonfungiblePositionManager, 0);
         }
 
-        _addAllowanceUpdateSwapParams(newParams_, isInitial_);
+        _addAllowanceUpdateSwapParams(newParams_, isEditFirstParams_);
     }
 
     function withdrawToken(address recipient_, address token_, uint256 amount_) external onlyOwner {
@@ -64,16 +65,16 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
     }
 
     function withdrawTokenId(address recipient_, address token_, uint256 tokenId_) external onlyOwner {
-        TransferHelper.safeTransferFrom(token_, address(this), recipient_, tokenId_);
+        IERC721(token_).safeTransferFrom(address(this), recipient_, tokenId_);
     }
 
     function swap(
         uint256 amountIn_,
         uint256 amountOutMinimum_,
         uint256 deadline_,
-        bool isInitial_
+        bool isEditFirstParams_
     ) external onlyOwner returns (uint256) {
-        SwapParams memory params_ = _getSwapParams(isInitial_);
+        SwapParams memory params_ = _getSwapParams(isEditFirstParams_);
 
         ISwapRouter.ExactInputSingleParams memory swapParams_ = ISwapRouter.ExactInputSingleParams({
             tokenIn: params_.tokenIn,
@@ -158,7 +159,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         return this.onERC721Received.selector;
     }
 
-    function _addAllowanceUpdateSwapParams(SwapParams memory newParams_, bool isInitial_) private {
+    function _addAllowanceUpdateSwapParams(SwapParams memory newParams_, bool isEditFirstParams_) private {
         require(newParams_.tokenIn != address(0), "L2TR: invalid tokenIn");
         require(newParams_.tokenOut != address(0), "L2TR: invalid tokenOut");
 
@@ -167,15 +168,15 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
 
         TransferHelper.safeApprove(newParams_.tokenOut, nonfungiblePositionManager, type(uint256).max);
 
-        if (isInitial_) {
+        if (isEditFirstParams_) {
             firstSwapParams = newParams_;
         } else {
             secondSwapParams = newParams_;
         }
     }
 
-    function _getSwapParams(bool isInitial_) internal view returns (SwapParams memory) {
-        return isInitial_ ? firstSwapParams : secondSwapParams;
+    function _getSwapParams(bool isEditFirstParams_) internal view returns (SwapParams memory) {
+        return isEditFirstParams_ ? firstSwapParams : secondSwapParams;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

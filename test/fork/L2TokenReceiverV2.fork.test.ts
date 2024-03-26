@@ -159,7 +159,6 @@ describe('L2TokenReceiverV2 Fork', () => {
       await expect(tx).to.changeTokenBalance(innerToken, l2TokenReceiver, txResult);
       await expect(tx).to.changeTokenBalance(inputToken, l2TokenReceiver, -amount);
     });
-
     it('should swap tokens 2', async () => {
       const txResult = await l2TokenReceiver.swap.staticCall(amount, 0, (await getCurrentBlockTime()) + 100, false);
       const tx = await l2TokenReceiver.swap(amount, 0, (await getCurrentBlockTime()) + 100, false);
@@ -245,4 +244,4 @@ describe('L2TokenReceiverV2 Fork', () => {
   });
 });
 
-// npx hardhat test "test/fork/L2TokenReceiver.fork.test.ts"
+// npx hardhat test "test/fork/L2TokenReceiverV2.fork.test.ts"
