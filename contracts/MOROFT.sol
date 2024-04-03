@@ -38,11 +38,11 @@ contract MOROFT is IMOROFT, OFT {
         _mint(account_, amount_);
     }
 
-    function burn(uint256 amount_) public virtual {
+    function burn(uint256 amount_) public {
         _burn(_msgSender(), amount_);
     }
 
-    function burnFrom(address account_, uint256 amount_) public virtual {
+    function burnFrom(address account_, uint256 amount_) public {
         _spendAllowance(account_, _msgSender(), amount_);
         _burn(account_, amount_);
     }
