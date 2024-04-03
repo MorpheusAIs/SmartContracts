@@ -6,7 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IOAppCore} from ".././@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppCore.sol";
 
 /**
- * This is the interface for MOROFT token contract. The token is ERC20 with cap, burnable and Layer Zero OFT features.
+ * This is the interface for MOROFT token contract. The token is ERC20 with burnable and Layer Zero OFT features.
  */
 interface IMOROFT is IERC20, IERC165 {
     /**
