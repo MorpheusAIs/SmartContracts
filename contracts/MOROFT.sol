@@ -13,6 +13,8 @@ contract MOROFT is IMOROFT, OFT {
         address _delegate,
         address _minter
     ) OFT("MOR", "MOR", _layerZeroEndpoint, _delegate) {
+        require(_minter != address(0), "MOROFT: invalid minter");
+
         minter_ = _minter;
 
         transferOwnership(_delegate);

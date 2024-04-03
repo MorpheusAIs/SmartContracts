@@ -38,6 +38,12 @@ const config: HardhatUserConfig = {
       // forking: {
       //   url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
+      // forking: {
+      //   url: `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      // },
+      // forking: {
+      //   url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
+      // },
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
@@ -53,7 +59,7 @@ const config: HardhatUserConfig = {
     sepolia: {
       url: `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
-      gasMultiplier: 1.2,
+      gasMultiplier: 1.1,
     },
     chapel: {
       url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
@@ -62,9 +68,9 @@ const config: HardhatUserConfig = {
       timeout: 60000,
     },
     mumbai: {
-      url: `https://rpc-mumbai.maticvigil.com/`,
+      url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
       accounts: privateKey(),
-      gasMultiplier: 1.2,
+      gasMultiplier: 1.1,
     },
     fuji: {
       url: `https://avalanche-fuji.infura.io/v3/${process.env.INFURA_KEY}`,
@@ -105,7 +111,7 @@ const config: HardhatUserConfig = {
     arbitrum_sepolia: {
       url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
-      gasMultiplier: 1.2,
+      gasMultiplier: 1.1,
     },
   },
   solidity: {

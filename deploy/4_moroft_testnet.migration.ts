@@ -11,3 +11,8 @@ module.exports = async function (deployer: Deployer) {
 
   Reporter.reportContracts(['MOROFT', await mor.getAddress()]);
 };
+
+// npx hardhat migrate --only 4
+// npx hardhat migrate --network arbitrum_sepolia --only 4 --verify
+// npx hardhat migrate --network sepolia --only 4 --verify
+// npx hardhat migrate --network mumbai --only 4 --verify

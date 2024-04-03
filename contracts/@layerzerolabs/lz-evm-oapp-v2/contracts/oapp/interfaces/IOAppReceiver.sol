@@ -5,21 +5,11 @@ import {ILayerZeroReceiver, Origin} from "@layerzerolabs/lz-evm-protocol-v2/cont
 
 interface IOAppReceiver is ILayerZeroReceiver {
     /**
-     * @notice Indicates whether an address is an approved composeMsg sender to the Endpoint.
-     * @param _origin The origin information containing the source endpoint and sender address.
-     *  - srcEid: The source chain endpoint ID.
-     *  - sender: The sender address on the src chain.
-     *  - nonce: The nonce of the message.
-     * @param _message The lzReceive payload.
-     * @param _sender The sender address.
-     * @return isSender Is a valid sender.
+     * @notice Retrieves the address responsible for 'sending' composeMsg's to the Endpoint.
+     * @return sender The address responsible for 'sending' composeMsg's to the Endpoint.
      *
      * @dev Applications can optionally choose to implement a separate composeMsg sender that is NOT the bridging layer.
-     * @dev The default sender IS the OAppReceiver implementer.
+     * @dev The default sender IS the OApp implementer.
      */
-    function isComposeMsgSender(
-        Origin calldata _origin,
-        bytes calldata _message,
-        address _sender
-    ) external view returns (bool isSender);
+    function composeMsgSender() external view returns (address sender);
 }

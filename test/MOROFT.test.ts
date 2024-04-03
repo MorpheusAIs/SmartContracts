@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
 
 import { LayerZeroEndpointV2Mock, MOROFT } from '@/generated-types/ethers';
+import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 
@@ -42,6 +43,13 @@ describe('MOROFT', () => {
       expect(await mor.name()).to.equal('MOR');
       expect(await mor.symbol()).to.equal('MOR');
       expect(await mor.minter()).to.equal(MINTER.address);
+    });
+    it('should revert if LZ endpoint is zero address', async () => {
+      const MOR = await ethers.getContractFactory('MOROFT');
+
+      await expect(MOR.deploy(lZEndpointMock, DELEGATE.address, ZERO_ADDR)).to.be.revertedWith(
+        'MOROFT: invalid minter',
+      );
     });
   });
 

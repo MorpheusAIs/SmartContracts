@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers, expect } from 'hardhat';
 
-import { MOROFT, OptionsBuilderMock } from '@/generated-types/ethers';
+import { MOROFT, OptionsGenerator } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 
@@ -12,7 +12,7 @@ describe('MOROFT', () => {
   let MINTER: SignerWithAddress;
   let DELEGATE: SignerWithAddress;
 
-  let optionsBuilderMock: OptionsBuilderMock;
+  let optionsGenerator: OptionsGenerator;
 
   let l1Mor: MOROFT;
   let l2Mor: MOROFT;
@@ -32,19 +32,19 @@ describe('MOROFT', () => {
       {
         forking: {
           jsonRpcUrl: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-          blockNumber: 190000000,
+          // blockNumber: 190000000,
         },
       },
     ]);
 
     [SECOND, MINTER, DELEGATE] = await ethers.getSigners();
 
-    const [MOR, OptionsBuilderMock] = await Promise.all([
+    const [MOR, OptionsGenerator] = await Promise.all([
       ethers.getContractFactory('MOROFT'),
-      ethers.getContractFactory('OptionsBuilderMock'),
+      ethers.getContractFactory('OptionsGenerator'),
     ]);
 
-    optionsBuilderMock = await OptionsBuilderMock.deploy();
+    optionsGenerator = await OptionsGenerator.deploy();
     l1Mor = await MOR.deploy(l1LzEndpointV2Address, DELEGATE.address, MINTER.address);
     l2Mor = await MOR.deploy(l2LzEndpointV2Address, DELEGATE.address, MINTER.address);
 
@@ -75,7 +75,7 @@ describe('MOROFT', () => {
       const executorGas = 200000; // Gas limit for the executor
       const executorValue = 0; // msg.value for the lzReceive() function on destination in wei
       // https://docs.layerzero.network/contracts/options#step-2-initializing-options
-      const options = await optionsBuilderMock.addExecutorLzReceiveOption('0x0003', executorGas, executorValue);
+      const options = await optionsGenerator.createLzReceiveOption(executorGas, executorValue);
 
       // Set default options
       // https://docs.layerzero.network/contracts/oft#message-execution-options
