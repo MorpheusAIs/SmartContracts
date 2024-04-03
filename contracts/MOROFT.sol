@@ -6,18 +6,18 @@ import {OFT} from "./@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import {IMOROFT, IERC20, IERC165, IOAppCore} from "./interfaces/IMOROFT.sol";
 
 contract MOROFT is IMOROFT, OFT {
-    address private immutable minter_;
+    address private immutable _minter;
 
     constructor(
-        address _layerZeroEndpoint,
-        address _delegate,
-        address _minter
-    ) OFT("MOR", "MOR", _layerZeroEndpoint, _delegate) {
-        require(_minter != address(0), "MOROFT: invalid minter");
+        address layerZeroEndpoint_,
+        address delegate_,
+        address minter_
+    ) OFT("MOR", "MOR", layerZeroEndpoint_, delegate_) {
+        require(minter_ != address(0), "MOROFT: invalid minter");
 
-        minter_ = _minter;
+        _minter = minter_;
 
-        transferOwnership(_delegate);
+        transferOwnership(delegate_);
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
@@ -29,21 +29,21 @@ contract MOROFT is IMOROFT, OFT {
     }
 
     function minter() public view returns (address) {
-        return minter_;
+        return _minter;
     }
 
-    function mint(address _account, uint256 _amount) public {
+    function mint(address account_, uint256 amount_) public {
         require(_msgSender() == minter(), "MOROFT: invalid caller");
 
-        _mint(_account, _amount);
+        _mint(account_, amount_);
     }
 
-    function burn(uint256 _amount) public virtual {
-        _burn(_msgSender(), _amount);
+    function burn(uint256 amount_) public virtual {
+        _burn(_msgSender(), amount_);
     }
 
-    function burnFrom(address _account, uint256 _amount) public virtual {
-        _spendAllowance(_account, _msgSender(), _amount);
-        _burn(_account, _amount);
+    function burnFrom(address account_, uint256 amount_) public virtual {
+        _spendAllowance(account_, _msgSender(), amount_);
+        _burn(account_, amount_);
     }
 }
