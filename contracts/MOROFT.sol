@@ -6,7 +6,8 @@ import {OFT} from "./@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import {IMOROFT, IERC20, IERC165, IOAppCore} from "./interfaces/IMOROFT.sol";
 
 /**
- * This is the interface for MOROFT token contract. The token is ERC20 with burnable and Layer Zero OFT features.
+ * The token is ERC20 with burnable and Layer Zero OFT features.
+ * @custom:security-contact Devs@Mor.org
  */
 contract MOROFT is IMOROFT, OFT {
     address private immutable _minter;
