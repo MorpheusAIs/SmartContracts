@@ -2,15 +2,16 @@
 
 Smart Contracts For The Morpheus Network
 
-This repository contains the smart contracts for the Morpheus Network.
-Contains the following contracts:
+This repository contains following smart contracts for the Morpheus Network.
+* **MOR** - The Morpheus Network Token.
+* **MOR OFT** - The Morpheus Network Token with integrated LayerZero OFT (Omnichain Fungible Token) standard. 
+* **LinearDistributionIntervalDecrease** - A library for calculating linear distribution intervals with a plenty of options.
+* **Distribution** - The contract that distributes the MOR tokens to the stakers and the team members.
+* **L1Sender** - A contract that allows to communicate between L1 and L2. It is used to send a minting request to the L2 using the Layer Zero. It is also used to transfer deposited tokens from the L1 to the L2.
+* **L2MessageReceiver** - A contract that receives messages from the L1Sender contract.
+* **L2TokenReceiver** - A contract that receives tokens from the L1Sender contract. It is used to Uniswap market making.
+* **L2TokenReceiverV2** - A contract that receives tokens from the L1Sender contract and used for Uniswap market making with extended functionality.
 
-* *MOR* - The Morpheus Network Token.
-* *LinearDistributionIntervalDecrease* - A library for calculating linear distribution intervals with a plenty of options.
-* *Distribution* - The contract that distributes the MOR tokens to the stakers and the team members.
-* *L1Sender* - A contract that allows to communicate between L1 and L2. It is used to send a minting request to the L2 using the Layer Zero. It is also used to transfer deposited tokens from the L1 to the L2.
-* *L2MessageReceiver* - A contract that receives messages from the L1Sender contract.
-* *L2TokenReceiver* - A contract that receives tokens from the L1Sender contract. It is used to Uniswap market making.
 
 [**Documentation**](https://github.com/MorpheusAIs/Docs/blob/main/Smart%20Contracts/Overview.md)
 
