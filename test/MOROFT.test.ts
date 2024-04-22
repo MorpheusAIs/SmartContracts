@@ -44,7 +44,7 @@ describe('MOROFT', () => {
       expect(await mor.symbol()).to.equal('MOR');
       expect(await mor.minter()).to.equal(MINTER.address);
     });
-    it('should revert if LZ endpoint is zero address', async () => {
+    it('should revert if minter is zero address', async () => {
       const MOR = await ethers.getContractFactory('MOROFT');
 
       await expect(MOR.deploy(lZEndpointMock, DELEGATE.address, ZERO_ADDR)).to.be.revertedWith(
