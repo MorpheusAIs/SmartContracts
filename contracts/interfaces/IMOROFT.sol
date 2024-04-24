@@ -6,7 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IOAppCore} from ".././@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppCore.sol";
 
 interface IMOROFT is IERC20, IERC165 {
-    function minter() external view returns (address);
+    function updateMinter(address minter_, bool status_) external;
 
     function mint(address account_, uint256 amount_) external;
 
