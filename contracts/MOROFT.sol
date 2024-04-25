@@ -7,7 +7,7 @@ import {IMOROFT, IERC20, IERC165, IOAppCore} from "./interfaces/IMOROFT.sol";
 
 /**
  * The token is ERC20 with burnable and Layer Zero OFT features.
- * @custom:security-contact Devs@Mor.org
+ * @custom:security-contact devs@mor.org
  */
 contract MOROFT is IMOROFT, OFT {
     address private immutable _minter;
@@ -41,17 +41,18 @@ contract MOROFT is IMOROFT, OFT {
     }
 
     /**
-     * @notice The function to get the minter address.
-     * @return The minter address.
+     * @dev See {IMOROFT-minter}.
      */
     function minter() public view returns (address) {
         return _minter;
     }
 
     /**
-     * @notice The function to mint tokens.
-     * @param account_ The address of the account to mint tokens to.
-     * @param amount_ The amount of tokens to mint.
+     * @dev See {IMOROFT-mint}.
+     *
+     * Requirements:
+     * - the caller must be the `minter()` address for this contract.
+     *
      */
     function mint(address account_, uint256 amount_) public {
         require(_msgSender() == minter(), "MOROFT: invalid caller");
@@ -60,27 +61,18 @@ contract MOROFT is IMOROFT, OFT {
     }
 
     /**
-     * @notice The function to destroys `amount` tokens from the caller.
-     * See {ERC20-_burn}.
-     * @param amount_ The amount of tokens to burn.
+     * @dev See {IMOROFT-burn}.
      */
     function burn(uint256 amount_) public {
         _burn(_msgSender(), amount_);
     }
 
     /**
-     * @notice The function to destroys `amount` tokens from `account`, deducting from the caller's
-     * allowance.
-     *
-     * See {ERC20-_burn} and {ERC20-allowance}.
+     * @dev See {IMOROFT-burnFrom, ERC20-_burn, ERC20-allowance}.
      *
      * Requirements:
-     *
      * - the caller must have allowance for ``accounts``'s tokens of at least
      * `amount`.
-     *
-     * @param account_ The address of the account to burn tokens from.
-     * @param amount_ The amount of tokens to burn.
      */
     function burnFrom(address account_, uint256 amount_) public {
         _spendAllowance(account_, _msgSender(), amount_);
