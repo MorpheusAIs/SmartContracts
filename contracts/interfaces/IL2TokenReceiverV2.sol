@@ -76,14 +76,14 @@ interface IL2TokenReceiverV2 is IERC165, IERC721Receiver {
      * @param amountIn_ The amount of tokens to swap.
      * @param amountOutMinimum_ The minimum amount of tokens to receive.
      * @param deadline_ The deadline for the swap.
-     * @param isFirstSwap_ The flag to indicate if the swapParams is initial.
+     * @param isUseFirstSwapParams_ The flag to indicate if the swapParams is initial.
      * @return The amount of tokens received.
      */
     function swap(
         uint256 amountIn_,
         uint256 amountOutMinimum_,
         uint256 deadline_,
-        bool isFirstSwap_
+        bool isUseFirstSwapParams_
     ) external returns (uint256);
 
     /**
