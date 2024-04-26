@@ -74,9 +74,9 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         uint256 amountIn_,
         uint256 amountOutMinimum_,
         uint256 deadline_,
-        bool isFirstSwap_
+        bool isUseFirstSwapParams_
     ) external onlyOwner returns (uint256) {
-        SwapParams memory params_ = _getSwapParams(isFirstSwap_);
+        SwapParams memory params_ = _getSwapParams(isUseFirstSwapParams_);
 
         ISwapRouter.ExactInputSingleParams memory swapParams_ = ISwapRouter.ExactInputSingleParams({
             tokenIn: params_.tokenIn,
@@ -157,8 +157,8 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         }
     }
 
-    function _getSwapParams(bool isEditFirstParams_) internal view returns (SwapParams memory) {
-        return isEditFirstParams_ ? firstSwapParams : secondSwapParams;
+    function _getSwapParams(bool isUseFirstSwapParams_) internal view returns (SwapParams memory) {
+        return isUseFirstSwapParams_ ? firstSwapParams : secondSwapParams;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}
