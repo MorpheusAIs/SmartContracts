@@ -7,10 +7,12 @@ import {IOAppCore} from ".././@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/inter
 
 interface IMOROFT is IERC20, IERC165 {
     /**
-     * @notice The function to get the minter address.
-     * @return The minter address.
+     * @notice The function update `minter` addresses.
+     *
+     * @param minter_ The upadted minter address.
+     * @param status_ The new status. True or false.
      */
-    function minter() external view returns (address);
+    function updateMinter(address minter_, bool status_) external;
 
     /**
      * @notice The function to mint tokens.

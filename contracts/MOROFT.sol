@@ -10,7 +10,7 @@ import {IMOROFT, IERC20, IERC165, IOAppCore} from "./interfaces/IMOROFT.sol";
  * @custom:security-contact devs@mor.org
  */
 contract MOROFT is IMOROFT, OFT {
-    address private immutable _minter;
+    mapping(address => bool) public isMinter;
 
     constructor(
         address layerZeroEndpoint_,
@@ -19,7 +19,7 @@ contract MOROFT is IMOROFT, OFT {
     ) OFT("MOR", "MOR", layerZeroEndpoint_, delegate_) {
         require(minter_ != address(0), "MOROFT: invalid minter");
 
-        _minter = minter_;
+        isMinter[minter_] = true;
 
         transferOwnership(delegate_);
     }
@@ -41,21 +41,25 @@ contract MOROFT is IMOROFT, OFT {
     }
 
     /**
-     * @dev See {IMOROFT-minter}.
+     * @dev See {IMOROFT-updateMinter}.
+     *
+     * Requirements:
+     * - the caller must be the contract `owner()`.
+     *
      */
-    function minter() public view returns (address) {
-        return _minter;
+    function updateMinter(address minter_, bool status_) external onlyOwner {
+        isMinter[minter_] = status_;
     }
 
     /**
      * @dev See {IMOROFT-mint}.
      *
      * Requirements:
-     * - the caller must be the `minter()` address for this contract.
+     * - the caller must be in the list of allowed minters. Check `isMinter`.
      *
      */
     function mint(address account_, uint256 amount_) public {
-        require(_msgSender() == minter(), "MOROFT: invalid caller");
+        require(isMinter[_msgSender()], "MOROFT: invalid caller");
 
         _mint(account_, amount_);
     }
