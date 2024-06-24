@@ -48,12 +48,19 @@ interface IDistributionV2 {
      * @param deposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
+     * @param lockStart The timestamp when the user locked his rewards.
+     * @param lockEnd The timestamp when the user can claim his rewards.
+     * @param multiplier The user's multiplier.
      */
     struct UserData {
         uint128 lastStake;
         uint256 deposited;
         uint256 rate;
         uint256 pendingRewards;
+        // Storage changes for DistributionV2
+        uint128 lockStart;
+        uint128 lockEnd;
+        uint256 multiplier;
     }
 
     /**
@@ -135,15 +142,22 @@ interface IDistributionV2 {
      * @param poolId_ The pool's id.
      * @param users_ The array of users.
      * @param amounts_ The array of amounts.
+     * @param lockEnds_ The array of lock ends.
      */
-    function manageUsersInPrivatePool(uint256 poolId_, address[] calldata users_, uint256[] calldata amounts_) external;
+    function manageUsersInPrivatePool(
+        uint256 poolId_,
+        address[] calldata users_,
+        uint256[] calldata amounts_,
+        uint128[] calldata lockEnds_
+    ) external;
 
     /**
      * The function to stake tokens in the public pool.
      * @param poolId_ The pool's id.
      * @param amount_ The amount of tokens to stake.
+     * @param lockEnd_ The timestamp when the user can withdraw his stake.
      */
-    function stake(uint256 poolId_, uint256 amount_) external;
+    function stake(uint256 poolId_, uint256 amount_, uint128 lockEnd_) external;
 
     /**
      * The function to claim rewards from the pool.

@@ -10,9 +10,11 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
 import {L1Sender} from "./L1Sender.sol";
-import {IDistribution} from "./interfaces/IDistribution.sol";
+import {IDistributionV2} from "./interfaces/IDistributionV2.sol";
 
-contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
+import "hardhat/console.sol";
+
+contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     bool public isNotUpgradeable;
@@ -123,21 +125,24 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     function manageUsersInPrivatePool(
         uint256 poolId_,
         address[] calldata users_,
-        uint256[] calldata amounts_
+        uint256[] calldata amounts_,
+        uint128[] calldata lockEnds_
     ) external onlyOwner poolExists(poolId_) {
         require(!pools[poolId_].isPublic, "DS: pool is public");
         require(users_.length == amounts_.length, "DS: invalid length");
+        require(users_.length == lockEnds_.length, "DS: invalid length");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
 
         for (uint256 i; i < users_.length; ++i) {
             address user_ = users_[i];
             uint256 amount_ = amounts_[i];
+            uint128 lockEnd_ = lockEnds_[i];
 
             uint256 deposited_ = usersData[user_][poolId_].deposited;
 
             if (deposited_ < amount_) {
-                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_);
+                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, lockEnd_);
             } else if (deposited_ > amount_) {
                 _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
             }
@@ -147,8 +152,12 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** Stake, claim, withdraw                                                                 ***/
     /**********************************************************************************************/
-    function stake(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
-        _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
+    function stake(
+        uint256 poolId_,
+        uint256 amount_,
+        uint128 lockEnd_
+    ) external poolExists(poolId_) poolPublic(poolId_) {
+        _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_), lockEnd_);
     }
 
     function claim(uint256 poolId_, address receiver_) external payable poolExists(poolId_) {
@@ -159,6 +168,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         UserData storage userData = usersData[user_][poolId_];
 
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
+        require(block.timestamp > userData.lockEnd, "DS: user claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
@@ -172,6 +182,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.rate = currentPoolRate_;
         userData.pendingRewards = 0;
 
+        _manageMultiplier(user_, poolId_);
+
         // Transfer rewards
         L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
 
@@ -182,7 +194,50 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
-    function getCurrentUserReward(uint256 poolId_, address user_) external view returns (uint256) {
+    function lockClaim(uint256 poolId_, uint128 lockEnd_) external poolExists(poolId_) {
+        // do we need to check if the pool is public?
+
+        address user_ = _msgSender();
+
+        // require(pools[poolId_].payoutStart < block.timestamp, "DS: pool isn't started");
+        require(getCurrentUserReward(poolId_, user_) > 0, "DS: nothing to lock");
+
+        _manageMultiplier(user_, poolId_);
+        _lockClaim(user_, poolId_, lockEnd_);
+
+        // event
+    }
+
+    function _lockClaim(address user_, uint256 poolId_, uint128 lockEnd_) private {
+        if (lockEnd_ < block.timestamp) {
+            // do we need to add minimal lock period?
+            return;
+            // or should we revert?
+        }
+
+        UserData storage userData = usersData[user_][poolId_];
+
+        uint128 lockStart_;
+        if (userData.lockEnd < block.timestamp) {
+            lockStart_ = uint128(block.timestamp);
+        } else {
+            lockStart_ = userData.lockStart;
+        }
+
+        userData.lockStart = lockStart_;
+        userData.lockEnd = lockEnd_;
+        userData.multiplier = _getSpecificPeriodMultiplier(pools[poolId_], lockStart_, lockEnd_);
+    }
+
+    function _manageMultiplier(address user_, uint256 poolId_) private {
+        UserData storage userData = usersData[user_][poolId_];
+
+        if (userData.lockEnd < block.timestamp) {
+            userData.multiplier = PRECISION;
+        }
+    }
+
+    function getCurrentUserReward(uint256 poolId_, address user_) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
             return 0;
         }
@@ -193,7 +248,13 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         return _getCurrentUserReward(currentPoolRate_, userData);
     }
 
-    function _stake(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) private {
+    function _stake(
+        address user_,
+        uint256 poolId_,
+        uint256 amount_,
+        uint256 currentPoolRate_,
+        uint128 lockEnd_
+    ) private {
         require(amount_ > 0, "DS: nothing to stake");
 
         Pool storage pool = pools[poolId_];
@@ -224,6 +285,10 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.lastStake = uint128(block.timestamp);
         userData.rate = currentPoolRate_;
         userData.deposited += amount_;
+
+        _manageMultiplier(user_, poolId_);
+
+        _lockClaim(user_, poolId_, lockEnd_);
 
         emit UserStaked(poolId_, user_, amount_);
     }
@@ -274,6 +339,8 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
         userData.deposited = newDeposited_;
         userData.pendingRewards = pendingRewards_;
 
+        _manageMultiplier(user_, poolId_);
+
         if (pool.isPublic) {
             totalDepositedInPublicPools -= amount_;
 
@@ -286,7 +353,53 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     function _getCurrentUserReward(uint256 currentPoolRate_, UserData memory userData_) private pure returns (uint256) {
         uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.deposited) / PRECISION;
 
-        return userData_.pendingRewards + newRewards_;
+        uint256 commonReward_ = userData_.pendingRewards + newRewards_;
+
+        return (commonReward_ * userData_.multiplier) / PRECISION;
+    }
+
+    function getSpecificPeriodMultiplier(
+        uint256 poolId_,
+        uint128 startTime_,
+        uint128 endTime_
+    ) public view returns (uint256) {
+        if (!_poolExists(poolId_) || startTime_ > endTime_) {
+            return 0;
+        }
+
+        return _getSpecificPeriodMultiplier(pools[poolId_], startTime_, endTime_);
+    }
+
+    function _getSpecificPeriodMultiplier(
+        Pool storage pool,
+        uint128 startTime_,
+        uint128 endTime_
+    ) internal view returns (uint256) {
+        if (startTime_ == endTime_) {
+            return PRECISION;
+        }
+
+        uint256 startReward_ = LinearDistributionIntervalDecrease.getPeriodReward(
+            pool.initialReward,
+            pool.rewardDecrease,
+            pool.payoutStart,
+            pool.decreaseInterval,
+            0,
+            startTime_
+        );
+
+        uint256 endReward_ = LinearDistributionIntervalDecrease.getPeriodReward(
+            pool.initialReward,
+            pool.rewardDecrease,
+            pool.payoutStart,
+            pool.decreaseInterval,
+            0,
+            endTime_
+        );
+
+        assert(startReward_ != 0);
+
+        return ((endReward_ - startReward_) * PRECISION) / startReward_ + PRECISION;
     }
 
     function _getCurrentPoolRate(uint256 poolId_) private view returns (uint256) {
