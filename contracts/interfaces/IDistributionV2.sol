@@ -45,22 +45,22 @@ interface IDistributionV2 {
     /**
      * The structure that stores the user's rate data of pool.
      * @param lastStake The timestamp when the user last staked tokens.
-     * @param deposited The amount of tokens deposited in the pool.
+     * @param realDeposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      * @param lockStart The timestamp when the user locked his rewards.
      * @param lockEnd The timestamp when the user can claim his rewards.
-     * @param multiplier The user's multiplier.
+     * @param totalDeposited The amount of tokens deposited in the pool multiplied by the user's multiplier.
      */
     struct UserData {
         uint128 lastStake;
-        uint256 deposited;
+        uint256 realDeposited;
         uint256 rate;
         uint256 pendingRewards;
         // Storage changes for DistributionV2
         uint128 lockStart;
         uint128 lockEnd;
-        uint256 multiplier;
+        uint256 totalDeposited;
     }
 
     /**
