@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { DistributionV2, IDistribution } from '@/generated-types/ethers';
+import { DistributionV2Mock, IDistribution } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 import { getDefaultPool, oneHour } from '@/test/helpers/distribution-helper';
 import { Reverter } from '@/test/helpers/reverter';
@@ -9,13 +9,13 @@ import { Reverter } from '@/test/helpers/reverter';
 describe('LinearDistributionIntervalDecrease', () => {
   const reverter = new Reverter();
 
-  let distribution: DistributionV2;
+  let distribution: DistributionV2Mock;
 
   before(async () => {
     const [libFactory] = await Promise.all([ethers.getContractFactory('LinearDistributionIntervalDecrease')]);
     const lib = await libFactory.deploy();
 
-    const distributionFactory = await ethers.getContractFactory('DistributionV2', {
+    const distributionFactory = await ethers.getContractFactory('DistributionV2Mock', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
       },
@@ -263,7 +263,7 @@ describe('LinearDistributionIntervalDecrease', () => {
   });
 });
 
-const _testRewardsCalculation = async (distribution: DistributionV2, poolId: number, payoutStart: number) => {
+const _testRewardsCalculation = async (distribution: DistributionV2Mock, poolId: number, payoutStart: number) => {
   let reward;
 
   // Range in one interval, first interval

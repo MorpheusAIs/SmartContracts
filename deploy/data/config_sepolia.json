@@ -1,5 +1,4 @@
 {
-  "cap": "1000000000000000000000000",
   "chainsConfig": {
     "senderChainId": 10161,
     "receiverChainId": 10231

@@ -5,7 +5,6 @@ import { IDistribution } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 
 export type Config = {
-  cap: number;
   chainsConfig: {
     senderChainId: number;
     receiverChainId: number;
@@ -53,13 +52,9 @@ export function parseConfig(chainId: bigint): Config {
     throw new Error(`Invalid chainId`);
   }
 
-  // configPath = `deploy/data/config.json`;
+  configPath = `deploy/data/config.json`;
 
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
-
-  if (config.cap == undefined) {
-    throw new Error(`Invalid 'cap' value.`);
-  }
 
   if (config.chainsConfig == undefined) {
     throw new Error(`Invalid 'chainsConfig' value.`);

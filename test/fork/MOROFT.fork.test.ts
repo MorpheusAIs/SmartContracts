@@ -58,7 +58,8 @@ describe('MOROFT', () => {
   after(async () => {
     await ethers.provider.send('hardhat_reset', []);
   });
-
+  0x000000000000000000000000901f2d23823730fb7f2356920e0e273efdcdfe17;
+  0x901f2d23823730fb7f2356920e0e273efdcdfe17;
   describe('send', () => {
     it('should send token to LZ endpoint and burn tokens', async () => {
       // Mint tokens to `SECOND`
@@ -100,6 +101,7 @@ describe('MOROFT', () => {
         oftCmd: '0x', // bytes. The OFT command to be executed, unused in default OFT implementations.
       };
       const quoteRes = await l1Mor.quoteSend(sendParams, false);
+      // [40267, '0x000000000000000000000000901F2d23823730fb7F2356920e0E273EFdCdFe17', 123, 1, '0x', '0x', '0x'];
 
       // Send token to L2 and check that tokens have burned on L1
       const messagingFee = {
