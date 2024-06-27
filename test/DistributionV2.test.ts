@@ -1277,7 +1277,7 @@ describe.only('DistributionV2', () => {
       userData = await distribution.usersData(OWNER, poolId);
       expect(userData.pendingRewards).to.equal(wei(0));
     });
-    describe.only('with multiplier', () => {
+    describe('with multiplier', () => {
       const lockEnd = oneDay + oneDay;
 
       it('should correctly claim, one user, without redeposits', async () => {
@@ -2217,6 +2217,28 @@ describe.only('DistributionV2', () => {
       const reward = await distribution.getCurrentUserReward(3, OWNER);
 
       expect(reward).to.eq(0);
+    });
+  });
+
+  describe.only('#getSpecificPeriodMultiplier', () => {
+    const poolId = 0;
+
+    beforeEach(async () => {
+      const pool = {
+        ...getDefaultPool(),
+        initialReward: wei(14400),
+        rewardDecrease: wei(2.468994701),
+      };
+
+      await distribution.createPool(pool);
+    });
+
+    it('should calculate multiplier correctly', async () => {
+      const multiplier = await distribution.getSpecificPeriodMultiplier(poolId, oneDay + oneDay, oneDay + 365 * oneDay);
+
+      await distribution.getCurrentUserReward.send(poolId, OWNER);
+
+      expect(multiplier).to.eq(wei(2.124011542, 25));
     });
   });
 
