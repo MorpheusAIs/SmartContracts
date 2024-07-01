@@ -5,17 +5,20 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {PRECISION, DECIMAL} from "@solarity/solidity-lib/utils/Globals.sol";
+import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
 import {L1Sender} from "./L1Sender.sol";
 import {IDistributionV2} from "./interfaces/IDistributionV2.sol";
 
-import "hardhat/console.sol";
+import {LogExpMath} from "./libs/LogExpMath.sol";
 
 contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
+
+    uint128 constant DECIMAL = 1e18;
+    uint256 constant POWER_MAX = (DECIMAL * 1661327546) / 100000000;
 
     bool public isNotUpgradeable;
 
@@ -31,6 +34,9 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
     // Total deposited storage
     uint256 public totalDepositedInPublicPools;
+
+    // TODO: add function to change this value
+    uint128 public constant distributionPeriod = 489283200; // 489283200
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -428,11 +434,23 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         return _getSpecificPeriodMultiplier(pools[poolId_], startTime_, endTime_);
     }
 
+    function tanh(uint128 x_) public pure returns (uint256) {
+        assert(x_ < uint128(type(int128).max));
+
+        int256 exp_x_ = LogExpMath.exp(int128(x_));
+        int256 exp_minus_x = LogExpMath.exp(-int128(x_));
+
+        return uint256(((exp_x_ - exp_minus_x) * int128(DECIMAL)) / (exp_x_ + exp_minus_x));
+    }
+
     function _getSpecificPeriodMultiplier(
         Pool storage pool,
         uint128 startTime_,
         uint128 endTime_
     ) internal view returns (uint256) {
+        uint256 maximalMultipier_ = (DECIMAL * 107) / 10;
+        uint256 minimalMultipier_ = DECIMAL;
+
         if (startTime_ <= pool.payoutStart) {
             return PRECISION;
         }
@@ -441,27 +459,17 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
             return PRECISION;
         }
 
-        uint256 startReward_ = LinearDistributionIntervalDecrease.getPeriodReward(
-            pool.initialReward,
-            pool.rewardDecrease,
-            pool.payoutStart,
-            pool.decreaseInterval,
-            0,
-            startTime_
-        );
+        uint256 multipier_ = (POWER_MAX *
+            (tanh(2 * (((endTime_ - pool.payoutStart) * DECIMAL) / distributionPeriod)) -
+                tanh(2 * (((startTime_ - pool.payoutStart) * DECIMAL) / distributionPeriod)))) / DECIMAL;
 
-        assert(startReward_ != 0);
+        if (multipier_ > maximalMultipier_) {
+            multipier_ = maximalMultipier_;
+        } else if (multipier_ < minimalMultipier_) {
+            multipier_ = minimalMultipier_;
+        }
 
-        uint256 endReward_ = LinearDistributionIntervalDecrease.getPeriodReward(
-            pool.initialReward,
-            pool.rewardDecrease,
-            pool.payoutStart,
-            pool.decreaseInterval,
-            0,
-            endTime_
-        );
-
-        return ((endReward_ - startReward_) * PRECISION) / startReward_ + PRECISION;
+        return (multipier_ * PRECISION) / DECIMAL;
     }
 
     function _getCurrentPoolRate(uint256 poolId_) private view returns (uint256) {
