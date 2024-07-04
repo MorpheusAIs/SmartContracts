@@ -14,11 +14,12 @@ import {IDistributionV2} from "./interfaces/IDistributionV2.sol";
 
 import {LogExpMath} from "./libs/LogExpMath.sol";
 
+import "hardhat/console.sol";
+
 contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     uint128 constant DECIMAL = 1e18;
-    uint256 constant POWER_MAX = (DECIMAL * 1661327546) / 100000000;
 
     bool public isNotUpgradeable;
 
@@ -34,9 +35,6 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
     // Total deposited storage
     uint256 public totalDepositedInPublicPools;
-
-    // TODO: add function to change this value
-    uint128 public constant distributionPeriod = 489283200; // 489283200
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -244,7 +242,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         } else {
             lockStart_ = userData.lockStart;
         }
-        uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(pools[poolId_], lockStart_, lockEnd_);
+        uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(lockStart_, lockEnd_);
         uint256 amountWithMultiplier_ = (userData.realDeposited * lockMultiplier_) / PRECISION;
 
         // Update pool data
@@ -326,7 +324,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
         uint256 amountWithMultiplier_;
         if (lockEnd_ > block.timestamp) {
-            uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(pool, uint128(block.timestamp), lockEnd_);
+            uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(uint128(block.timestamp), lockEnd_);
             amountWithMultiplier_ = (amount_ * lockMultiplier_) / PRECISION;
 
             userData.lockStart = uint128(block.timestamp);
@@ -386,7 +384,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 amountWithMultiplier_;
         uint256 newDepositedWithMultiplier_;
         if (userData.lockEnd > block.timestamp) {
-            uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(pool, uint128(block.timestamp), userData.lockEnd);
+            uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(uint128(block.timestamp), userData.lockEnd);
             amountWithMultiplier_ = (amount_ * lockMultiplier_) / PRECISION;
             newDepositedWithMultiplier_ = (newDeposited_ * lockMultiplier_) / PRECISION;
         } else {
@@ -431,37 +429,44 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
             return 0;
         }
 
-        return _getSpecificPeriodMultiplier(pools[poolId_], startTime_, endTime_);
+        return _getSpecificPeriodMultiplier(startTime_, endTime_);
     }
 
-    function tanh(uint128 x_) public pure returns (uint256) {
-        assert(x_ < uint128(type(int128).max));
-
+    /**
+     * @dev tahn(x) = (e^x - e^(-x)) / (e^x + e^(-x))
+     */
+    function _tanh(uint128 x_) private pure returns (uint256) {
         int256 exp_x_ = LogExpMath.exp(int128(x_));
         int256 exp_minus_x = LogExpMath.exp(-int128(x_));
 
         return uint256(((exp_x_ - exp_minus_x) * int128(DECIMAL)) / (exp_x_ + exp_minus_x));
     }
 
-    function _getSpecificPeriodMultiplier(
-        Pool storage pool,
-        uint128 startTime_,
-        uint128 endTime_
-    ) internal view returns (uint256) {
-        uint256 maximalMultipier_ = (DECIMAL * 107) / 10;
-        uint256 minimalMultipier_ = DECIMAL;
+    function _getSpecificPeriodMultiplier(uint128 startTime_, uint128 endTime_) internal pure returns (uint256) {
+        uint256 powerMax = 16_613275460000000000; // 16.61327546
 
-        if (startTime_ <= pool.payoutStart) {
-            return PRECISION;
+        uint256 maximalMultipier_ = 10_700000000000000000; // 10.7
+        uint256 minimalMultipier_ = DECIMAL; // 1
+
+        uint128 periodStart_ = 1721908800; // Thu, 25 Jul 2024 12:00:00 UTC
+        uint128 periodEnd_ = 2211192000; // Thu, 26 Jan 2040 12:00:00 UTC
+        uint128 distributionPeriod = 489283200;
+
+        if (startTime_ < periodStart_) {
+            startTime_ = periodStart_;
+        }
+
+        if (endTime_ > periodEnd_) {
+            endTime_ = periodEnd_;
         }
 
         if (startTime_ >= endTime_) {
             return PRECISION;
         }
 
-        uint256 multipier_ = (POWER_MAX *
-            (tanh(2 * (((endTime_ - pool.payoutStart) * DECIMAL) / distributionPeriod)) -
-                tanh(2 * (((startTime_ - pool.payoutStart) * DECIMAL) / distributionPeriod)))) / DECIMAL;
+        uint256 multipier_ = (powerMax *
+            (_tanh(2 * (((endTime_ - periodStart_) * DECIMAL) / distributionPeriod)) -
+                _tanh(2 * (((startTime_ - periodStart_) * DECIMAL) / distributionPeriod)))) / DECIMAL;
 
         if (multipier_ > maximalMultipier_) {
             multipier_ = maximalMultipier_;
