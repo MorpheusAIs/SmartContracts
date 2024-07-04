@@ -2220,7 +2220,7 @@ describe.only('DistributionV2', () => {
     });
   });
 
-  describe.only('#getSpecificPeriodMultiplier', () => {
+  describe('#getSpecificPeriodMultiplier', () => {
     const poolId = 0;
 
     beforeEach(async () => {

@@ -14,8 +14,6 @@ import {IDistributionV2} from "./interfaces/IDistributionV2.sol";
 
 import {LogExpMath} from "./libs/LogExpMath.sol";
 
-import "hardhat/console.sol";
-
 contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
