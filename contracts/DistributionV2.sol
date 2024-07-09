@@ -142,9 +142,9 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
             uint256 deposited_ = usersData[user_][poolId_].deposited;
 
-            if (deposited_ < amount_) {
+            if (deposited_ <= amount_) {
                 _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, lockEnds_[i]);
-            } else if (deposited_ > amount_) {
+            } else {
                 _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
             }
         }
@@ -200,7 +200,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
-    function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external poolExists(poolId_) {
+    function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external poolExists(poolId_) poolPublic(poolId_) {
         require(claimLockEnd_ > block.timestamp, "DS: invalid lock end value");
 
         address user_ = _msgSender();
@@ -229,7 +229,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         userData.claimLockStart = claimLockStart_;
         userData.claimLockEnd = claimLockEnd_;
 
-        // TODO: ADD EVENT
+        emit UserClaimLocked(poolId_, user_, claimLockStart_, claimLockEnd_);
     }
 
     function getCurrentUserReward(uint256 poolId_, address user_) public view returns (uint256) {
@@ -250,14 +250,18 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 currentPoolRate_,
         uint128 claimLockEnd_
     ) private {
-        require(amount_ > 0, "DS: nothing to stake");
-        require(claimLockEnd_ > block.timestamp || claimLockEnd_ == 0, "DS: invalid claim lock end");
-
         Pool storage pool = pools[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
+        if (claimLockEnd_ == 0) {
+            claimLockEnd_ = userData.claimLockEnd > block.timestamp ? userData.claimLockEnd : uint128(block.timestamp);
+        }
+
         if (pool.isPublic) {
+            require(amount_ > 0, "DS: nothing to stake");
+            require(claimLockEnd_ >= userData.claimLockEnd, "DS: invalid claim lock end");
+
             // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
             uint256 balanceBefore_ = IERC20(depositToken).balanceOf(address(this));
             IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
@@ -290,6 +294,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         userData.claimLockEnd = claimLockEnd_;
 
         emit UserStaked(poolId_, user_, amount_);
+        emit UserClaimLocked(poolId_, user_, uint128(block.timestamp), claimLockEnd_);
     }
 
     function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) private {
@@ -384,13 +389,17 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint128 claimLockEnd_
     ) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
-            return DECIMAL;
+            return PRECISION;
         }
 
         return _getClaimLockPeriodMultiplier(claimLockStart_, claimLockEnd_);
     }
 
     function getCurrentUserMultiplier(uint256 poolId_, address user_) public view returns (uint256) {
+        if (!_poolExists(poolId_)) {
+            return PRECISION;
+        }
+
         UserData storage userData = usersData[user_][poolId_];
 
         return _getClaimLockPeriodMultiplier(userData.claimLockStart, userData.claimLockEnd);
@@ -473,6 +482,10 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
     function removeUpgradeability() external onlyOwner {
         isNotUpgradeable = true;
+    }
+
+    function version() external pure returns (uint256) {
+        return 2;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {

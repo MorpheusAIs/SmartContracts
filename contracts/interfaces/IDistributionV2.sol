@@ -108,6 +108,15 @@ interface IDistributionV2 {
     event OverplusBridged(uint256 amount, bytes uniqueId);
 
     /**
+     * The event that is emitted when the user locks his rewards.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param claimLockStart The timestamp when the user locked his rewards.
+     * @param claimLockEnd The timestamp when the user can claim his rewards.
+     */
+    event UserClaimLocked(uint256 indexed poolId, address indexed user, uint128 claimLockStart, uint128 claimLockEnd);
+
+    /**
      * The function to initialize the contract.
      * @param depositToken_ The address of deposit token.
      * @param l1Sender_ The address of bridge contract.
