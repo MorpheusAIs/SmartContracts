@@ -34,33 +34,33 @@ interface IDistributionV2 {
      * The structure that stores the pool's rate data.
      * @param lastUpdate The timestamp when the pool was updated.
      * @param rate The current reward rate.
-     * @param totalDeposited The total amount of tokens deposited in the pool.
+     * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
      */
     struct PoolData {
         uint128 lastUpdate;
         uint256 rate;
-        uint256 totalDeposited;
+        uint256 totalVirtualDeposited;
     }
 
     /**
      * The structure that stores the user's rate data of pool.
      * @param lastStake The timestamp when the user last staked tokens.
-     * @param realDeposited The amount of tokens deposited in the pool.
+     * @param deposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
-     * @param lockStart The timestamp when the user locked his rewards.
-     * @param lockEnd The timestamp when the user can claim his rewards.
-     * @param totalDeposited The amount of tokens deposited in the pool multiplied by the user's multiplier.
+     * @param claimLockStart The timestamp when the user locked his rewards.
+     * @param claimLockEnd The timestamp when the user can claim his rewards.
+     * @param virtualDeposited The amount of tokens deposited in the pool with user multiplier.
      */
     struct UserData {
         uint128 lastStake;
-        uint256 realDeposited;
+        uint256 deposited;
         uint256 rate;
         uint256 pendingRewards;
         // Storage changes for DistributionV2
-        uint128 lockStart;
-        uint128 lockEnd;
-        uint256 totalDeposited;
+        uint128 claimLockStart;
+        uint128 claimLockEnd;
+        uint256 virtualDeposited;
     }
 
     /**
@@ -106,6 +106,15 @@ interface IDistributionV2 {
      * The event that is emitted when the overplus of the deposit tokens is bridged.
      */
     event OverplusBridged(uint256 amount, bytes uniqueId);
+
+    /**
+     * The event that is emitted when the user locks his rewards.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param claimLockStart The timestamp when the user locked his rewards.
+     * @param claimLockEnd The timestamp when the user can claim his rewards.
+     */
+    event UserClaimLocked(uint256 indexed poolId, address indexed user, uint128 claimLockStart, uint128 claimLockEnd);
 
     /**
      * The function to initialize the contract.
@@ -155,7 +164,7 @@ interface IDistributionV2 {
      * The function to stake tokens in the public pool.
      * @param poolId_ The pool's id.
      * @param amount_ The amount of tokens to stake.
-     * @param lockEnd_ The timestamp when the user can withdraw his stake.
+     * @param lockEnd_ The timestamp when the user can claim his rewards.
      */
     function stake(uint256 poolId_, uint256 amount_, uint128 lockEnd_) external;
 

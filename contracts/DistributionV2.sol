@@ -139,13 +139,12 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         for (uint256 i; i < users_.length; ++i) {
             address user_ = users_[i];
             uint256 amount_ = amounts_[i];
-            uint128 lockEnd_ = lockEnds_[i];
 
-            uint256 deposited_ = usersData[user_][poolId_].realDeposited;
+            uint256 deposited_ = usersData[user_][poolId_].deposited;
 
-            if (deposited_ < amount_) {
-                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, lockEnd_);
-            } else if (deposited_ > amount_) {
+            if (deposited_ <= amount_) {
+                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, lockEnds_[i]);
+            } else {
                 _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
             }
         }
@@ -157,9 +156,9 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     function stake(
         uint256 poolId_,
         uint256 amount_,
-        uint128 lockEnd_
+        uint128 claimLockEnd_
     ) external poolExists(poolId_) poolPublic(poolId_) {
-        _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_), lockEnd_);
+        _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_), claimLockEnd_);
     }
 
     function claim(uint256 poolId_, address receiver_) external payable poolExists(poolId_) {
@@ -170,26 +169,26 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         UserData storage userData = usersData[user_][poolId_];
 
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
-        require(block.timestamp > userData.lockEnd, "DS: user claim is locked");
+        require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
         require(pendingRewards_ > 0, "DS: nothing to claim");
 
-        uint256 overDeposit_ = userData.totalDeposited - userData.realDeposited;
-        if (overDeposit_ != 0) {
-            poolData.totalDeposited -= overDeposit_;
-
-            userData.totalDeposited = userData.realDeposited;
-        }
-
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
+        poolData.totalVirtualDeposited =
+            poolData.totalVirtualDeposited +
+            userData.deposited -
+            userData.virtualDeposited;
 
         // Update user data
         userData.rate = currentPoolRate_;
         userData.pendingRewards = 0;
+        userData.virtualDeposited = userData.deposited;
+        userData.claimLockStart = 0;
+        userData.claimLockEnd = 0;
 
         // Transfer rewards
         L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
@@ -201,25 +200,8 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
-    function getCurrentUserMultiplier(uint256 poolId_, address user_) public view returns (uint256) {
-        if (!_poolExists(poolId_)) {
-            return 0;
-        }
-
-        UserData storage userData = usersData[user_][poolId_];
-
-        if (userData.realDeposited == 0) {
-            return PRECISION;
-        }
-
-        return (userData.totalDeposited * PRECISION) / userData.realDeposited;
-    }
-
-    function lockClaim(uint256 poolId_, uint128 lockEnd_) external poolExists(poolId_) {
-        // do we need to check if the pool is public?
-
-        require(lockEnd_ > block.timestamp, "DS: invalid lock end value");
-        require(block.timestamp > pools[poolId_].payoutStart, "DS: invalid lock start value");
+    function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external poolExists(poolId_) poolPublic(poolId_) {
+        require(claimLockEnd_ > block.timestamp, "DS: invalid lock end value");
 
         address user_ = _msgSender();
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
@@ -227,58 +209,27 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        require(userData.realDeposited > 0, "DS: user isn't staked");
-
-        // require(pools[poolId_].payoutStart < block.timestamp, "DS: pool isn't started");
-        // require(getCurrentUserReward(poolId_, user_) > 0, "DS: nothing to lock");
+        require(userData.deposited > 0, "DS: user isn't staked");
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
-        uint128 lockStart_;
-        if (userData.lockEnd < block.timestamp) {
-            lockStart_ = uint128(block.timestamp);
-        } else {
-            lockStart_ = userData.lockStart;
-        }
-        uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(lockStart_, lockEnd_);
-        uint256 amountWithMultiplier_ = (userData.realDeposited * lockMultiplier_) / PRECISION;
+        uint128 claimLockStart_ = userData.claimLockStart > 0 ? userData.claimLockStart : uint128(block.timestamp);
+        uint256 multiplier_ = _getClaimLockPeriodMultiplier(claimLockStart_, claimLockEnd_);
+        uint256 virtualDeposited_ = (userData.deposited * multiplier_) / PRECISION;
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
-        poolData.totalDeposited += amountWithMultiplier_ - userData.realDeposited;
+        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
 
         // Update user data
         userData.lastStake = uint128(block.timestamp);
         userData.rate = currentPoolRate_;
-        userData.totalDeposited = amountWithMultiplier_;
-        userData.lockStart = lockStart_;
-        userData.lockEnd = lockEnd_;
+        userData.virtualDeposited = virtualDeposited_;
+        userData.claimLockStart = claimLockStart_;
+        userData.claimLockEnd = claimLockEnd_;
 
-        // event
-    }
-
-    function resetLockMultiplier(address user_, uint256 poolId_) external {
-        UserData storage userData = usersData[user_][poolId_];
-
-        if (getCurrentUserMultiplier(poolId_, user_) == PRECISION) {
-            return;
-        }
-
-        PoolData storage poolData = poolsData[poolId_];
-
-        uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
-
-        userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
-
-        // Update pool data
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
-        poolData.totalDeposited -= userData.totalDeposited - userData.realDeposited;
-
-        // Update user data
-        userData.rate = currentPoolRate_;
-        userData.totalDeposited = userData.realDeposited;
+        emit UserClaimLocked(poolId_, user_, claimLockStart_, claimLockEnd_);
     }
 
     function getCurrentUserReward(uint256 poolId_, address user_) public view returns (uint256) {
@@ -297,15 +248,20 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 poolId_,
         uint256 amount_,
         uint256 currentPoolRate_,
-        uint128 lockEnd_
+        uint128 claimLockEnd_
     ) private {
-        require(amount_ > 0, "DS: nothing to stake");
-
         Pool storage pool = pools[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
+        if (claimLockEnd_ == 0) {
+            claimLockEnd_ = userData.claimLockEnd > block.timestamp ? userData.claimLockEnd : uint128(block.timestamp);
+        }
+
         if (pool.isPublic) {
+            require(amount_ > 0, "DS: nothing to stake");
+            require(claimLockEnd_ >= userData.claimLockEnd, "DS: invalid claim lock end");
+
             // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
             uint256 balanceBefore_ = IERC20(depositToken).balanceOf(address(this));
             IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
@@ -313,36 +269,32 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
             amount_ = balanceAfter_ - balanceBefore_;
 
-            require(userData.realDeposited + amount_ >= pool.minimalStake, "DS: amount too low");
+            require(userData.deposited + amount_ >= pool.minimalStake, "DS: amount too low");
 
             totalDepositedInPublicPools += amount_;
         }
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
-        uint256 amountWithMultiplier_;
-        if (lockEnd_ > block.timestamp) {
-            uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(uint128(block.timestamp), lockEnd_);
-            amountWithMultiplier_ = (amount_ * lockMultiplier_) / PRECISION;
-
-            userData.lockStart = uint128(block.timestamp);
-        } else {
-            amountWithMultiplier_ = amount_;
-        }
+        uint256 depoisted_ = userData.deposited + amount_;
+        uint256 multiplier_ = _getClaimLockPeriodMultiplier(uint128(block.timestamp), claimLockEnd_);
+        uint256 virtualDeposited_ = (depoisted_ * multiplier_) / PRECISION;
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
-        poolData.totalDeposited += amountWithMultiplier_;
+        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
 
         // Update user data
         userData.lastStake = uint128(block.timestamp);
         userData.rate = currentPoolRate_;
-        userData.realDeposited += amount_;
-        userData.totalDeposited += amountWithMultiplier_;
-        userData.lockEnd = lockEnd_;
+        userData.deposited = depoisted_;
+        userData.virtualDeposited = virtualDeposited_;
+        userData.claimLockStart = uint128(block.timestamp);
+        userData.claimLockEnd = claimLockEnd_;
 
         emit UserStaked(poolId_, user_, amount_);
+        emit UserClaimLocked(poolId_, user_, uint128(block.timestamp), claimLockEnd_);
     }
 
     function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) private {
@@ -350,7 +302,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        uint256 deposited_ = userData.realDeposited;
+        uint256 deposited_ = userData.deposited;
         require(deposited_ > 0, "DS: user isn't staked");
 
         if (amount_ > deposited_) {
@@ -379,29 +331,22 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
             newDeposited_ = deposited_ - amount_;
         }
 
-        uint256 amountWithMultiplier_;
-        uint256 newDepositedWithMultiplier_;
-        if (userData.lockEnd > block.timestamp) {
-            uint256 lockMultiplier_ = _getSpecificPeriodMultiplier(uint128(block.timestamp), userData.lockEnd);
-            amountWithMultiplier_ = (amount_ * lockMultiplier_) / PRECISION;
-            newDepositedWithMultiplier_ = (newDeposited_ * lockMultiplier_) / PRECISION;
-        } else {
-            amountWithMultiplier_ = amount_;
-            newDepositedWithMultiplier_ = newDeposited_;
-        }
+        userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
-        uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
+        uint256 multiplier_ = _getClaimLockPeriodMultiplier(uint128(block.timestamp), userData.claimLockEnd);
+        uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
-        poolData.totalDeposited -= amountWithMultiplier_;
+        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
 
         // Update user data
         userData.rate = currentPoolRate_;
-        userData.realDeposited = newDeposited_;
-        userData.totalDeposited = newDepositedWithMultiplier_;
-        userData.pendingRewards = pendingRewards_;
+        userData.deposited = newDeposited_;
+        userData.virtualDeposited = virtualDeposited_;
+        userData.claimLockStart = uint128(block.timestamp);
+        userData.claimLockEnd = userData.claimLockEnd;
 
         if (pool.isPublic) {
             totalDepositedInPublicPools -= amount_;
@@ -413,21 +358,51 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function _getCurrentUserReward(uint256 currentPoolRate_, UserData memory userData_) private pure returns (uint256) {
-        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.totalDeposited) / PRECISION;
+        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.virtualDeposited) / PRECISION;
 
         return userData_.pendingRewards + newRewards_;
     }
 
-    function getSpecificPeriodMultiplier(
-        uint256 poolId_,
-        uint128 startTime_,
-        uint128 endTime_
-    ) public view returns (uint256) {
-        if (!_poolExists(poolId_) || startTime_ > endTime_) {
-            return 0;
+    function _getCurrentPoolRate(uint256 poolId_) private view returns (uint256) {
+        PoolData storage poolData = poolsData[poolId_];
+
+        if (poolData.totalVirtualDeposited == 0) {
+            return poolData.rate;
         }
 
-        return _getSpecificPeriodMultiplier(startTime_, endTime_);
+        uint256 rewards_ = getPeriodReward(poolId_, poolData.lastUpdate, uint128(block.timestamp));
+
+        return poolData.rate + (rewards_ * PRECISION) / poolData.totalVirtualDeposited;
+    }
+
+    function _poolExists(uint256 poolId_) private view returns (bool) {
+        return poolId_ < pools.length;
+    }
+
+    /**********************************************************************************************/
+    /*** Claim lock multiplier                                                                  ***/
+    /**********************************************************************************************/
+
+    function getClaimLockPeriodMultiplier(
+        uint256 poolId_,
+        uint128 claimLockStart_,
+        uint128 claimLockEnd_
+    ) public view returns (uint256) {
+        if (!_poolExists(poolId_)) {
+            return PRECISION;
+        }
+
+        return _getClaimLockPeriodMultiplier(claimLockStart_, claimLockEnd_);
+    }
+
+    function getCurrentUserMultiplier(uint256 poolId_, address user_) public view returns (uint256) {
+        if (!_poolExists(poolId_)) {
+            return PRECISION;
+        }
+
+        UserData storage userData = usersData[user_][poolId_];
+
+        return _getClaimLockPeriodMultiplier(userData.claimLockStart, userData.claimLockEnd);
     }
 
     /**
@@ -440,55 +415,31 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         return uint256(((exp_x_ - exp_minus_x) * int128(DECIMAL)) / (exp_x_ + exp_minus_x));
     }
 
-    function _getSpecificPeriodMultiplier(uint128 startTime_, uint128 endTime_) internal pure returns (uint256) {
-        uint256 powerMax = 16_613275460000000000; // 16.61327546
+    function _getClaimLockPeriodMultiplier(uint128 start_, uint128 end_) internal pure returns (uint256) {
+        uint256 powerMax = 16_613_275_460_000_000_000; // 16.61327546 * DECIMAL
 
-        uint256 maximalMultipier_ = 10_700000000000000000; // 10.7
-        uint256 minimalMultipier_ = DECIMAL; // 1
+        uint256 maximalMultipier_ = 10_700_000_000_000_000_000; // 10.7 * DECIMAL
+        uint256 minimalMultipier_ = DECIMAL; // 1 * DECIMAL
 
         uint128 periodStart_ = 1721908800; // Thu, 25 Jul 2024 12:00:00 UTC
-        uint128 periodEnd_ = 2211192000; // Thu, 26 Jan 2040 12:00:00 UTC
-        uint128 distributionPeriod = 489283200;
+        uint128 periodEnd_ = 2211192000; // Thu, 26 Jan 2040 12:00:00 UTC TODO
+        uint128 distributionPeriod = periodEnd_ - periodStart_;
 
-        if (startTime_ < periodStart_) {
-            startTime_ = periodStart_;
-        }
+        end_ = end_ > periodEnd_ ? periodEnd_ : end_;
+        start_ = start_ < periodStart_ ? periodStart_ : start_;
 
-        if (endTime_ > periodEnd_) {
-            endTime_ = periodEnd_;
-        }
-
-        if (startTime_ >= endTime_) {
+        if (start_ >= end_) {
             return PRECISION;
         }
 
-        uint256 multipier_ = (powerMax *
-            (_tanh(2 * (((endTime_ - periodStart_) * DECIMAL) / distributionPeriod)) -
-                _tanh(2 * (((startTime_ - periodStart_) * DECIMAL) / distributionPeriod)))) / DECIMAL;
+        uint256 endPower_ = _tanh(2 * (((end_ - periodStart_) * DECIMAL) / distributionPeriod));
+        uint256 startPower_ = _tanh(2 * (((start_ - periodStart_) * DECIMAL) / distributionPeriod));
+        uint256 multipier_ = (powerMax * (endPower_ - startPower_)) / DECIMAL;
 
-        if (multipier_ > maximalMultipier_) {
-            multipier_ = maximalMultipier_;
-        } else if (multipier_ < minimalMultipier_) {
-            multipier_ = minimalMultipier_;
-        }
+        multipier_ = multipier_ > maximalMultipier_ ? maximalMultipier_ : multipier_;
+        multipier_ = multipier_ < minimalMultipier_ ? minimalMultipier_ : multipier_;
 
         return (multipier_ * PRECISION) / DECIMAL;
-    }
-
-    function _getCurrentPoolRate(uint256 poolId_) private view returns (uint256) {
-        PoolData storage poolData = poolsData[poolId_];
-
-        if (poolData.totalDeposited == 0) {
-            return poolData.rate;
-        }
-
-        uint256 rewards_ = getPeriodReward(poolId_, poolData.lastUpdate, uint128(block.timestamp));
-
-        return poolData.rate + (rewards_ * PRECISION) / poolData.totalDeposited;
-    }
-
-    function _poolExists(uint256 poolId_) private view returns (bool) {
-        return poolId_ < pools.length;
     }
 
     /**********************************************************************************************/
@@ -531,6 +482,10 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
     function removeUpgradeability() external onlyOwner {
         isNotUpgradeable = true;
+    }
+
+    function version() external pure returns (uint256) {
+        return 2;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {
