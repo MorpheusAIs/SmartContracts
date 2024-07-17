@@ -29,12 +29,13 @@ contract DistributionExt is IDistributionExt, Ownable {
 
     function getTotalRewards() external view returns (uint256) {
         uint256 count_ = poolIds.length;
+        IDistribution distribution_ = IDistribution(distribution);
         uint256 amount_;
 
         for (uint256 i = 0; i < count_; i++) {
             uint256 poolId = poolIds[i];
 
-            amount_ += IDistribution(distribution).getPeriodReward(poolId, 0, uint128(block.timestamp));
+            amount_ += distribution_.getPeriodReward(poolId, 0, uint128(block.timestamp));
         }
 
         return amount_;
