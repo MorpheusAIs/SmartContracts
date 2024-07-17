@@ -33,9 +33,9 @@ contract DistributionExt is IDistributionExt, Ownable {
         uint256 amount_;
 
         for (uint256 i = 0; i < count_; i++) {
-            uint256 poolId = poolIds[i];
+            uint256 poolId_ = poolIds[i];
 
-            amount_ += distribution_.getPeriodReward(poolId, 0, uint128(block.timestamp));
+            amount_ += distribution_.getPeriodReward(poolId_, 0, uint128(block.timestamp));
         }
 
         return amount_;

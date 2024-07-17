@@ -153,4 +153,4 @@ describe('DistributionExt', () => {
 });
 
 // npx hardhat test "test/extensions/DistributionExt.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/libs/LinearDistributionIntervalDecrease.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/extensions/DistributionExt.test.ts"
