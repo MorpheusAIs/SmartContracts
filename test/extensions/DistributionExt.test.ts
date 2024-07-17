@@ -73,7 +73,7 @@ describe('DistributionExt', () => {
   });
 
   describe('#getTotalRewards', () => {
-    it('should return correct rewards the test pools', async () => {
+    it('should return correct rewards for the test pools', async () => {
       const defaultPool = getDefaultPool();
 
       const pool0 = { ...defaultPool };
@@ -116,7 +116,7 @@ describe('DistributionExt', () => {
       expect(reward).to.eq(wei(100 + 98 + 96 + 200 + 198));
     });
 
-    it('should return correct rewards in a pool where `payoutStart % decreaseInterval != 0`', async () => {
+    it('should return correct rewards for the real pools', async () => {
       const pool = {
         ...getDefaultPool(),
         initialReward: wei(3456),
