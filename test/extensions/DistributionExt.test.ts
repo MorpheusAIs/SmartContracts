@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 
 import { setTime } from '../helpers/block-helper';
 
-import { DistributionExt, DistributionV2 } from '@/generated-types/ethers';
+import { DistributionExt, DistributionV2, L1SenderV2 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { getDefaultPool, oneDay, oneHour } from '@/test/helpers/distribution-helper';
@@ -21,9 +21,13 @@ describe('DistributionExt', () => {
   before(async () => {
     [, SECOND] = await ethers.getSigners();
 
-    const [libFactory] = await Promise.all([ethers.getContractFactory('LinearDistributionIntervalDecrease')]);
-    const lib = await libFactory.deploy();
+    const [ERC1967ProxyFactory, LinearDistributionIntervalDecreaseFactory, DistributionExtFactory] = await Promise.all([
+      ethers.getContractFactory('ERC1967Proxy'),
+      ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+      ethers.getContractFactory('DistributionExt'),
+    ]);
 
+    const lib = await LinearDistributionIntervalDecreaseFactory.deploy();
     const distributionFactory = await ethers.getContractFactory('DistributionV2', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
@@ -32,13 +36,59 @@ describe('DistributionExt', () => {
 
     distribution = await distributionFactory.deploy();
 
-    const distributionExtFactory = await ethers.getContractFactory('DistributionExt');
-    distributionExt = await distributionExtFactory.deploy(await distribution.getAddress(), [0]);
+    const distributionExtImpl = await DistributionExtFactory.deploy();
+    const distributionExtProxy = await ERC1967ProxyFactory.deploy(distributionExtImpl, '0x');
+    distributionExt = DistributionExtFactory.attach(distributionExtProxy) as DistributionExt;
+    await distributionExt.DistributionExt_init(await distribution.getAddress(), [0]);
 
     await reverter.snapshot();
   });
 
   afterEach(reverter.revert);
+
+  describe('#constructor', () => {
+    it('should disable initialize function', async () => {
+      const reason = 'Initializable: contract is already initialized';
+
+      const distributionExt_ = await (await ethers.getContractFactory('DistributionExt')).deploy();
+
+      await expect(distributionExt_.DistributionExt_init(await distribution.getAddress(), [0])).to.be.rejectedWith(
+        reason,
+      );
+    });
+  });
+
+  describe('#DistributionExt_init', () => {
+    it('should revert if try to call init function twice', async () => {
+      const reason = 'Initializable: contract is already initialized';
+
+      await expect(distributionExt.DistributionExt_init(await distribution.getAddress(), [0])).to.be.rejectedWith(
+        reason,
+      );
+    });
+    it('should setup config', async () => {
+      expect(await distributionExt.distribution()).to.be.equal(await distribution.getAddress());
+      expect(await distributionExt.poolIds(0)).to.be.deep.equal(0);
+    });
+  });
+
+  describe('#_authorizeUpgrade', () => {
+    it('should correctly upgrade', async () => {
+      const V2Factory = await ethers.getContractFactory('L1SenderV2');
+      const V2Implementation = await V2Factory.deploy();
+
+      await distributionExt.upgradeTo(V2Implementation);
+
+      const V2 = V2Factory.attach(distributionExt) as L1SenderV2;
+
+      expect(await V2.version()).to.eq(2);
+    });
+    it('should revert if caller is not the owner', async () => {
+      await expect(distributionExt.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
+  });
 
   describe('setDistribution', () => {
     it('should set distribution', async () => {

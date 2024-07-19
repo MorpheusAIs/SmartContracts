@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IDistribution} from "../interfaces/IDistribution.sol";
 import {IDistributionExt} from "../interfaces/extensions/IDistributionExt.sol";
 
-contract DistributionExt is IDistributionExt, Ownable {
+contract DistributionExt is IDistributionExt, OwnableUpgradeable, UUPSUpgradeable {
     address public distribution;
     uint256[] public poolIds;
 
-    constructor(address distribution_, uint256[] memory poolIds_) {
+    constructor() {
+        _disableInitializers();
+    }
+
+    function DistributionExt_init(address distribution_, uint256[] memory poolIds_) external initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
         setDistribution(distribution_);
         setPoolIds(poolIds_);
     }
@@ -40,4 +48,6 @@ contract DistributionExt is IDistributionExt, Ownable {
 
         return amount_;
     }
+
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 }
