@@ -201,7 +201,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external poolExists(poolId_) poolPublic(poolId_) {
-        require(claimLockEnd_ > block.timestamp, "DS: invalid lock end value");
+        require(claimLockEnd_ > block.timestamp, "DS: invalid lock end value (1)");
 
         address user_ = _msgSender();
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
@@ -210,6 +210,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         UserData storage userData = usersData[user_][poolId_];
 
         require(userData.deposited > 0, "DS: user isn't staked");
+        require(claimLockEnd_ > userData.claimLockEnd, "DS: invalid lock end value (2)");
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
@@ -358,7 +359,9 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function _getCurrentUserReward(uint256 currentPoolRate_, UserData memory userData_) private pure returns (uint256) {
-        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * userData_.virtualDeposited) / PRECISION;
+        uint256 depoisted_ = userData_.virtualDeposited == 0 ? userData_.deposited : userData_.virtualDeposited;
+
+        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * depoisted_) / PRECISION;
 
         return userData_.pendingRewards + newRewards_;
     }
