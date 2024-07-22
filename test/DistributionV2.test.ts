@@ -20,7 +20,6 @@ import {
   SwapRouterMock,
   WStETHMock,
 } from '@/generated-types/ethers';
-import { pool } from '@/generated-types/ethers/@uniswap/v3-core/contracts/interfaces';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { getCurrentBlockTime, setNextTime, setTime } from '@/test/helpers/block-helper';
