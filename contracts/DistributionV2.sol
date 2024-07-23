@@ -175,6 +175,10 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
         require(pendingRewards_ > 0, "DS: nothing to claim");
 
+        if (userData.virtualDeposited == 0) {
+            userData.virtualDeposited = userData.deposited;
+        }
+
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
@@ -217,6 +221,10 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint128 claimLockStart_ = userData.claimLockStart > 0 ? userData.claimLockStart : uint128(block.timestamp);
         uint256 multiplier_ = _getClaimLockPeriodMultiplier(claimLockStart_, claimLockEnd_);
         uint256 virtualDeposited_ = (userData.deposited * multiplier_) / PRECISION;
+
+        if (userData.virtualDeposited == 0) {
+            userData.virtualDeposited = userData.deposited;
+        }
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
@@ -276,9 +284,13 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
-        uint256 depoisted_ = userData.deposited + amount_;
+        uint256 deposited_ = userData.deposited + amount_;
         uint256 multiplier_ = _getClaimLockPeriodMultiplier(uint128(block.timestamp), claimLockEnd_);
-        uint256 virtualDeposited_ = (depoisted_ * multiplier_) / PRECISION;
+        uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
+
+        if (userData.virtualDeposited == 0) {
+            userData.virtualDeposited = userData.deposited;
+        }
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
@@ -288,7 +300,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         // Update user data
         userData.lastStake = uint128(block.timestamp);
         userData.rate = currentPoolRate_;
-        userData.deposited = depoisted_;
+        userData.deposited = deposited_;
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
         userData.claimLockEnd = claimLockEnd_;
@@ -336,6 +348,10 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 multiplier_ = _getClaimLockPeriodMultiplier(uint128(block.timestamp), userData.claimLockEnd);
         uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
 
+        if (userData.virtualDeposited == 0) {
+            userData.virtualDeposited = userData.deposited;
+        }
+
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
@@ -358,9 +374,9 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function _getCurrentUserReward(uint256 currentPoolRate_, UserData memory userData_) private pure returns (uint256) {
-        uint256 depoisted_ = userData_.virtualDeposited == 0 ? userData_.deposited : userData_.virtualDeposited;
+        uint256 deposited_ = userData_.virtualDeposited == 0 ? userData_.deposited : userData_.virtualDeposited;
 
-        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * depoisted_) / PRECISION;
+        uint256 newRewards_ = ((currentPoolRate_ - userData_.rate) * deposited_) / PRECISION;
 
         return userData_.pendingRewards + newRewards_;
     }
