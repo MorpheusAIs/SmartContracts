@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { assert } from 'console';
 import { ethers } from 'hardhat';
 
-import { getCurrentBlockTime } from '../helpers/block-helper';
+import { getCurrentBlockTime, setNextTime } from '../helpers/block-helper';
 import { oneDay } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
@@ -91,6 +91,15 @@ describe('L2TokenReceiverV2 Fork', () => {
       expect(userData.pendingRewards).to.be.eq('267534152514009588478');
       expect(userData.claimLockStart).to.be.eq('0');
       expect(userData.claimLockEnd).to.be.eq('0');
+
+      const poolData = await distribution.poolsData(0);
+      expect(poolData.lastUpdate).to.be.eq('1720539707');
+      expect(poolData.rate).to.be.eq('52175778470982772508060350');
+      expect(poolData.totalVirtualDeposited).to.be.eq('71907980495998572259078');
+
+      expect(await distribution.getCurrentUserReward(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7')).to.be.eq(
+        '386755493702019514016',
+      );
     });
   });
 
@@ -101,12 +110,40 @@ describe('L2TokenReceiverV2 Fork', () => {
       user = await ethers.getImpersonatedSigner('0x473FFa6AB954a7A003C554eeA90153DADB05a4E7');
     });
 
-    it('should lock claim old user', async () => {
+    it('should stake, claim and withdraw', async () => {
       const claimLockEnd = (await getCurrentBlockTime()) + 500 * oneDay;
-      await distribution.connect(user).lockClaim(0, claimLockEnd);
 
-      const userData = await distribution.usersData(user.address, 0);
-      expect(userData.claimLockStart).to.be.eq(await getCurrentBlockTime());
+      let userData = await distribution.usersData('0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', 0);
+      expect(userData.lastStake).to.be.eq('1720439015');
+
+      // Move in feature to skip time restrictions
+      await setNextTime((await getCurrentBlockTime()) + 10 * oneDay);
+      // Withdraw two times to check that nothing can't lock this proccess
+      await distribution.connect(user).withdraw(0, wei(1));
+      await distribution.connect(user).withdraw(0, wei(1));
+      // Claim  two times to check that nothing can't lock this proccess
+      await distribution.connect(user).claim(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', { value: wei(0.1) });
+      await distribution.connect(user).claim(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', { value: wei(0.1) });
+      // Stake again
+      await distribution.connect(user).stake(0, wei(1), 0);
+      // Withdraw should be locked, claim should be available
+      await expect(distribution.connect(user).withdraw(0, wei(1))).to.be.rejectedWith('DS: pool withdraw is locked');
+      await distribution.connect(user).claim(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', { value: wei(0.1) });
+
+      // Move in feature to skip time restrictions
+      await setNextTime((await getCurrentBlockTime()) + 20 * oneDay);
+      await distribution.connect(user).lockClaim(0, claimLockEnd);
+      // Withdraw should be available
+      await distribution.connect(user).withdraw(0, wei(1));
+      // Stake should be availalble
+      await distribution.connect(user).stake(0, wei(1), 0);
+      // Claim should be locked
+      await expect(
+        distribution.connect(user).claim(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', { value: wei(0.1) }),
+      ).to.be.rejectedWith('DS: user claim is locked');
+
+      userData = await distribution.usersData(user.address, 0);
+      expect(userData.claimLockStart).to.be.eq('1723133833');
       expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
     });
   });

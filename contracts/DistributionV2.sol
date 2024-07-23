@@ -224,7 +224,6 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
 
         // Update user data
-        userData.lastStake = uint128(block.timestamp);
         userData.rate = currentPoolRate_;
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = claimLockStart_;

@@ -297,6 +297,7 @@ describe('DistributionV2', () => {
         await setTime(oneDay + oneDay * 3);
         expect(await distributionV2.getCurrentUserReward(poolId, OWNER.address)).to.closeTo(wei(72), wei(0.01));
         expect((await distributionV2.poolsData(poolId)).totalVirtualDeposited).to.eq(wei(4));
+        expect(await distributionV2.version()).to.eq(2);
 
         // Claim after 1 day
         await distributionV2.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
