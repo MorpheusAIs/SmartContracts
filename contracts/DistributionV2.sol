@@ -362,7 +362,6 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         userData.deposited = newDeposited_;
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
-        userData.claimLockEnd = userData.claimLockEnd;
 
         if (pool.isPublic) {
             totalDepositedInPublicPools -= amount_;
@@ -436,8 +435,8 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     function _getClaimLockPeriodMultiplier(uint128 start_, uint128 end_) internal pure returns (uint256) {
         uint256 powerMax = 16_613_275_460_000_000_000; // 16.61327546 * DECIMAL
 
-        uint256 maximalMultipier_ = 10_700_000_000_000_000_000; // 10.7 * DECIMAL
-        uint256 minimalMultipier_ = DECIMAL; // 1 * DECIMAL
+        uint256 maximalMultiplier_ = 10_700_000_000_000_000_000; // 10.7 * DECIMAL
+        uint256 minimalMultiplier_ = DECIMAL; // 1 * DECIMAL
 
         uint128 periodStart_ = 1721908800; // Thu, 25 Jul 2024 12:00:00 UTC
         uint128 periodEnd_ = 2211192000; // Thu, 26 Jan 2040 12:00:00 UTC TODO
@@ -452,12 +451,12 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
         uint256 endPower_ = _tanh(2 * (((end_ - periodStart_) * DECIMAL) / distributionPeriod));
         uint256 startPower_ = _tanh(2 * (((start_ - periodStart_) * DECIMAL) / distributionPeriod));
-        uint256 multipier_ = (powerMax * (endPower_ - startPower_)) / DECIMAL;
+        uint256 multiplier_ = (powerMax * (endPower_ - startPower_)) / DECIMAL;
 
-        multipier_ = multipier_ > maximalMultipier_ ? maximalMultipier_ : multipier_;
-        multipier_ = multipier_ < minimalMultipier_ ? minimalMultipier_ : multipier_;
+        multiplier_ = multiplier_ > maximalMultiplier_ ? maximalMultiplier_ : multiplier_;
+        multiplier_ = multiplier_ < minimalMultiplier_ ? minimalMultiplier_ : multiplier_;
 
-        return (multipier_ * PRECISION) / DECIMAL;
+        return (multiplier_ * PRECISION) / DECIMAL;
     }
 
     /**********************************************************************************************/
