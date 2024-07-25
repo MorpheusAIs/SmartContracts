@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { assert } from 'console';
 import { ethers } from 'hardhat';
 
-import { getCurrentBlockTime, setNextTime } from '../helpers/block-helper';
+import { getCurrentBlockTime, setNextTime, setTime } from '../helpers/block-helper';
 import { oneDay } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
@@ -110,6 +110,34 @@ describe('L2TokenReceiverV2 Fork', () => {
       user = await ethers.getImpersonatedSigner('0x473FFa6AB954a7A003C554eeA90153DADB05a4E7');
     });
 
+    it('should lock claim', async () => {
+      let userData = await distribution.usersData(user.address, 0);
+      expect(userData.lastStake).to.be.eq('1720439015');
+
+      // Move in feature to skip time restrictions
+      await setTime((await getCurrentBlockTime()) + 10 * oneDay);
+
+      const claimLockEnd = (await getCurrentBlockTime()) + 500 * oneDay;
+
+      await distribution.connect(user).lockClaim(0, claimLockEnd);
+      userData = await distribution.usersData(user.address, 0);
+      expect(userData.claimLockStart).to.be.eq(await getCurrentBlockTime());
+      expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
+
+      // Withdraw should be available
+      await distribution.connect(user).withdraw(0, wei(1));
+      // Stake should be availalble
+      await distribution.connect(user).stake(0, wei(1), 0);
+      const claimLockStart = await getCurrentBlockTime();
+      // Claim should be locked
+      await expect(
+        distribution.connect(user).claim(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', { value: wei(0.1) }),
+      ).to.be.rejectedWith('DS: user claim is locked');
+
+      userData = await distribution.usersData(user.address, 0);
+      expect(userData.claimLockStart).to.be.eq(claimLockStart);
+      expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
+    });
     it('should stake, claim and withdraw', async () => {
       const claimLockEnd = (await getCurrentBlockTime()) + 500 * oneDay;
 

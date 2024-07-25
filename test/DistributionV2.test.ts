@@ -53,7 +53,7 @@ describe('DistributionV2', () => {
   let l2TokenReceiver: L2TokenReceiverV2;
 
   before(async () => {
-    await setTime(3681);
+    await setTime(3830);
     [OWNER, SECOND] = await ethers.getSigners();
 
     const [
@@ -482,6 +482,16 @@ describe('DistributionV2', () => {
         expect(userData.deposited).to.eq(wei(1));
         expect(userData.virtualDeposited).to.eq(wei(1));
         expect(userData.pendingRewards).to.eq(0);
+      });
+      it('should correctly upgrade', async () => {
+        const distributionV2MockFactory = await ethers.getContractFactory('Distribution', {
+          libraries: {
+            LinearDistributionIntervalDecrease: await lib.getAddress(),
+          },
+        });
+        const distributionV2MockImplementation = await distributionV2MockFactory.deploy();
+
+        await distribution.upgradeTo(await distributionV2MockImplementation.getAddress());
       });
       it('should revert if caller is not the owner', async () => {
         await expect(distribution.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
