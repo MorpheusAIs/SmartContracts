@@ -5,7 +5,6 @@ import { IDistribution } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 
 export type Config = {
-  cap: number;
   chainsConfig: {
     senderChainId: number;
     receiverChainId: number;
@@ -38,28 +37,10 @@ type PoolInitInfo = IDistribution.PoolStruct & {
   amounts: BigNumberish[];
 };
 
-export function parseConfig(chainId: bigint): Config {
-  let configPath: string;
-
-  if (chainId === 31337n) {
-    configPath = `deploy/data/config_localhost.json`;
-  } else if (chainId === 1n || chainId === 42161n) {
-    configPath = `deploy/data/config.json`;
-  } else if (chainId === 5n || chainId === 421613n) {
-    configPath = `deploy/data/config_goerli.json`;
-  } else if (chainId === 11155111n || chainId === 421614n) {
-    configPath = `deploy/data/config_sepolia.json`;
-  } else {
-    throw new Error(`Invalid chainId`);
-  }
-
-  // configPath = `deploy/data/config.json`;
+export function parseConfig(): Config {
+  const configPath = `deploy/data/config.json`;
 
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
-
-  if (config.cap == undefined) {
-    throw new Error(`Invalid 'cap' value.`);
-  }
 
   if (config.chainsConfig == undefined) {
     throw new Error(`Invalid 'chainsConfig' value.`);

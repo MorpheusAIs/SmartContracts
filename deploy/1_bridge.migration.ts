@@ -1,75 +1,74 @@
-import { Deployer, Reporter, UserStorage } from '@solarity/hardhat-migrate';
+import { Deployer, Reporter } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
 import {
   ERC1967Proxy__factory,
+  IL2TokenReceiverV2,
   L2MessageReceiver__factory,
-  L2TokenReceiver__factory,
-  MOR__factory,
+  L2TokenReceiverV2__factory,
+  MOROFT__factory,
 } from '@/generated-types/ethers';
-import { IL2TokenReceiver } from '@/generated-types/ethers/contracts/L2TokenReceiver';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig(await deployer.getChainId());
-
-  let WStETH: string;
-  let swapRouter: string;
-  let nonfungiblePositionManager: string;
-
-  if (config.L2) {
-    WStETH = config.L2.wStEth;
-    swapRouter = config.L2.swapRouter;
-    nonfungiblePositionManager = config.L2.nonfungiblePositionManager;
-  } else {
-    // deploy mock
-    // const stETHMock = await deployer.deploy(StETHMock__factory, [], { name: 'StETH on L2' });
-    // const stETH = await stETHMock.getAddress();
-
-    // const wStEthMock = await deployer.deploy(WStETHMock__factory, [stETH], { name: 'Wrapped stETH on L2' });
-    // WStETH = await wStEthMock.getAddress();
-
-    // const swapRouterMock = await deployer.deploy(SwapRouterMock__factory);
-    // swapRouter = await swapRouterMock.getAddress();
-
-    // const nonfungiblePositionManagerMock = await deployer.deploy(NonfungiblePositionManagerMock__factory);
-    // nonfungiblePositionManager = await nonfungiblePositionManagerMock.getAddress();
+  const config = parseConfig();
+  if (config.L2 === undefined) {
     return;
   }
 
-  const MOR = await deployer.deploy(MOR__factory, [config.cap]);
-  UserStorage.set('MOR', await MOR.getAddress());
+  const WStETH = config.L2.wStEth;
+  const swapRouter = config.L2.swapRouter;
+  const nonfungiblePositionManager = config.L2.nonfungiblePositionManager;
 
-  const swapParams: IL2TokenReceiver.SwapParamsStruct = {
-    tokenIn: WStETH,
+  const l2TokenReceiverImpl = await deployer.deploy(L2TokenReceiverV2__factory);
+  const l2TokenReceiverProxy = await deployer.deploy(
+    ERC1967Proxy__factory,
+    [await l2TokenReceiverImpl.getAddress(), '0x'],
+    {
+      name: 'L2TokenReceiver Proxy',
+    },
+  );
+  const l2TokenReceiver = await deployer.deployed(L2TokenReceiverV2__factory, await l2TokenReceiverProxy.getAddress());
+
+  const l2MessageReceiverImpl = await deployer.deploy(L2MessageReceiver__factory);
+  const l2MessageReceiverProxy = await deployer.deploy(
+    ERC1967Proxy__factory,
+    [await l2MessageReceiverImpl.getAddress(), '0x'],
+    {
+      name: 'L2MessageReceiver Proxy',
+    },
+  );
+  const l2MessageReceiver = await deployer.deployed(
+    L2MessageReceiver__factory,
+    await l2MessageReceiverProxy.getAddress(),
+  );
+  await l2MessageReceiver.L2MessageReceiver__init();
+
+  const layerZeroEndpoint = '0x1a44076050125825900e736c501f859c50fe728c';
+  const WETH = '0x52D00439eADfc53D0005dcaF1914BAf9015f82fe';
+
+  const MOR = await deployer.deploy(MOROFT__factory, [
+    layerZeroEndpoint,
+    await (await deployer.getSigner()).getAddress(),
+    await l2MessageReceiver.getAddress(),
+  ]);
+
+  const secondSwapParams: IL2TokenReceiverV2.SwapParamsStruct = {
+    tokenIn: WETH,
     tokenOut: MOR,
     fee: config.swapParams.fee,
     sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
   };
 
-  const l2TokenReceiverImpl = await deployer.deploy(L2TokenReceiver__factory);
-  const l2TokenReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2TokenReceiverImpl, '0x'], {
-    name: 'L2TokenReceiver Proxy',
-  });
-  UserStorage.set('L2TokenReceiver Proxy', await l2TokenReceiverProxy.getAddress());
-  const l2TokenReceiver = L2TokenReceiver__factory.connect(
-    await l2TokenReceiverProxy.getAddress(),
-    await deployer.getSigner(),
-  );
-  await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, swapParams);
+  await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, secondSwapParams);
 
-  const l2MessageReceiverImpl = await deployer.deploy(L2MessageReceiver__factory);
-  const l2MessageReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2MessageReceiverImpl, '0x'], {
-    name: 'L2MessageReceiver Proxy',
-  });
-  UserStorage.set('L2MessageReceiver Proxy', await l2MessageReceiverProxy.getAddress());
-  const l2MessageReceiver = L2MessageReceiver__factory.connect(
-    await l2MessageReceiverProxy.getAddress(),
-    await deployer.getSigner(),
-  );
-  await l2MessageReceiver.L2MessageReceiver__init();
-
-  await MOR.transferOwnership(l2MessageReceiver);
+  const firstSwapParams: IL2TokenReceiverV2.SwapParamsStruct = {
+    tokenIn: WStETH,
+    tokenOut: WETH,
+    fee: config.swapParams.fee,
+    sqrtPriceLimitX96: config.swapParams.sqrtPriceLimitX96,
+  };
+  await l2TokenReceiver.editParams(firstSwapParams, true);
 
   Reporter.reportContracts(
     ['L2TokenReceiver', await l2TokenReceiver.getAddress()],
@@ -77,3 +76,6 @@ module.exports = async function (deployer: Deployer) {
     ['MOR', await MOR.getAddress()],
   );
 };
+
+// npx hardhat migrate --network arbitrum_sepolia --only 1 --verify
+// npx hardhat migrate --network arbitrum --only 1 --verify

@@ -8,7 +8,7 @@ import {IDistribution, LinearDistributionIntervalDecrease} from "../Distribution
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {LZEndpointMock} from "@layerzerolabs/solidity-examples/contracts/lzApp/mocks/LZEndpointMock.sol";
 
-contract DistributionV2 is UUPSUpgradeable {
+contract DistributionV2Mock is UUPSUpgradeable {
     IDistribution.Pool[] public pools;
 
     function version() external pure returns (uint256) {

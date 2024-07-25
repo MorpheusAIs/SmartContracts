@@ -1,12 +1,11 @@
 {
-  "cap": "1000000000000000000000000",
   "chainsConfig": {
     "senderChainId": 10161,
     "receiverChainId": 10231
   },
   "pools": [
     {
-      "payoutStart": 1704360948,
+      "payoutStart": 1721401800,
       "decreaseInterval": 86400,
       "withdrawLockPeriod": 120,
       "claimLockPeriod": 60,
@@ -17,7 +16,7 @@
       "isPublic": true
     },
     {
-      "payoutStart": 1704360948,
+      "payoutStart": 1721401800,
       "decreaseInterval": 60,
       "withdrawLockPeriod": 1,
       "claimLockPeriod": 1,
@@ -34,13 +33,13 @@
     }
   ],
   "L1": {
-    "stEth": "0xe6D01D086a844a61641C75f1BCA572e7aa70e154",
-    "wStEth": "0xE7d86F503F3dA0DEF5660420F667BF873d3D6A8f"
+    "stEth": "0xa878Ad6FF38d6fAE81FBb048384cE91979d448DA",
+    "wStEth": "0x4EaF53c014B95bD3B8C667CA6569A76989689845"
   },
   "L2": {
     "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     "nonfungiblePositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-    "wStEth": "0xfD5d8Dc9918e04673b9F5F332cE63BcC3BE427a2"
+    "wStEth": "0xAa88407124085dE567d7C493b67931F9FF38297b"
   },
   "swapParams": {
     "fee": 10000,
