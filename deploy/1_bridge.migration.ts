@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Deployer, Reporter } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
@@ -12,7 +11,7 @@ import {
 } from '@/generated-types/ethers';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig(await deployer.getChainId());
+  const config = parseConfig();
   if (config.L2 === undefined) {
     return;
   }
@@ -31,10 +30,14 @@ module.exports = async function (deployer: Deployer) {
   );
   const l2TokenReceiver = await deployer.deployed(L2TokenReceiverV2__factory, await l2TokenReceiverProxy.getAddress());
 
-  const l2MessageReceiverImpl = '0x2Efd4430489e1a05A89c2f51811aC661B7E5FF84';
-  const l2MessageReceiverProxy = await deployer.deploy(ERC1967Proxy__factory, [l2MessageReceiverImpl, '0x'], {
-    name: 'L2MessageReceiver Proxy',
-  });
+  const l2MessageReceiverImpl = await deployer.deploy(L2MessageReceiver__factory);
+  const l2MessageReceiverProxy = await deployer.deploy(
+    ERC1967Proxy__factory,
+    [await l2MessageReceiverImpl.getAddress(), '0x'],
+    {
+      name: 'L2MessageReceiver Proxy',
+    },
+  );
   const l2MessageReceiver = await deployer.deployed(
     L2MessageReceiver__factory,
     await l2MessageReceiverProxy.getAddress(),
@@ -73,3 +76,6 @@ module.exports = async function (deployer: Deployer) {
     ['MOR', await MOR.getAddress()],
   );
 };
+
+// npx hardhat migrate --network arbitrum_sepolia --only 1 --verify
+// npx hardhat migrate --network arbitrum --only 1 --verify

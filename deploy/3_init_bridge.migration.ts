@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { Deployer } from '@solarity/hardhat-migrate';
 
 import { parseConfig } from './helpers/config-parser';
 
@@ -7,7 +6,7 @@ import { L1Sender__factory, L2MessageReceiver__factory, MOROFT__factory } from '
 import { IL2MessageReceiver } from '@/generated-types/ethers/contracts/L2MessageReceiver';
 
 module.exports = async function (deployer: Deployer) {
-  const config = parseConfig(await deployer.getChainId());
+  const config = parseConfig();
 
   const l2MessageReceiver = await deployer.deployed(
     L2MessageReceiver__factory,
@@ -28,7 +27,8 @@ module.exports = async function (deployer: Deployer) {
     senderChainId: config.chainsConfig.senderChainId,
   };
 
-  const tx = await l2MessageReceiver.setParams(mor, l2MessageReceiverConfig);
-
-  await Reporter.reportTransactionByHash(tx.hash);
+  await l2MessageReceiver.setParams(mor, l2MessageReceiverConfig);
 };
+
+// npx hardhat migrate --network arbitrum_sepolia --only 3 --verify
+// npx hardhat migrate --network arbitrum --only 3 --verify
