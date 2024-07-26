@@ -7,9 +7,9 @@ module.exports = async function (deployer: Deployer) {
 
   const distributionV2Impl = await deployer.deploy(DistributionV2__factory);
 
-  await distribution.upgradeTo(await distributionV2Impl.getAddress());
+  // await distribution.upgradeTo(await distributionV2Impl.getAddress());
 
-  console.log(await distribution.getCurrentUserReward(0, await deployer.getSigner()));
+  // console.log(await distribution.getCurrentUserReward(0, await deployer.getSigner()));
 
   Reporter.reportContracts(
     ['DistributionV2Impl', await distributionV2Impl.getAddress()],

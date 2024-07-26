@@ -128,11 +128,11 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 poolId_,
         address[] calldata users_,
         uint256[] calldata amounts_,
-        uint128[] calldata lockEnds_
+        uint128[] calldata claimLockEnds_
     ) external onlyOwner poolExists(poolId_) {
         require(!pools[poolId_].isPublic, "DS: pool is public");
         require(users_.length == amounts_.length, "DS: invalid length");
-        require(users_.length == lockEnds_.length, "DS: invalid length");
+        require(users_.length == claimLockEnds_.length, "DS: invalid length");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
 
@@ -143,7 +143,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
             uint256 deposited_ = usersData[user_][poolId_].deposited;
 
             if (deposited_ <= amount_) {
-                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, lockEnds_[i]);
+                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, claimLockEnds_[i]);
             } else {
                 _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
             }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /**
- * This is Distribution contract that stores all the pools and users data.
+ * This is the Distribution contract that stores all the pools and users data.
  * It is used to calculate the user's rewards and operate with overpluses.
  */
 interface IDistributionV2 {
@@ -43,7 +43,7 @@ interface IDistributionV2 {
     }
 
     /**
-     * The structure that stores the user's rate data of pool.
+     * The structure that stores the user's rate data of the pool.
      * @param lastStake The timestamp when the user last staked tokens.
      * @param deposited The amount of tokens deposited in the pool.
      * @param rate The current reward rate.
@@ -118,8 +118,8 @@ interface IDistributionV2 {
 
     /**
      * The function to initialize the contract.
-     * @param depositToken_ The address of deposit token.
-     * @param l1Sender_ The address of bridge contract.
+     * @param depositToken_ The address of the deposit token.
+     * @param l1Sender_ The address of the bridge contract.
      * @param poolsInfo_ The array of initial pools.
      */
     function Distribution_init(address depositToken_, address l1Sender_, Pool[] calldata poolsInfo_) external;
@@ -151,22 +151,22 @@ interface IDistributionV2 {
      * @param poolId_ The pool's id.
      * @param users_ The array of users.
      * @param amounts_ The array of amounts.
-     * @param lockEnds_ The array of lock ends.
+     * @param claimLockEnds_ The array of lock ends.
      */
     function manageUsersInPrivatePool(
         uint256 poolId_,
         address[] calldata users_,
         uint256[] calldata amounts_,
-        uint128[] calldata lockEnds_
+        uint128[] calldata claimLockEnds_
     ) external;
 
     /**
      * The function to stake tokens in the public pool.
      * @param poolId_ The pool's id.
      * @param amount_ The amount of tokens to stake.
-     * @param lockEnd_ The timestamp when the user can claim his rewards.
+     * @param claimLockEnd_ The timestamp when the user can claim his rewards.
      */
-    function stake(uint256 poolId_, uint256 amount_, uint128 lockEnd_) external;
+    function stake(uint256 poolId_, uint256 amount_, uint128 claimLockEnd_) external;
 
     /**
      * The function to claim rewards from the pool.
@@ -201,7 +201,7 @@ interface IDistributionV2 {
      * @param gasLimit_ The gas limit.
      * @param maxFeePerGas_ The max fee per gas.
      * @param maxSubmissionCost_ The max submission cost.
-     * @return The unique identifier for withdrawal.
+     * @return The unique identifier for the withdrawal.
      */
     function bridgeOverplus(
         uint256 gasLimit_,
@@ -210,31 +210,31 @@ interface IDistributionV2 {
     ) external payable returns (bytes memory);
 
     /**
-     * The function to remove upgradeability.
+     * The function to remove the upgradeability.
      */
     function removeUpgradeability() external;
 
     /**
-     * The function to check if the contract is upgradeable.
-     * @return The flag that indicates if the contract is upgradeable.
+     * The function to check whether the contract is upgradeable.
+     * @return The flag that indicates whether the contract is upgradeable.
      */
     function isNotUpgradeable() external view returns (bool);
 
     /**
-     * The function to get the address of deposit token.
-     * @return The address of deposit token.
+     * The function to get the address of the deposit token.
+     * @return The address of the deposit token.
      */
     function depositToken() external view returns (address);
 
     /**
-     * The function to get the address of bridge contract.
-     * @return The address of bridge contract.
+     * The function to get the address of a bridge contract.
+     * @return The address of a bridge contract.
      */
     function l1Sender() external view returns (address);
 
     /**
-     * The function to get the amount of deposit tokens that are staked in all of the public pools.
-     * @dev The value accumulates the amount amount despite the rate differences.
+     * The function to get the amount of deposit tokens that are staked in all the public pools.
+     * @dev The value accumulates the amount despite the rate differences.
      * @return The amount of deposit tokens.
      */
     function totalDepositedInPublicPools() external view returns (uint256);
