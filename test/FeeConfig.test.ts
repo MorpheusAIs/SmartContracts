@@ -79,7 +79,7 @@ describe('FeeConfig', () => {
           'FC: invalid base fee',
         );
         await expect(feeConfig.FeeConfig_init(SECOND, baseFee, wei(1.1, 25))).to.be.revertedWith(
-          'FC: invalid base fee for operation',
+          'FC: invalid base fee for op',
         );
       });
     });
@@ -164,9 +164,7 @@ describe('FeeConfig', () => {
     });
     it('should revert if fee is > 1', async () => {
       await expect(feeConfig.setBaseFee(wei(1.1, 25), baseFeeForOperation)).to.be.revertedWith('FC: invalid base fee');
-      await expect(feeConfig.setBaseFee(baseFee, wei(1.1, 25))).to.be.revertedWith(
-        'FC: invalid base fee for operation',
-      );
+      await expect(feeConfig.setBaseFee(baseFee, wei(1.1, 25))).to.be.revertedWith('FC: invalid base fee for op');
     });
   });
 

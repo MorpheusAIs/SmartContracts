@@ -48,7 +48,7 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
 
     function setBaseFee(uint256 baseFee_, uint256 baseFeeForOperation_) public onlyOwner {
         require(baseFee_ <= PRECISION, "FC: invalid base fee");
-        require(baseFeeForOperation_ <= PRECISION, "FC: invalid base fee for operation");
+        require(baseFeeForOperation_ <= PRECISION, "FC: invalid base fee for op");
 
         baseFee = baseFee_;
         baseFeeForOperation = baseFeeForOperation_;
