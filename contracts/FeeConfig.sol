@@ -10,6 +10,7 @@ import {IFeeConfig} from "./interfaces/IFeeConfig.sol";
 
 contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     address public treasury;
+
     uint256 public baseFee;
     uint256 public baseFeeForOperation;
 
@@ -20,10 +21,10 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function FeeConfig_init(address treasury_, uint256 baseFee_) external initializer {
+    function FeeConfig_init(address treasury_, uint256 baseFee_, uint256 baseFeeForOperation_) external initializer {
         __Ownable_init();
 
-        setBaseFee(baseFee_);
+        setBaseFee(baseFee_, baseFeeForOperation_);
         setTreasury(treasury_);
     }
 
@@ -33,16 +34,24 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
         fees[sender_] = fee_;
     }
 
+    function setFeeForOperation(address sender_, string memory operation_, uint256 fee_) external onlyOwner {
+        require(fee_ <= PRECISION, "FC: invalid fee");
+
+        feeForOperations[sender_][operation_] = fee_;
+    }
+
     function setTreasury(address treasury_) public onlyOwner {
         require(treasury_ != address(0), "FC: invalid treasury");
 
         treasury = treasury_;
     }
 
-    function setBaseFee(uint256 baseFee_) public onlyOwner {
+    function setBaseFee(uint256 baseFee_, uint256 baseFeeForOperation_) public onlyOwner {
         require(baseFee_ <= PRECISION, "FC: invalid base fee");
+        require(baseFeeForOperation_ <= PRECISION, "FC: invalid base fee for operation");
 
         baseFee = baseFee_;
+        baseFeeForOperation = baseFeeForOperation_;
     }
 
     function getFeeAndTreasury(address sender_) external view returns (uint256, address) {

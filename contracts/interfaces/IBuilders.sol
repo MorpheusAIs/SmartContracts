@@ -22,6 +22,18 @@ interface IBuilders {
     }
 
     /**
+     * The structure that stores the pool's rate data.
+     * @param rewardsAtLastUpdate The amount of rewards at the last update.
+     * @param rate The current reward rate.
+     * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
+     */
+    struct PoolData {
+        uint256 rewardsAtLastUpdate;
+        uint256 rate;
+        uint256 totalVirtualDeposited;
+    }
+
+    /**
      * The structure that stores the user's data of pool.
      * @param lastStake The timestamp when the user last staked tokens.
      * @param deposited The amount of tokens deposited in the pool.

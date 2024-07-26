@@ -9,8 +9,9 @@ interface IFeeConfig {
      * The function that initializes the contract.
      * @param treasury_ The treasury address.
      * @param baseFee_ The base fee.
+     * @param baseFeeForOperation_ The base fee for the operation.
      */
-    function FeeConfig_init(address treasury_, uint256 baseFee_) external;
+    function FeeConfig_init(address treasury_, uint256 baseFee_, uint256 baseFeeForOperation_) external;
 
     /**
      * The function that returns the treasury address.
@@ -54,5 +55,5 @@ interface IFeeConfig {
     /**
      * The function that sets the base fee.
      */
-    function setBaseFee(uint256 baseFee_) external;
+    function setBaseFee(uint256 baseFee_, uint256 baseFeeForOperation_) external;
 }
