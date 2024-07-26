@@ -53,7 +53,6 @@ describe('DistributionV2', () => {
   let l2TokenReceiver: L2TokenReceiverV2;
 
   before(async () => {
-    await setTime(3830);
     [OWNER, SECOND] = await ethers.getSigners();
 
     const [
@@ -181,6 +180,8 @@ describe('DistributionV2', () => {
     ]);
 
     await reverter.snapshot();
+
+    await setTime(3830);
   });
 
   afterEach(reverter.revert);
