@@ -34,7 +34,10 @@ describe('DistributionExt', () => {
       },
     });
 
-    distribution = await distributionFactory.deploy();
+    const distributionImpl = await distributionFactory.deploy();
+    const distributionProxy = await ERC1967ProxyFactory.deploy(await distributionImpl.getAddress(), '0x');
+    distribution = distributionFactory.attach(await distributionProxy.getAddress()) as DistributionV2;
+    await distribution.Distribution_init(SECOND, SECOND, []);
 
     const distributionExtImpl = await DistributionExtFactory.deploy();
     const distributionExtProxy = await ERC1967ProxyFactory.deploy(distributionExtImpl, '0x');

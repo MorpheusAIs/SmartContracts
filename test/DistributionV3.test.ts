@@ -4,10 +4,10 @@ import { ethers } from 'hardhat';
 
 import {
   Distribution,
-  DistributionV2,
-  DistributionV2__factory,
+  DistributionV3,
+  DistributionV3__factory,
   GatewayRouterMock,
-  IDistributionV2,
+  IDistributionV3,
   IL1Sender,
   L1Sender,
   L2MessageReceiver,
@@ -26,7 +26,7 @@ import { getCurrentBlockTime, setNextTime, setTime } from '@/test/helpers/block-
 import { getDefaultPool, oneDay, oneHour } from '@/test/helpers/distribution-helper';
 import { Reverter } from '@/test/helpers/reverter';
 
-describe('DistributionV2', () => {
+describe('DistributionV3', () => {
   const senderChainId = 101;
   const receiverChainId = 110;
 
@@ -35,9 +35,9 @@ describe('DistributionV2', () => {
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
-  let distributionFactory: DistributionV2__factory;
-  let distribution: DistributionV2;
-  let distributionImplementation: DistributionV2;
+  let distributionFactory: DistributionV3__factory;
+  let distribution: DistributionV3;
+  let distributionImplementation: DistributionV3;
 
   let lib: LinearDistributionIntervalDecrease;
 
@@ -114,7 +114,7 @@ describe('DistributionV2', () => {
       l1SenderFactory.deploy(),
     ]);
 
-    distributionFactory = await ethers.getContractFactory('DistributionV2', {
+    distributionFactory = await ethers.getContractFactory('DistributionV3', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
       },
@@ -139,7 +139,7 @@ describe('DistributionV2', () => {
 
     // START deploy distribution contract
     const distributionProxy = await ERC1967ProxyFactory.deploy(await distributionImplementation.getAddress(), '0x');
-    distribution = distributionFactory.attach(await distributionProxy.getAddress()) as DistributionV2;
+    distribution = distributionFactory.attach(await distributionProxy.getAddress()) as DistributionV3;
     // END
 
     const rewardTokenConfig: IL1Sender.RewardTokenConfigStruct = {
@@ -214,14 +214,14 @@ describe('DistributionV2', () => {
           await ethers.getContractFactory('ERC1967Proxy')
         ).deploy(await distributionFactory.deploy(), '0x');
 
-        const distribution = distributionFactory.attach(await distributionProxy.getAddress()) as DistributionV2;
+        const distribution = distributionFactory.attach(await distributionProxy.getAddress()) as DistributionV3;
 
         await distribution.Distribution_init(depositToken, l1Sender, [pool1, pool2]);
 
-        const pool1Data: IDistributionV2.PoolStruct = await distribution.pools(0);
+        const pool1Data: IDistributionV3.PoolStruct = await distribution.pools(0);
         expect(_comparePoolStructs(pool1, pool1Data)).to.be.true;
 
-        const pool2Data: IDistributionV2.PoolStruct = await distribution.pools(1);
+        const pool2Data: IDistributionV3.PoolStruct = await distribution.pools(1);
         expect(_comparePoolStructs(pool2, pool2Data)).to.be.true;
       });
       it('should revert if try to call init function twice', async () => {
@@ -277,44 +277,44 @@ describe('DistributionV2', () => {
 
         // Upgrade
         await distributionV1.upgradeTo(await distributionImplementation.getAddress());
-        const distributionV2Factory = await ethers.getContractFactory('DistributionV2', {
+        const DistributionV3Factory = await ethers.getContractFactory('DistributionV3', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
           },
         });
-        const distributionV2 = distributionV2Factory.attach(await distributionV1.getAddress()) as DistributionV2;
+        const DistributionV3 = DistributionV3Factory.attach(await distributionV1.getAddress()) as DistributionV3;
 
         // A stakes 2 tokens
         await setNextTime(oneDay * 2);
-        await distributionV2.stake(poolId, wei(3), 0);
-        let userData = await distributionV2.usersData(OWNER.address, poolId);
+        await DistributionV3.stake(poolId, wei(3), 0);
+        let userData = await DistributionV3.usersData(OWNER.address, poolId);
         expect(userData.deposited).to.eq(wei(4));
         expect(userData.virtualDeposited).to.eq(wei(4));
         expect(userData.rate).to.eq(wei(100, 25));
         expect(userData.pendingRewards).to.eq(wei(100));
         expect(userData.claimLockStart).to.eq(oneDay * 2);
         expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
-        let poolData = await distributionV2.poolsData(poolId);
+        let poolData = await DistributionV3.poolsData(poolId);
         expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
         expect(poolData.totalVirtualDeposited).to.eq(wei(4));
         expect(poolData.rate).to.eq(wei(100, 25));
-        expect(await distributionV2.totalDepositedInPublicPools()).to.eq(wei(4));
+        expect(await DistributionV3.totalDepositedInPublicPools()).to.eq(wei(4));
 
         // B stakes 8 tokens
         await setNextTime(oneDay * 3);
-        await distributionV2.connect(SECOND).stake(poolId, wei(8), 0);
-        userData = await distributionV2.usersData(SECOND.address, poolId);
+        await DistributionV3.connect(SECOND).stake(poolId, wei(8), 0);
+        userData = await DistributionV3.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(8));
         expect(userData.virtualDeposited).to.eq(wei(8));
         expect(userData.rate).to.eq(wei(124.5, 25));
         expect(userData.pendingRewards).to.eq(0);
         expect(userData.claimLockStart).to.eq(oneDay * 3);
         expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
-        poolData = await distributionV2.poolsData(poolId);
+        poolData = await DistributionV3.poolsData(poolId);
         expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
         expect(poolData.totalVirtualDeposited).to.eq(wei(12));
         expect(poolData.rate).to.eq(wei(124.5, 25));
-        expect(await distributionV2.totalDepositedInPublicPools()).to.eq(wei(12));
+        expect(await DistributionV3.totalDepositedInPublicPools()).to.eq(wei(12));
       });
       it('should correctly upgrade, check withdraw', async () => {
         // Deploy V1 and setup
@@ -361,44 +361,44 @@ describe('DistributionV2', () => {
 
         // Upgrade
         await distributionV1.upgradeTo(await distributionImplementation.getAddress());
-        const distributionV2Factory = await ethers.getContractFactory('DistributionV2', {
+        const DistributionV3Factory = await ethers.getContractFactory('DistributionV3', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
           },
         });
-        const distributionV2 = distributionV2Factory.attach(await distributionV1.getAddress()) as DistributionV2;
+        const DistributionV3 = DistributionV3Factory.attach(await distributionV1.getAddress()) as DistributionV3;
 
         // A stakes 2 tokens
         await setNextTime(oneDay * 2);
-        await distributionV2.stake(poolId, wei(3), 0);
-        let userData = await distributionV2.usersData(OWNER.address, poolId);
+        await DistributionV3.stake(poolId, wei(3), 0);
+        let userData = await DistributionV3.usersData(OWNER.address, poolId);
         expect(userData.deposited).to.eq(wei(4));
         expect(userData.virtualDeposited).to.eq(wei(4));
         expect(userData.rate).to.eq(wei(100, 25));
         expect(userData.pendingRewards).to.eq(wei(100));
         expect(userData.claimLockStart).to.eq(oneDay * 2);
         expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
-        let poolData = await distributionV2.poolsData(poolId);
+        let poolData = await DistributionV3.poolsData(poolId);
         expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
         expect(poolData.totalVirtualDeposited).to.eq(wei(4));
         expect(poolData.rate).to.eq(wei(100, 25));
-        expect(await distributionV2.totalDepositedInPublicPools()).to.eq(wei(4));
+        expect(await DistributionV3.totalDepositedInPublicPools()).to.eq(wei(4));
 
         // B stakes 8 tokens
         await setNextTime(oneDay * 3);
-        await distributionV2.connect(SECOND).stake(poolId, wei(8), 0);
-        userData = await distributionV2.usersData(SECOND.address, poolId);
+        await DistributionV3.connect(SECOND).stake(poolId, wei(8), 0);
+        userData = await DistributionV3.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(8));
         expect(userData.virtualDeposited).to.eq(wei(8));
         expect(userData.rate).to.eq(wei(124.5, 25));
         expect(userData.pendingRewards).to.eq(0);
         expect(userData.claimLockStart).to.eq(oneDay * 3);
         expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
-        poolData = await distributionV2.poolsData(poolId);
+        poolData = await DistributionV3.poolsData(poolId);
         expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
         expect(poolData.totalVirtualDeposited).to.eq(wei(12));
         expect(poolData.rate).to.eq(wei(124.5, 25));
-        expect(await distributionV2.totalDepositedInPublicPools()).to.eq(wei(12));
+        expect(await DistributionV3.totalDepositedInPublicPools()).to.eq(wei(12));
       });
       it('should correctly upgrade, check claim', async () => {
         // Deploy V1 and setup
@@ -454,43 +454,43 @@ describe('DistributionV2', () => {
 
         // Upgrade
         await distributionV1.upgradeTo(await distributionImplementation.getAddress());
-        const distributionV2Factory = await ethers.getContractFactory('DistributionV2', {
+        const DistributionV3Factory = await ethers.getContractFactory('DistributionV3', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
           },
         });
-        const distributionV2 = distributionV2Factory.attach(await distributionV1.getAddress()) as DistributionV2;
+        const DistributionV3 = DistributionV3Factory.attach(await distributionV1.getAddress()) as DistributionV3;
 
         await setTime(oneDay + oneDay * 3);
-        expect(await distributionV2.getCurrentUserReward(poolId, OWNER.address)).to.closeTo(wei(72), wei(0.01));
-        expect((await distributionV2.poolsData(poolId)).totalVirtualDeposited).to.eq(wei(4));
-        expect(await distributionV2.version()).to.eq(2);
+        expect(await DistributionV3.getCurrentUserReward(poolId, OWNER.address)).to.closeTo(wei(72), wei(0.01));
+        expect((await DistributionV3.poolsData(poolId)).totalVirtualDeposited).to.eq(wei(4));
+        expect(await DistributionV3.version()).to.eq(3);
 
         // Claim after 1 day
-        await distributionV2.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
-        await distributionV2.claim(poolId, OWNER, { value: wei(0.5) });
+        await DistributionV3.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
+        await DistributionV3.claim(poolId, OWNER, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 72), wei(0.01));
-        userData = await distributionV2.usersData(OWNER.address, poolId);
+        userData = await DistributionV3.usersData(OWNER.address, poolId);
         expect(userData.deposited).to.eq(wei(3));
         expect(userData.virtualDeposited).to.eq(wei(3));
         expect(userData.pendingRewards).to.eq(0);
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(124.5 + 24), wei(0.01));
-        userData = await distributionV2.usersData(SECOND.address, poolId);
+        userData = await DistributionV3.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(1));
         expect(userData.virtualDeposited).to.eq(wei(1));
         expect(userData.pendingRewards).to.eq(0);
       });
       it('should correctly upgrade', async () => {
-        const distributionV2MockFactory = await ethers.getContractFactory('Distribution', {
+        const DistributionV3MockFactory = await ethers.getContractFactory('Distribution', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
           },
         });
-        const distributionV2MockImplementation = await distributionV2MockFactory.deploy();
+        const DistributionV3MockImplementation = await DistributionV3MockFactory.deploy();
 
-        await distribution.upgradeTo(await distributionV2MockImplementation.getAddress());
+        await distribution.upgradeTo(await DistributionV3MockImplementation.getAddress());
       });
       it('should revert if caller is not the owner', async () => {
         await expect(distribution.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
@@ -512,7 +512,7 @@ describe('DistributionV2', () => {
       const tx = await distribution.createPool(pool);
       await expect(tx).to.emit(distribution, 'PoolCreated');
 
-      const poolData: IDistributionV2.PoolStruct = await distribution.pools(0);
+      const poolData: IDistributionV3.PoolStruct = await distribution.pools(0);
       expect(_comparePoolStructs(pool, poolData)).to.be.true;
     });
     it('should correctly pool with constant reward', async () => {
@@ -521,7 +521,7 @@ describe('DistributionV2', () => {
 
       await distribution.createPool(pool);
 
-      const poolData: IDistributionV2.PoolStruct = await distribution.pools(0);
+      const poolData: IDistributionV3.PoolStruct = await distribution.pools(0);
       expect(_comparePoolStructs(pool, poolData)).to.be.true;
     });
 
@@ -549,7 +549,7 @@ describe('DistributionV2', () => {
 
   describe('#editPool', () => {
     const poolId = 0;
-    let defaultPool: IDistributionV2.PoolStruct;
+    let defaultPool: IDistributionV3.PoolStruct;
 
     beforeEach(async () => {
       defaultPool = getDefaultPool();
@@ -571,7 +571,7 @@ describe('DistributionV2', () => {
       const tx = await distribution.editPool(poolId, newPool);
       await expect(tx).to.emit(distribution, 'PoolEdited');
 
-      const poolData: IDistributionV2.PoolStruct = await distribution.pools(poolId);
+      const poolData: IDistributionV3.PoolStruct = await distribution.pools(poolId);
       expect(_comparePoolStructs(newPool, poolData)).to.be.true;
     });
     it('should revert if try to change pool type', async () => {
@@ -2165,7 +2165,7 @@ describe('DistributionV2', () => {
       await setTime(periodStart - 3 * oneDay);
     });
 
-    it('should lock claim correctly', async () => {
+    it('should lock claim correctly in the public pool', async () => {
       await distribution.stake(poolId, wei(10), 0);
 
       const initialTime = await getCurrentBlockTime();
@@ -2207,13 +2207,53 @@ describe('DistributionV2', () => {
       expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
       expect(userData.claimLockEnd).to.eq(claimLockEnd * 3);
     });
+    it('should lock claim correctly in the private pool', async () => {
+      const poolPrivate = { ...getDefaultPool(), isPublic: false, payoutStart: (await getCurrentBlockTime()) + 2 };
+      await distribution.createPool(poolPrivate);
+      const poolId = 1;
+
+      await distribution.manageUsersInPrivatePool(poolId, [OWNER], [wei(10)], [0]);
+
+      const initialTime = await getCurrentBlockTime();
+
+      let userData = await distribution.usersData(OWNER, poolId);
+      expect(userData.claimLockStart).to.eq(initialTime);
+      expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
+
+      await setNextTime(periodStart + oneDay);
+
+      const tx = await distribution.lockClaim(poolId, claimLockEnd);
+      await expect(tx).to.emit(distribution, 'UserClaimLocked').withArgs(poolId, OWNER, initialTime, claimLockEnd);
+      userData = await distribution.usersData(OWNER, poolId);
+      expect(userData.deposited).to.eq(wei(10));
+      expect(userData.virtualDeposited).to.gt(wei(10));
+      expect(userData.rate).to.gt(0);
+      expect(userData.pendingRewards).to.gt(0);
+      expect(userData.claimLockStart).to.eq(initialTime);
+      expect(userData.claimLockEnd).to.eq(claimLockEnd);
+
+      const poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.gt(wei(1));
+      expect(poolData.rate).to.gt(0);
+
+      await setTime(claimLockEnd);
+
+      await distribution.lockClaim(poolId, claimLockEnd * 2);
+      userData = await distribution.usersData(OWNER, poolId);
+      expect(userData.claimLockStart).to.eq(initialTime);
+      expect(userData.claimLockEnd).to.eq(claimLockEnd * 2);
+
+      await setTime(claimLockEnd * 2);
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+
+      await distribution.lockClaim(poolId, claimLockEnd * 3);
+      userData = await distribution.usersData(OWNER, poolId);
+      expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
+      expect(userData.claimLockEnd).to.eq(claimLockEnd * 3);
+    });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.lockClaim(1, 1)).to.be.revertedWith("DS: pool doesn't exist");
-    });
-    it('should revert if pool is private', async () => {
-      const pool = { ...getDefaultPool(), isPublic: false, payoutStart: (await getCurrentBlockTime()) + 2 };
-      await distribution.createPool(pool);
-      await expect(distribution.lockClaim(1, 1)).to.be.revertedWith("DS: pool isn't public");
     });
     it('should revert if claimLockEnd < block.timestamp', async () => {
       await distribution.stake(poolId, wei(10), 0);
@@ -2375,7 +2415,7 @@ describe('DistributionV2', () => {
       expect(rewardSecond).to.closeTo(wei(47), wei(0.001));
     });
     it('should correctly calculate distribution rewards with real data', async () => {
-      const pool: IDistributionV2.PoolStruct = {
+      const pool: IDistributionV3.PoolStruct = {
         payoutStart: oneDay,
         decreaseInterval: oneDay,
         withdrawLockPeriod: 1,
@@ -2635,9 +2675,9 @@ describe('DistributionV2', () => {
 });
 
 // @dev: should be called before other pool creation
-const _getRewardTokenFromPool = async (distribution: DistributionV2, amount: bigint, user: SignerWithAddress) => {
+const _getRewardTokenFromPool = async (distribution: DistributionV3, amount: bigint, user: SignerWithAddress) => {
   const poolId = await _getNextPoolId(distribution);
-  const pool: IDistributionV2.PoolStruct = {
+  const pool: IDistributionV3.PoolStruct = {
     initialReward: amount,
     rewardDecrease: amount,
     payoutStart: (await getCurrentBlockTime()) + 2,
@@ -2654,7 +2694,7 @@ const _getRewardTokenFromPool = async (distribution: DistributionV2, amount: big
   await distribution.connect(user).withdraw(poolId, wei(1));
 };
 
-const _getNextPoolId = async (distribution: DistributionV2) => {
+const _getNextPoolId = async (distribution: DistributionV3) => {
   let poolId = 0;
 
   // eslint-disable-next-line no-constant-condition
@@ -2669,7 +2709,7 @@ const _getNextPoolId = async (distribution: DistributionV2) => {
   }
 };
 
-const _comparePoolStructs = (a: IDistributionV2.PoolStruct, b: IDistributionV2.PoolStruct): boolean => {
+const _comparePoolStructs = (a: IDistributionV3.PoolStruct, b: IDistributionV3.PoolStruct): boolean => {
   return (
     a.payoutStart.toString() === b.payoutStart.toString() &&
     a.decreaseInterval.toString() === b.decreaseInterval.toString() &&
@@ -2683,5 +2723,5 @@ const _comparePoolStructs = (a: IDistributionV2.PoolStruct, b: IDistributionV2.P
   );
 };
 
-// npx hardhat test "test/DistributionV2.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/DistributionV2.test.ts"
+// npx hardhat test "test/DistributionV3.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/DistributionV3.test.ts"

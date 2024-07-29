@@ -52,7 +52,6 @@ describe('Distribution', () => {
   let l2TokenReceiver: L2TokenReceiverV2;
 
   before(async () => {
-    await setTime(oneHour + 200);
     [OWNER, SECOND] = await ethers.getSigners();
 
     const [
