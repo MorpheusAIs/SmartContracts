@@ -7,18 +7,20 @@ pragma solidity ^0.8.20;
 interface IBuilders {
     /**
      * The structure that stores the builder pool's data.
-     * @param project The address of the project.
+     * @param project The name of the project.
      * @param admin The address of the admin.
      * @param poolStart The timestamp when the pool opens.
-     * @param withdrawLockPeriodAfterStake The period in seconds when the user can't withdraw his stake after staking.
-     * @param minimalStake The minimal stake amount.
+     * @param withdrawLockPeriodAfterDeposit The period in seconds when the user can't withdraw his deposit after staking.
+     * @param claimLockEnd The timestamp when the admin can claim his rewards.
+     * @param minimalDeposit The minimal deposit amount.
      */
     struct BuilderPool {
-        address project;
+        string name;
         address admin;
         uint128 poolStart;
-        uint128 withdrawLockPeriodAfterStake;
-        uint256 minimalStake;
+        uint128 withdrawLockPeriodAfterDeposit;
+        uint128 claimLockEnd;
+        uint256 minimalDeposit;
     }
 
     /**
@@ -27,7 +29,7 @@ interface IBuilders {
      * @param rate The current reward rate.
      * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
      */
-    struct PoolData {
+    struct BuilderPoolData {
         uint256 rewardsAtLastUpdate;
         uint256 rate;
         uint256 totalVirtualDeposited;
@@ -35,60 +37,51 @@ interface IBuilders {
 
     /**
      * The structure that stores the user's data of pool.
-     * @param lastStake The timestamp when the user last staked tokens.
+     * @param lastDeposit The timestamp when the user last deposited tokens.
      * @param deposited The amount of tokens deposited in the pool.
-     * @param withdrawLockStart The timestamp when the user locked his tokens.
-     * @param withdrawLockEnd The timestamp when the user can withdraw his tokens.
+     * @param multiplierLockStart The timestamp when the user locked his tokens.
      */
     struct UserData {
-        uint128 lastStake;
+        uint128 lastDeposit;
         uint256 deposited;
-        uint128 withdrawLockStart;
-        uint128 withdrawLockEnd;
+        uint128 multiplierLockStart;
     }
 
     /**
      * The structure that stores the pool's data.
-     * @param lastStake The timestamp when the user last staked tokens.
+     * @param lastDeposit The timestamp when the user last deposited tokens.
      * @param virtualDeposited The amount of tokens deposited in the pool with user multiplier.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      */
     struct BuilderData {
-        uint128 lastStake;
+        uint128 lastDeposit;
         uint256 virtualDeposited;
         uint256 rate;
         uint256 pendingRewards;
     }
 
     /**
-     * The event that is emitted when the distribution is set.
-     * @param distribution The address of the distribution contract.
-     * @param poolId The pool's id.
-     */
-    event DistrutionSet(address distribution, uint256 poolId);
-
-    /**
      * The event that is emitted when the pool is created.
      * @param builderPoolId The pool's id.
      * @param builderPool The pool's data.
      */
-    event PoolCreated(uint256 indexed builderPoolId, BuilderPool builderPool);
+    event BuilderPoolCreated(uint256 indexed builderPoolId, BuilderPool builderPool);
 
     /**
      * The event that is emitted when the pool is edited.
      * @param builderPoolId The pool's id.
      * @param builderPool The pool's data.
      */
-    event PoolEdited(uint256 indexed builderPoolId, BuilderPool builderPool);
+    event BuilderPoolEdited(uint256 indexed builderPoolId, BuilderPool builderPool);
 
     /**
-     * The event that is emitted when the user stakes tokens in the pool.
+     * The event that is emitted when the user deposits tokens in the pool.
      * @param builderPool_ The pool's id.
      * @param user The user's address.
      * @param amount The amount of tokens.
      */
-    event UserStaked(uint256 indexed builderPool_, address indexed user, uint256 amount);
+    event UserDeposited(uint256 indexed builderPool_, address indexed user, uint256 amount);
 
     /**
      * The event that is emitted when the admin claims rewards from the pool.
@@ -113,7 +106,7 @@ interface IBuilders {
      * @param withdrawLockStart The timestamp when the user locked his tokens.
      * @param withdrawLockEnd The timestamp when the user can withdraw his tokens.
      */
-    event UserWithdrawLocked(
+    event UserLocked(
         uint256 indexed builderPool_,
         address indexed user,
         uint128 withdrawLockStart,
@@ -143,12 +136,11 @@ interface IBuilders {
     function editBuilderPool(uint256 builderPoolId_, BuilderPool calldata builderPool_) external;
 
     /**
-     * The function to stake tokens in the public pool.
+     * The function to deposit tokens in the public pool.
      * @param builderPoolId_ The pool's id.
-     * @param amount_ The amount of tokens to stake.
-     * @param withdrawLockEnd_ The timestamp when the user can withdraw tokens.
+     * @param amount_ The amount of tokens to deposit.
      */
-    function stake(uint256 builderPoolId_, uint256 amount_, uint128 withdrawLockEnd_) external;
+    function deposit(uint256 builderPoolId_, uint256 amount_) external;
 
     /**
      * The function to claim rewards from the pool.
@@ -163,13 +155,6 @@ interface IBuilders {
      * @param amount_ The amount of tokens to withdraw.
      */
     function withdraw(uint256 builderPoolId_, uint256 amount_) external;
-
-    /**
-     * The function to lock the user's tokens.
-     * @param builderPoolId_ The pool's id.
-     * @param withdrawLockEnd_ The timestamp when the user can withdraw his tokens.
-     */
-    function lockWithdraw(uint256 builderPoolId_, uint128 withdrawLockEnd_) external;
 
     /**
      * The function to get the builder's reward.
@@ -194,10 +179,4 @@ interface IBuilders {
      * @return The address of deposit token.
      */
     function depositToken() external view returns (address);
-
-    /**
-     * The function to get the amount of deposit tokens that is staked.
-     * @return The amount of deposit tokens.
-     */
-    function totalDeposited() external view returns (uint256);
 }
