@@ -7,11 +7,11 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IBuilders} from "./interfaces/IBuilders.sol";
-import {IFeeConfig} from "./interfaces/IFeeConfig.sol";
-import {IBuildersTreasury} from "./interfaces/IBuildersTreasury.sol";
+import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
+import {IBuilders} from "../interfaces/builders/IBuilders.sol";
+import {IBuildersTreasury} from "../interfaces/builders/IBuildersTreasury.sol";
 
-import {LockMultiplierMath} from "./libs/LockMultiplierMath.sol";
+import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
 
 contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;

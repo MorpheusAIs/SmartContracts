@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IBuildersTreasury} from "./interfaces/IBuildersTreasury.sol";
+import {IBuildersTreasury} from "../interfaces/builders/IBuildersTreasury.sol";
 
 contract BuildersTreasury is IBuildersTreasury, OwnableUpgradeable, UUPSUpgradeable {
     address public rewardToken;
