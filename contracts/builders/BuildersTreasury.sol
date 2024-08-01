@@ -7,7 +7,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IBuildersTreasury} from "../interfaces/builders/IBuildersTreasury.sol";
+import {IBuilders} from "../interfaces/builders/IBuilders.sol";
+import {IBuildersTreasury, IERC165} from "../interfaces/builders/IBuildersTreasury.sol";
 
 contract BuildersTreasury is IBuildersTreasury, OwnableUpgradeable, UUPSUpgradeable {
     address public rewardToken;
@@ -16,7 +17,7 @@ contract BuildersTreasury is IBuildersTreasury, OwnableUpgradeable, UUPSUpgradea
     uint256 public distributedRewards;
 
     modifier onlyBuilders() {
-        _onlyBuilders();
+        require(_msgSender() == builders, "BT: caller is not the builder");
         _;
     }
 
@@ -32,24 +33,28 @@ contract BuildersTreasury is IBuildersTreasury, OwnableUpgradeable, UUPSUpgradea
         setBuilders(builders_);
     }
 
-    function setBuilders(address builders_) public onlyOwner {
-        require(builders_ != address(0), "BT: invalid builders");
-
-        builders = builders_;
+    function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
+        return interfaceId_ == type(IBuildersTreasury).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     }
 
-    function getTotalRewards() public view returns (uint256) {
+    function setBuilders(address builders_) public onlyOwner {
+        require(IERC165(builders_).supportsInterface(type(IBuilders).interfaceId), "BT: invalid builders");
+
+        builders = builders_;
+
+        emit BuildersSet(builders_);
+    }
+
+    function getAllRewards() public view returns (uint256) {
         return IERC20(rewardToken).balanceOf(address(this)) + distributedRewards;
     }
 
-    function sendReward(address receiver_, uint256 amount_) external onlyBuilders {
+    function sendRewards(address receiver_, uint256 amount_) external onlyBuilders {
         distributedRewards += amount_;
 
         IERC20(rewardToken).transfer(receiver_, amount_);
-    }
 
-    function _onlyBuilders() internal view {
-        require(msg.sender == builders, "BT: caller is not the builder");
+        emit RewardSent(receiver_, amount_);
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IFeeConfig} from "./interfaces/IFeeConfig.sol";
+import {IFeeConfig, IERC165} from "./interfaces/IFeeConfig.sol";
 
 contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     address public treasury;
@@ -15,7 +15,7 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     uint256 public baseFeeForOperation;
 
     mapping(address => uint256) public fees;
-    mapping(address => mapping(string => uint256)) public feeForOperations;
+    mapping(address => mapping(bytes32 => uint256)) public feeForOperations;
 
     constructor() {
         _disableInitializers();
@@ -28,13 +28,17 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
         setTreasury(treasury_);
     }
 
+    function supportsInterface(bytes4 interfaceId_) external pure override returns (bool) {
+        return interfaceId_ == type(IFeeConfig).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+    }
+
     function setFee(address sender_, uint256 fee_) external onlyOwner {
         require(fee_ <= PRECISION, "FC: invalid fee");
 
         fees[sender_] = fee_;
     }
 
-    function setFeeForOperation(address sender_, string memory operation_, uint256 fee_) external onlyOwner {
+    function setFeeForOperation(address sender_, bytes32 operation_, uint256 fee_) external onlyOwner {
         require(fee_ <= PRECISION, "FC: invalid fee");
 
         feeForOperations[sender_][operation_] = fee_;
@@ -65,7 +69,7 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
 
     function getFeeAndTreasuryForOperation(
         address sender_,
-        string memory operation_
+        bytes32 operation_
     ) external view returns (uint256, address) {
         uint256 fee_ = feeForOperations[sender_][operation_];
         if (fee_ == 0) {

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+
 /**
  * This is the Builders contract that stores custom builder pools.
  */
-interface IBuilders {
+interface IBuilders is IERC165 {
     /**
      * The structure that stores the builder pool's data.
      * @param project The name of the project.
@@ -25,12 +27,12 @@ interface IBuilders {
 
     /**
      * The structure that stores the pool's rate data.
-     * @param rewardsAtLastUpdate The amount of rewards at the last update.
+     * @param distributedRewards The amount of rewards at the last update.
      * @param rate The current reward rate.
      * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
      */
-    struct BuilderPoolData {
-        uint256 rewardsAtLastUpdate;
+    struct TotalPoolData {
+        uint256 distributedRewards;
         uint256 rate;
         uint256 totalVirtualDeposited;
     }
@@ -38,13 +40,15 @@ interface IBuilders {
     /**
      * The structure that stores the user's data of pool.
      * @param lastDeposit The timestamp when the user last deposited tokens.
+     * @param claimLockStart The timestamp when the user locked his tokens.
      * @param deposited The amount of tokens deposited in the pool.
-     * @param multiplierLockStart The timestamp when the user locked his tokens.
+     * @param virtualDeposited The amount of tokens deposited in the pool with user multiplier.
      */
     struct UserData {
         uint128 lastDeposit;
+        uint128 claimLockStart;
         uint256 deposited;
-        uint128 multiplierLockStart;
+        uint256 virtualDeposited;
     }
 
     /**
@@ -54,12 +58,36 @@ interface IBuilders {
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      */
-    struct BuilderData {
+    struct BuilderPoolData {
         uint128 lastDeposit;
         uint256 virtualDeposited;
         uint256 rate;
         uint256 pendingRewards;
     }
+
+    /**
+     * The event that is emitted when the fee config is set.
+     * @param feeConfig The address of the fee config.
+     */
+    event FeeConfigSet(address feeConfig);
+
+    /**
+     * The event that is emitted when the builders treasury address is set.
+     * @param buildersTreasury The address of the builders treasury.
+     */
+    event BuildersTreasurySet(address buildersTreasury);
+
+    /**
+     * The event that is emitted when the minimal withdraw lock period is set.
+     * @param minimalWithdrawLockPeriod The minimal withdraw lock period.
+     */
+    event MinimalWithdrawLockPeriodSet(uint256 minimalWithdrawLockPeriod);
+
+    /**
+     * The event that is emitted when the deadline for editing the pool is set.
+     * @param editPoolDeadline The deadline for editing the pool.
+     */
+    event EditPoolDeadlineSet(uint128 editPoolDeadline);
 
     /**
      * The event that is emitted when the pool is created.
@@ -120,7 +148,31 @@ interface IBuilders {
      * @param amount The amount of tokens.
      * @param treasury The treasury address.
      */
-    event FeePaid(address indexed user, string indexed operation, uint256 amount, address treasury);
+    event FeePaid(address indexed user, bytes32 indexed operation, uint256 amount, address treasury);
+
+    /**
+     * The function to set the fee config address.
+     * @param feeConfig_ The address of the fee config.
+     */
+    function setFeeConfig(address feeConfig_) external;
+
+    /**
+     * The function to set the builders treasury address.
+     * @param buildersTreasury_ The address of the builders treasury.
+     */
+    function setBuildersTreasury(address buildersTreasury_) external;
+
+    /**
+     * The function to set the deadline for editing the pool.
+     * @param editPoolDeadline_ The deadline for editing the pool.
+     */
+    function setEditPoolDeadline(uint128 editPoolDeadline_) external;
+
+    /**
+     * The function to set the minimal withdraw lock period.
+     * @param minimalWithdrawLockPeriod_ The minimal withdraw lock period.
+     */
+    function setMinimalWithdrawLockPeriod(uint256 minimalWithdrawLockPeriod_) external;
 
     /**
      * The function to create a new pool.
@@ -162,17 +214,6 @@ interface IBuilders {
      * @return The user's reward amount.
      */
     function getCurrentBuilderReward(uint256 builderPoolId_) external view returns (uint256);
-
-    /**
-     * The function to remove upgradeability.
-     */
-    function removeUpgradeability() external;
-
-    /**
-     * The function to check if the contract is upgradeable.
-     * @return The flag that indicates if the contract is upgradeable.
-     */
-    function isNotUpgradeable() external view returns (bool);
 
     /**
      * The function to get the address of deposit token.
