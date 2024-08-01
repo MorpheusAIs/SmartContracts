@@ -201,8 +201,9 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         require(newDeposited_ >= builderPool.minimalDeposit || newDeposited_ == 0, "BU: invalid withdraw amount");
 
         (uint256 fee_, uint256 amountToWithdraw_, address treasuryAddress_) = _getFee(amount_, WITHDRAW_OPERATION);
-
-        IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
+        if (fee_ > 0) {
+            IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
+        }
         IERC20(depositToken).safeTransfer(user_, amountToWithdraw_);
 
         uint256 currentRate_ = _getCurrentRate();
@@ -263,7 +264,9 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
 
         // Transfer rewards
         (uint256 fee_, uint256 amountToClaim_, address treasuryAddress_) = _getFee(pendingRewards_, CLAIM_OPERATION);
-        IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
+        if (fee_ > 0) {
+            IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
+        }
         IBuildersTreasury(buildersTreasury).sendRewards(receiver_, amountToClaim_);
 
         emit AdminClaimed(builderPoolId_, receiver_, amountToClaim_);
