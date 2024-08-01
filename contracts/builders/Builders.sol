@@ -24,19 +24,17 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     uint128 public editPoolDeadline;
     uint256 public minimalWithdrawLockPeriod;
 
-    uint256 public nextPoolId;
-
     TotalPoolData public totalPoolData;
-    mapping(uint256 => BuilderPool) public builderPools;
-    mapping(uint256 => BuilderPoolData) public buildersPoolData;
+    mapping(bytes32 builderPoolId => BuilderPool) public builderPools;
+    mapping(bytes32 builderPoolId => BuilderPoolData) public buildersPoolData;
 
-    mapping(address => mapping(uint256 => UserData)) public usersData;
+    mapping(address user => mapping(bytes32 builderPoolId => UserData)) public usersData;
 
     bytes32 private constant WITHDRAW_OPERATION = "withdraw";
     bytes32 private constant CLAIM_OPERATION = "claim";
 
-    modifier poolExists(uint256 builderPoolId_) {
-        require(_poolExists(builderPoolId_), "BU: pool doesn't exist");
+    modifier poolExists(string calldata builderPoolName_) {
+        require(_poolExists(builderPoolName_), "BU: pool doesn't exist");
         _;
     }
 
@@ -99,18 +97,20 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     function createBuilderPool(BuilderPool calldata builderPool_) public {
         _validateBuilderPool(builderPool_);
 
-        uint256 builderPoolId_ = nextPoolId++;
+        bytes32 builderPoolId_ = getPoolId(builderPool_.name);
 
         builderPools[builderPoolId_] = builderPool_;
 
         emit BuilderPoolCreated(builderPoolId_, builderPool_);
     }
 
-    function editBuilderPool(
-        uint256 builderPoolId_,
-        BuilderPool calldata builderPool_
-    ) external poolExists(builderPoolId_) {
+    function editBuilderPool(BuilderPool calldata builderPool_) external {
+        require(_poolExists(builderPool_.name), "BU: pool doesn't exist");
+
         _validateBuilderPool(builderPool_);
+
+        bytes32 builderPoolId_ = getPoolId(builderPool_.name);
+        require(getPoolId(builderPool_.name) == builderPoolId_, "BU: invalid pool id");
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
 
@@ -125,10 +125,11 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit BuilderPoolEdited(builderPoolId_, builderPool_);
     }
 
-    function deposit(uint256 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) {
+    function deposit(string calldata builderPoolName_, uint256 amount_) external poolExists(builderPoolName_) {
         require(amount_ > 0, "BU: nothing to deposit");
 
         address user_ = _msgSender();
+        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
         require(block.timestamp >= builderPool.poolStart, "BU: pool isn't started");
@@ -177,10 +178,11 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit UserLocked(builderPoolId_, user_, uint128(block.timestamp), builderPool.claimLockEnd);
     }
 
-    function withdraw(uint256 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) {
+    function withdraw(string calldata builderPoolName_, uint256 amount_) external poolExists(builderPoolName_) {
         require(amount_ > 0, "BU: nothing to withdraw");
 
         address user_ = _msgSender();
+        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
         BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
@@ -239,8 +241,10 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit FeePaid(user_, WITHDRAW_OPERATION, fee_, treasuryAddress_);
     }
 
-    function claim(uint256 builderPoolId_, address receiver_) external poolExists(builderPoolId_) {
+    function claim(string calldata builderPoolName_, address receiver_) external poolExists(builderPoolName_) {
         address user_ = _msgSender();
+        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
+
         require(user_ == builderPools[builderPoolId_].admin, "BU: only admin can claim rewards");
 
         BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
@@ -271,21 +275,23 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function getLockPeriodMultiplier(
-        uint256 builderPoolId_,
+        string calldata builderPoolName_,
         uint128 lockStart_,
         uint128 lockEnd_
     ) public view returns (uint256) {
-        if (!_poolExists(builderPoolId_)) {
+        if (!_poolExists(builderPoolName_)) {
             return PRECISION;
         }
 
         return LockMultiplierMath._getLockPeriodMultiplier(lockStart_, lockEnd_);
     }
 
-    function getCurrentUserMultiplier(uint256 builderPoolId_, address user_) public view returns (uint256) {
-        if (!_poolExists(builderPoolId_)) {
+    function getCurrentUserMultiplier(string calldata builderPoolName_, address user_) public view returns (uint256) {
+        if (!_poolExists(builderPoolName_)) {
             return PRECISION;
         }
+
+        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
         UserData storage userData = usersData[user_][builderPoolId_];
@@ -293,10 +299,12 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         return LockMultiplierMath._getLockPeriodMultiplier(userData.claimLockStart, builderPool.claimLockEnd);
     }
 
-    function getCurrentBuilderReward(uint256 builderPoolId_) external view returns (uint256) {
-        if (!_poolExists(builderPoolId_)) {
+    function getCurrentBuilderReward(string calldata builderPoolName_) external view returns (uint256) {
+        if (!_poolExists(builderPoolName_)) {
             return 0;
         }
+
+        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         return _getCurrentBuilderReward(_getCurrentRate(), buildersPoolData[builderPoolId_]);
     }
@@ -339,8 +347,14 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         return builderPoolData_.pendingRewards + newRewards_;
     }
 
-    function _poolExists(uint256 builderPoolId_) private view returns (bool) {
-        return builderPoolId_ < nextPoolId;
+    function getPoolId(string calldata builderPooldName_) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(builderPooldName_));
+    }
+
+    function _poolExists(string calldata builderPooldName_) private view returns (bool) {
+        bytes32 builderPoolId_ = getPoolId(builderPooldName_);
+
+        return builderPools[builderPoolId_].admin != address(0);
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

@@ -94,14 +94,14 @@ interface IBuilders is IERC165 {
      * @param builderPoolId The pool's id.
      * @param builderPool The pool's data.
      */
-    event BuilderPoolCreated(uint256 indexed builderPoolId, BuilderPool builderPool);
+    event BuilderPoolCreated(bytes32 indexed builderPoolId, BuilderPool builderPool);
 
     /**
      * The event that is emitted when the pool is edited.
      * @param builderPoolId The pool's id.
      * @param builderPool The pool's data.
      */
-    event BuilderPoolEdited(uint256 indexed builderPoolId, BuilderPool builderPool);
+    event BuilderPoolEdited(bytes32 indexed builderPoolId, BuilderPool builderPool);
 
     /**
      * The event that is emitted when the user deposits tokens in the pool.
@@ -109,7 +109,7 @@ interface IBuilders is IERC165 {
      * @param user The user's address.
      * @param amount The amount of tokens.
      */
-    event UserDeposited(uint256 indexed builderPool_, address indexed user, uint256 amount);
+    event UserDeposited(bytes32 indexed builderPool_, address indexed user, uint256 amount);
 
     /**
      * The event that is emitted when the admin claims rewards from the pool.
@@ -117,7 +117,7 @@ interface IBuilders is IERC165 {
      * @param receiver The receiver's address.
      * @param amount The amount of tokens.
      */
-    event AdminClaimed(uint256 indexed builderPool_, address receiver, uint256 amount);
+    event AdminClaimed(bytes32 indexed builderPool_, address receiver, uint256 amount);
 
     /**
      * The event that is emitted when the user withdraws tokens from the pool.
@@ -125,7 +125,7 @@ interface IBuilders is IERC165 {
      * @param user The user's address.
      * @param amount The amount of tokens.
      */
-    event UserWithdrawn(uint256 indexed builderPool_, address indexed user, uint256 amount);
+    event UserWithdrawn(bytes32 indexed builderPool_, address indexed user, uint256 amount);
 
     /**
      * The event that is emitted when the user locks his tokens.
@@ -135,7 +135,7 @@ interface IBuilders is IERC165 {
      * @param withdrawLockEnd The timestamp when the user can withdraw his tokens.
      */
     event UserLocked(
-        uint256 indexed builderPool_,
+        bytes32 indexed builderPool_,
         address indexed user,
         uint128 withdrawLockStart,
         uint128 withdrawLockEnd
@@ -182,38 +182,37 @@ interface IBuilders is IERC165 {
 
     /**
      * The function to edit the pool's data.
-     * @param builderPoolId_ The pool's id.
      * @param builderPool_ The new pool's data.
      */
-    function editBuilderPool(uint256 builderPoolId_, BuilderPool calldata builderPool_) external;
+    function editBuilderPool(BuilderPool calldata builderPool_) external;
 
     /**
      * The function to deposit tokens in the public pool.
-     * @param builderPoolId_ The pool's id.
+     * @param builderPoolName_ The pool's name.
      * @param amount_ The amount of tokens to deposit.
      */
-    function deposit(uint256 builderPoolId_, uint256 amount_) external;
+    function deposit(string calldata builderPoolName_, uint256 amount_) external;
 
     /**
      * The function to claim rewards from the pool.
-     * @param builderPoolId_ The pool's id.
+     * @param builderPoolName_ The pool's name.
      * @param receiver_ The receiver's address.
      */
-    function claim(uint256 builderPoolId_, address receiver_) external;
+    function claim(string calldata builderPoolName_, address receiver_) external;
 
     /**
      * The function to withdraw tokens from the pool.
-     * @param builderPoolId_ The pool's id.
+     * @param builderPoolName_ The pool's name.
      * @param amount_ The amount of tokens to withdraw.
      */
-    function withdraw(uint256 builderPoolId_, uint256 amount_) external;
+    function withdraw(string calldata builderPoolName_, uint256 amount_) external;
 
     /**
      * The function to get the builder's reward.
-     * @param builderPoolId_ The pool's id.
+     * @param builderPoolName_ The pool's name.
      * @return The user's reward amount.
      */
-    function getCurrentBuilderReward(uint256 builderPoolId_) external view returns (uint256);
+    function getCurrentBuilderReward(string calldata builderPoolName_) external view returns (uint256);
 
     /**
      * The function to get the address of deposit token.
