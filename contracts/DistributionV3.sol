@@ -265,10 +265,10 @@ contract DistributionV3 is IDistributionV3, OwnableUpgradeable, UUPSUpgradeable 
         if (claimLockEnd_ == 0) {
             claimLockEnd_ = userData.claimLockEnd > block.timestamp ? userData.claimLockEnd : uint128(block.timestamp);
         }
+        require(claimLockEnd_ >= userData.claimLockEnd, "DS: invalid claim lock end");
 
         if (pool.isPublic) {
             require(amount_ > 0, "DS: nothing to stake");
-            require(claimLockEnd_ >= userData.claimLockEnd, "DS: invalid claim lock end");
 
             // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
             uint256 balanceBefore_ = IERC20(depositToken).balanceOf(address(this));

@@ -979,8 +979,6 @@ describe('DistributionV3', () => {
       };
 
       beforeEach(async () => {
-        // await setTime(payoutStart - 3 * oneDay);
-
         await distribution.editPool(poolId, newPool);
       });
 
@@ -1075,7 +1073,7 @@ describe('DistributionV3', () => {
         expect(userData.virtualDeposited).to.eq(wei(4));
         expect(userData.pendingRewards).to.eq(0);
       });
-      it('should handle if changes only claimLockEnd', async () => {
+      it('should save claimLockEnd changes only', async () => {
         let userData, multiplier;
 
         await distribution.manageUsersInPrivatePool(
@@ -1105,13 +1103,13 @@ describe('DistributionV3', () => {
         expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
         expect(userData.claimLockEnd).to.eq(claimLockEnd * 2);
 
-        await setNextTime(claimLockEnd);
+        await setNextTime(claimLockEnd + 1);
 
         await distribution.manageUsersInPrivatePool(
           poolId,
           [SECOND.address, OWNER.address],
           [wei(1), wei(4)],
-          [claimLockEnd * 2, claimLockEnd + 200 * oneDay],
+          [claimLockEnd * 2, claimLockEnd * 2 + 200 * oneDay],
         );
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
@@ -1132,25 +1130,7 @@ describe('DistributionV3', () => {
         expect(userData.virtualDeposited).to.eq((wei(4) * multiplier) / PRECISION);
         expect(userData.pendingRewards).to.gt(wei((4570722 * 4) / 5));
         expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
-        expect(userData.claimLockEnd).to.eq(claimLockEnd + 200 * oneDay);
-      });
-      it('should correctly set less claimLockEnd', async () => {
-        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [claimLockEnd]);
-        let userData = await distribution.usersData(SECOND.address, poolId);
-        expect(userData.claimLockEnd).to.eq(claimLockEnd);
-
-        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1.1)], [claimLockEnd - 2]);
-        userData = await distribution.usersData(SECOND.address, poolId);
-        expect(userData.claimLockEnd).to.eq(claimLockEnd - 2);
-
-        await distribution.manageUsersInPrivatePool(
-          poolId,
-          [SECOND.address],
-          [wei(1.2)],
-          [(await getCurrentBlockTime()) - 2],
-        );
-        userData = await distribution.usersData(SECOND.address, poolId);
-        expect(userData.claimLockEnd).to.eq((await getCurrentBlockTime()) - 3);
+        expect(userData.claimLockEnd).to.eq(claimLockEnd * 2 + 200 * oneDay);
       });
       it('should set claimLockEnd properly if providing 0', async () => {
         await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0]);

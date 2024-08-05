@@ -183,7 +183,7 @@ interface IDistributionV3 {
     function withdraw(uint256 poolId_, uint256 amount_) external;
 
     /**
-     * The function to withdraw tokens from the pool.
+     * The function to lock rewards.
      * @param poolId_ The pool's id.
      * @param claimLockEnd_ The timestamp when the user can claim his rewards.
      */
