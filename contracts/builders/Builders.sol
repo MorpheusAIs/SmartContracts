@@ -136,45 +136,15 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         BuilderPool storage builderPool = builderPools[builderPoolId_];
         require(block.timestamp >= builderPool.poolStart, "BU: pool isn't started");
 
-        BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
         UserData storage userData = usersData[user_][builderPoolId_];
 
         uint256 deposited_ = userData.deposited + amount_;
         require(deposited_ >= builderPool.minimalDeposit, "BU: amount too low");
 
-        (uint256 currentRate_, uint256 newPoolRewards_) = _getCurrentRate();
-
-        uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
-
-        uint256 multiplier_ = LockMultiplierMath._getLockPeriodMultiplier(
-            uint128(block.timestamp),
-            builderPool.claimLockEnd
-        );
-        uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
-
         IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
 
-        // Update pool data
-        totalPoolData.distributedRewards += newPoolRewards_;
-        totalPoolData.rate = currentRate_;
-        totalPoolData.totalVirtualDeposited =
-            totalPoolData.totalVirtualDeposited +
-            virtualDeposited_ -
-            userData.virtualDeposited;
-
-        // Update builder data
-        builderPoolData.rate = currentRate_;
-        builderPoolData.pendingRewards = pendingRewards_;
-        builderPoolData.virtualDeposited =
-            builderPoolData.virtualDeposited +
-            virtualDeposited_ -
-            userData.virtualDeposited;
-
-        // Update user data
+        _updatePoolData(builderPoolId_, deposited_, userData);
         userData.lastDeposit = uint128(block.timestamp);
-        userData.deposited = deposited_;
-        userData.virtualDeposited = virtualDeposited_;
-        userData.claimLockStart = uint128(block.timestamp);
 
         emit UserDeposited(builderPoolId_, user_, amount_);
     }
@@ -186,7 +156,6 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
-        BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
         UserData storage userData = usersData[user_][builderPoolId_];
 
         require(
@@ -201,50 +170,18 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         uint256 newDeposited_ = userData.deposited - amount_;
         require(newDeposited_ >= builderPool.minimalDeposit || newDeposited_ == 0, "BU: invalid withdraw amount");
 
-        (uint256 currentRate_, uint256 newPoolRewards_) = _getCurrentRate();
+        _updatePoolData(builderPoolId_, newDeposited_, userData);
 
-        uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
+        (uint256 fee_, address treasuryAddress_) = _getFee(amount_, FEE_WITHDRAW_OPERATION);
+        if (fee_ > 0) {
+            IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
 
-        uint256 multiplier_ = LockMultiplierMath._getLockPeriodMultiplier(
-            uint128(block.timestamp),
-            builderPool.claimLockEnd
-        );
-        uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
-
-        // Update pool data
-        totalPoolData.distributedRewards += newPoolRewards_;
-        totalPoolData.rate = currentRate_;
-        totalPoolData.totalVirtualDeposited =
-            totalPoolData.totalVirtualDeposited +
-            virtualDeposited_ -
-            userData.virtualDeposited;
-
-        // Update builder data
-        builderPoolData.rate = currentRate_;
-        builderPoolData.pendingRewards = pendingRewards_;
-        builderPoolData.virtualDeposited =
-            builderPoolData.virtualDeposited +
-            virtualDeposited_ -
-            userData.virtualDeposited;
-
-        // Update user data
-        userData.deposited = newDeposited_;
-        userData.virtualDeposited = virtualDeposited_;
-        userData.claimLockStart = uint128(block.timestamp);
-
-        {
-            (uint256 fee_, address treasuryAddress_) = _getFee(amount_, FEE_WITHDRAW_OPERATION);
-            if (fee_ > 0) {
-                IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
-
-                amount_ -= fee_;
-            }
-            IERC20(depositToken).safeTransfer(user_, amount_);
-
-            emit FeePaid(user_, FEE_WITHDRAW_OPERATION, fee_, treasuryAddress_);
+            amount_ -= fee_;
         }
+        IERC20(depositToken).safeTransfer(user_, amount_);
 
         emit UserWithdrawn(builderPoolId_, user_, amount_);
+        emit FeePaid(user_, FEE_WITHDRAW_OPERATION, fee_, treasuryAddress_);
     }
 
     function claim(string calldata builderPoolName_, address receiver_) external poolExists(builderPoolName_) {
@@ -278,6 +215,42 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
 
         emit AdminClaimed(builderPoolId_, receiver_, pendingRewards_);
         emit FeePaid(user_, FEE_CLAIM_OPERATION, fee_, treasuryAddress_);
+    }
+
+    function _updatePoolData(bytes32 builderPoolId_, uint256 newDeposited_, UserData storage userData) internal {
+        BuilderPool storage builderPool = builderPools[builderPoolId_];
+        BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
+
+        (uint256 currentRate_, uint256 newPoolRewards_) = _getCurrentRate();
+
+        uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
+
+        uint256 multiplier_ = LockMultiplierMath._getLockPeriodMultiplier(
+            uint128(block.timestamp),
+            builderPool.claimLockEnd
+        );
+        uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
+
+        // Update pool data
+        totalPoolData.distributedRewards += newPoolRewards_;
+        totalPoolData.rate = currentRate_;
+        totalPoolData.totalVirtualDeposited =
+            totalPoolData.totalVirtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
+
+        // Update builder data
+        builderPoolData.rate = currentRate_;
+        builderPoolData.pendingRewards = pendingRewards_;
+        builderPoolData.virtualDeposited =
+            builderPoolData.virtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
+
+        // Update user data
+        userData.deposited = newDeposited_;
+        userData.virtualDeposited = virtualDeposited_;
+        userData.claimLockStart = uint128(block.timestamp);
     }
 
     function getNotDistributedRewards() public view returns (uint256) {
