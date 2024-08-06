@@ -128,20 +128,6 @@ interface IBuilders is IERC165 {
     event UserWithdrawn(bytes32 indexed builderPool_, address indexed user, uint256 amount);
 
     /**
-     * The event that is emitted when the user locks his tokens.
-     * @param builderPool_ The pool's id.
-     * @param user The user's address.
-     * @param withdrawLockStart The timestamp when the user locked his tokens.
-     * @param withdrawLockEnd The timestamp when the user can withdraw his tokens.
-     */
-    event UserLocked(
-        bytes32 indexed builderPool_,
-        address indexed user,
-        uint128 withdrawLockStart,
-        uint128 withdrawLockEnd
-    );
-
-    /**
      * The event that is emitted when the fee is paid.
      * @param user The payer's address.
      * @param operation The operation name.

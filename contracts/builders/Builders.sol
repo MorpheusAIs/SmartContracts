@@ -30,8 +30,8 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
 
     mapping(address user => mapping(bytes32 builderPoolId => UserData)) public usersData;
 
-    bytes32 private constant WITHDRAW_OPERATION = "withdraw";
-    bytes32 private constant CLAIM_OPERATION = "claim";
+    bytes32 private constant FEE_WITHDRAW_OPERATION = "withdraw";
+    bytes32 private constant FEE_CLAIM_OPERATION = "claim";
 
     modifier poolExists(string calldata builderPoolName_) {
         require(_poolExists(builderPoolName_), "BU: pool doesn't exist");
@@ -95,6 +95,8 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function createBuilderPool(BuilderPool calldata builderPool_) public {
+        require(!_poolExists(builderPool_.name), "BU: pool already exist");
+
         _validateBuilderPool(builderPool_);
 
         bytes32 builderPoolId_ = getPoolId(builderPool_.name);
@@ -110,9 +112,9 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         _validateBuilderPool(builderPool_);
 
         bytes32 builderPoolId_ = getPoolId(builderPool_.name);
-        require(getPoolId(builderPool_.name) == builderPoolId_, "BU: invalid pool id");
-
         BuilderPool storage builderPool = builderPools[builderPoolId_];
+
+        require(getPoolId(builderPool.name) == builderPoolId_, "BU: invalid pool id");
 
         require(_msgSender() == builderPool.admin, "BU: only admin can edit pool");
 
@@ -140,7 +142,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         uint256 deposited_ = userData.deposited + amount_;
         require(deposited_ >= builderPool.minimalDeposit, "BU: amount too low");
 
-        uint256 currentRate_ = _getCurrentRate();
+        (uint256 currentRate_, uint256 newPoolRewards_) = _getCurrentRate();
 
         uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
 
@@ -150,8 +152,10 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         );
         uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
 
+        IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
+
         // Update pool data
-        totalPoolData.distributedRewards += getNotDistributedRewards();
+        totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
         totalPoolData.totalVirtualDeposited =
             totalPoolData.totalVirtualDeposited +
@@ -172,10 +176,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
 
-        IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
-
         emit UserDeposited(builderPoolId_, user_, amount_);
-        emit UserLocked(builderPoolId_, user_, uint128(block.timestamp), builderPool.claimLockEnd);
     }
 
     function withdraw(string calldata builderPoolName_, uint256 amount_) external poolExists(builderPoolName_) {
@@ -200,13 +201,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         uint256 newDeposited_ = userData.deposited - amount_;
         require(newDeposited_ >= builderPool.minimalDeposit || newDeposited_ == 0, "BU: invalid withdraw amount");
 
-        (uint256 fee_, uint256 amountToWithdraw_, address treasuryAddress_) = _getFee(amount_, WITHDRAW_OPERATION);
-        if (fee_ > 0) {
-            IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
-        }
-        IERC20(depositToken).safeTransfer(user_, amountToWithdraw_);
-
-        uint256 currentRate_ = _getCurrentRate();
+        (uint256 currentRate_, uint256 newPoolRewards_) = _getCurrentRate();
 
         uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
 
@@ -217,7 +212,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
 
         // Update pool data
-        totalPoolData.distributedRewards += getNotDistributedRewards();
+        totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
         totalPoolData.totalVirtualDeposited =
             totalPoolData.totalVirtualDeposited +
@@ -237,9 +232,19 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
 
-        emit UserWithdrawn(builderPoolId_, user_, amountToWithdraw_);
-        emit UserLocked(builderPoolId_, user_, uint128(block.timestamp), builderPool.claimLockEnd);
-        emit FeePaid(user_, WITHDRAW_OPERATION, fee_, treasuryAddress_);
+        {
+            (uint256 fee_, address treasuryAddress_) = _getFee(amount_, FEE_WITHDRAW_OPERATION);
+            if (fee_ > 0) {
+                IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
+
+                amount_ -= fee_;
+            }
+            IERC20(depositToken).safeTransfer(user_, amount_);
+
+            emit FeePaid(user_, FEE_WITHDRAW_OPERATION, fee_, treasuryAddress_);
+        }
+
+        emit UserWithdrawn(builderPoolId_, user_, amount_);
     }
 
     function claim(string calldata builderPoolName_, address receiver_) external poolExists(builderPoolName_) {
@@ -250,12 +255,12 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
 
         BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
 
-        uint256 currentRate_ = _getCurrentRate();
+        (uint256 currentRate_, uint256 newPoolRewards_) = _getCurrentRate();
         uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
         require(pendingRewards_ > 0, "BU: nothing to claim");
 
         // Update pool data
-        totalPoolData.distributedRewards += getNotDistributedRewards();
+        totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
 
         // Update builder data
@@ -263,30 +268,20 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         builderPoolData.pendingRewards = 0;
 
         // Transfer rewards
-        (uint256 fee_, uint256 amountToClaim_, address treasuryAddress_) = _getFee(pendingRewards_, CLAIM_OPERATION);
+        (uint256 fee_, address treasuryAddress_) = _getFee(pendingRewards_, FEE_CLAIM_OPERATION);
         if (fee_ > 0) {
             IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
-        }
-        IBuildersTreasury(buildersTreasury).sendRewards(receiver_, amountToClaim_);
 
-        emit AdminClaimed(builderPoolId_, receiver_, amountToClaim_);
-        emit FeePaid(user_, CLAIM_OPERATION, fee_, treasuryAddress_);
+            pendingRewards_ -= fee_;
+        }
+        IBuildersTreasury(buildersTreasury).sendRewards(receiver_, pendingRewards_);
+
+        emit AdminClaimed(builderPoolId_, receiver_, pendingRewards_);
+        emit FeePaid(user_, FEE_CLAIM_OPERATION, fee_, treasuryAddress_);
     }
 
     function getNotDistributedRewards() public view returns (uint256) {
         return IBuildersTreasury(buildersTreasury).getAllRewards() - totalPoolData.distributedRewards;
-    }
-
-    function getLockPeriodMultiplier(
-        string calldata builderPoolName_,
-        uint128 lockStart_,
-        uint128 lockEnd_
-    ) public view returns (uint256) {
-        if (!_poolExists(builderPoolName_)) {
-            return PRECISION;
-        }
-
-        return LockMultiplierMath._getLockPeriodMultiplier(lockStart_, lockEnd_);
     }
 
     function getCurrentUserMultiplier(string calldata builderPoolName_, address user_) public view returns (uint256) {
@@ -307,9 +302,13 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
             return 0;
         }
 
-        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
+        (uint256 currentRate_, ) = _getCurrentRate();
 
-        return _getCurrentBuilderReward(_getCurrentRate(), buildersPoolData[builderPoolId_]);
+        return _getCurrentBuilderReward(currentRate_, buildersPoolData[getPoolId(builderPoolName_)]);
+    }
+
+    function getLockPeriodMultiplier(uint128 lockStart_, uint128 lockEnd_) public pure returns (uint256) {
+        return LockMultiplierMath._getLockPeriodMultiplier(lockStart_, lockEnd_);
     }
 
     function _validateBuilderPool(BuilderPool calldata builderPool_) internal view {
@@ -319,26 +318,25 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         require(builderPool_.poolStart > block.timestamp, "BU: invalid pool start value");
     }
 
-    function _getFee(uint256 amount_, bytes32 operation_) internal view returns (uint256, uint256, address) {
+    function _getFee(uint256 amount_, bytes32 operation_) internal view returns (uint256, address) {
         (uint256 feePart_, address treasuryAddress_) = IFeeConfig(feeConfig).getFeeAndTreasuryForOperation(
             address(this),
             operation_
         );
 
         uint256 fee_ = (amount_ * feePart_) / PRECISION;
-        uint256 amountWithoutFee_ = amount_ - fee_;
 
-        return (fee_, amountWithoutFee_, treasuryAddress_);
+        return (fee_, treasuryAddress_);
     }
 
-    function _getCurrentRate() private view returns (uint256) {
+    function _getCurrentRate() private view returns (uint256, uint256) {
         if (totalPoolData.totalVirtualDeposited == 0) {
-            return totalPoolData.rate;
+            return (totalPoolData.rate, 0);
         }
 
         uint256 rewards_ = getNotDistributedRewards();
 
-        return totalPoolData.rate + (rewards_ * PRECISION) / totalPoolData.totalVirtualDeposited;
+        return (totalPoolData.rate + (rewards_ * PRECISION) / totalPoolData.totalVirtualDeposited, rewards_);
     }
 
     function _getCurrentBuilderReward(
@@ -350,12 +348,12 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         return builderPoolData_.pendingRewards + newRewards_;
     }
 
-    function getPoolId(string calldata builderPooldName_) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(builderPooldName_));
+    function getPoolId(string memory builderPoolName_) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(builderPoolName_));
     }
 
-    function _poolExists(string calldata builderPooldName_) private view returns (bool) {
-        bytes32 builderPoolId_ = getPoolId(builderPooldName_);
+    function _poolExists(string calldata builderPoolName_) private view returns (bool) {
+        bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         return builderPools[builderPoolId_].admin != address(0);
     }

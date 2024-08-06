@@ -17,7 +17,7 @@ contract BuildersTreasury is IBuildersTreasury, OwnableUpgradeable, UUPSUpgradea
     uint256 public distributedRewards;
 
     modifier onlyBuilders() {
-        require(_msgSender() == builders, "BT: caller is not the builder");
+        require(_msgSender() == builders, "BT: caller is not the builders");
         _;
     }
 

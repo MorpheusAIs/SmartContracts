@@ -8,12 +8,52 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  */
 interface IFeeConfig is IERC165 {
     /**
+     * The event that is emitted when the fee for sender is set.
+     * @param sender The sender address.
+     * @param fee The fee.
+     */
+    event FeeSet(address indexed sender, uint256 fee);
+
+    /**
+     * The event that is emitted when the fee for sender for the operation is set.
+     * @param sender The sender address.
+     * @param operation The operation.
+     * @param fee The fee.
+     */
+    event FeeForOperationSet(address indexed sender, bytes32 operation, uint256 fee);
+
+    /**
+     * The event that is emitted when the fee for sender for the operation is discarded.
+     * @param sender The sender address.
+     * @param operation The operation.
+     */
+    event FeeForOperationDiscarded(address indexed sender, bytes32 operation);
+
+    /**
+     * The event that is emitted when the treasury address is set.
+     * @param treasury The treasury address.
+     */
+    event TreasurySet(address treasury);
+
+    /**
+     * The event that is emitted when the base fee is set.
+     * @param baseFee The base fee.
+     */
+    event BaseFeeSet(uint256 baseFee);
+
+    /**
+     * The event that is emitted when the base fee for the operation is set.
+     * @param operation The operation.
+     * @param baseFeeForOperation The base fee for the operation.
+     */
+    event BaseFeeForOperationSet(bytes32 operation, uint256 baseFeeForOperation);
+
+    /**
      * The function that initializes the contract.
      * @param treasury_ The treasury address.
      * @param baseFee_ The base fee.
-     * @param baseFeeForOperation_ The base fee for the operation.
      */
-    function FeeConfig_init(address treasury_, uint256 baseFee_, uint256 baseFeeForOperation_) external;
+    function FeeConfig_init(address treasury_, uint256 baseFee_) external;
 
     /**
      * The function that returns the treasury address.
@@ -50,6 +90,21 @@ interface IFeeConfig is IERC165 {
     function setFee(address sender_, uint256 fee_) external;
 
     /**
+     * The function that sets the fee for the sender for the operation.
+     */
+    function setFeeForOperation(address sender_, bytes32 operation_, uint256 fee_) external;
+
+    /**
+     * The function that discards the fee for the sender for the operation.
+     */
+    function discardCustomFee(address sender_, bytes32 operation_) external;
+
+    /**
+     * The function that sets the fee for the sender for the operation.
+     */
+    function setBaseFeeForOperation(bytes32 operation_, uint256 baseFeeForOperation_) external;
+
+    /**
      * The function that sets the treasury address.
      */
     function setTreasury(address treasury_) external;
@@ -57,5 +112,5 @@ interface IFeeConfig is IERC165 {
     /**
      * The function that sets the base fee.
      */
-    function setBaseFee(uint256 baseFee_, uint256 baseFeeForOperation_) external;
+    function setBaseFee(uint256 baseFee_) external;
 }

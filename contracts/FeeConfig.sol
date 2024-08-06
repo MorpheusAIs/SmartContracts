@@ -12,19 +12,21 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     address public treasury;
 
     uint256 public baseFee;
-    uint256 public baseFeeForOperation;
+    mapping(bytes32 => uint256) public baseFeeForOperations;
 
     mapping(address => uint256) public fees;
+
     mapping(address => mapping(bytes32 => uint256)) public feeForOperations;
+    mapping(address => mapping(bytes32 => bool)) public feeForOperationIsSet;
 
     constructor() {
         _disableInitializers();
     }
 
-    function FeeConfig_init(address treasury_, uint256 baseFee_, uint256 baseFeeForOperation_) external initializer {
+    function FeeConfig_init(address treasury_, uint256 baseFee_) external initializer {
         __Ownable_init();
 
-        setBaseFee(baseFee_, baseFeeForOperation_);
+        setBaseFee(baseFee_);
         setTreasury(treasury_);
     }
 
@@ -33,29 +35,50 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function setFee(address sender_, uint256 fee_) external onlyOwner {
-        require(fee_ <= PRECISION, "FC: invalid fee");
+        require(fee_ < PRECISION, "FC: invalid fee");
 
         fees[sender_] = fee_;
+
+        emit FeeSet(sender_, fee_);
     }
 
     function setFeeForOperation(address sender_, bytes32 operation_, uint256 fee_) external onlyOwner {
-        require(fee_ <= PRECISION, "FC: invalid fee");
+        require(fee_ < PRECISION, "FC: invalid fee");
 
         feeForOperations[sender_][operation_] = fee_;
+        feeForOperationIsSet[sender_][operation_] = true;
+
+        emit FeeForOperationSet(sender_, operation_, fee_);
+    }
+
+    function discardCustomFee(address sender_, bytes32 operation_) external onlyOwner {
+        feeForOperationIsSet[sender_][operation_] = false;
+
+        emit FeeForOperationDiscarded(sender_, operation_);
     }
 
     function setTreasury(address treasury_) public onlyOwner {
         require(treasury_ != address(0), "FC: invalid treasury");
 
         treasury = treasury_;
+
+        emit TreasurySet(treasury_);
     }
 
-    function setBaseFee(uint256 baseFee_, uint256 baseFeeForOperation_) public onlyOwner {
-        require(baseFee_ <= PRECISION, "FC: invalid base fee");
-        require(baseFeeForOperation_ <= PRECISION, "FC: invalid base fee for op");
+    function setBaseFee(uint256 baseFee_) public onlyOwner {
+        require(baseFee_ < PRECISION, "FC: invalid base fee");
 
         baseFee = baseFee_;
-        baseFeeForOperation = baseFeeForOperation_;
+
+        emit BaseFeeSet(baseFee_);
+    }
+
+    function setBaseFeeForOperation(bytes32 operation_, uint256 baseFeeForOperation_) public onlyOwner {
+        require(baseFeeForOperation_ < PRECISION, "FC: invalid base fee for op");
+
+        baseFeeForOperations[operation_] = baseFeeForOperation_;
+
+        emit BaseFeeForOperationSet(operation_, baseFeeForOperation_);
     }
 
     function getFeeAndTreasury(address sender_) external view returns (uint256, address) {
@@ -71,9 +94,11 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
         address sender_,
         bytes32 operation_
     ) external view returns (uint256, address) {
-        uint256 fee_ = feeForOperations[sender_][operation_];
-        if (fee_ == 0) {
-            fee_ = baseFeeForOperation;
+        uint256 fee_;
+        if (feeForOperationIsSet[sender_][operation_]) {
+            fee_ = feeForOperations[sender_][operation_];
+        } else {
+            fee_ = baseFeeForOperations[operation_];
         }
 
         return (fee_, treasury);
