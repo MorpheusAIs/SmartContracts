@@ -105,27 +105,27 @@ interface IBuilders is IERC165 {
 
     /**
      * The event that is emitted when the user deposits tokens in the pool.
-     * @param builderPool_ The pool's id.
+     * @param builderPool The pool's id.
      * @param user The user's address.
      * @param amount The amount of tokens.
      */
-    event UserDeposited(bytes32 indexed builderPool_, address indexed user, uint256 amount);
+    event UserDeposited(bytes32 indexed builderPool, address indexed user, uint256 amount);
 
     /**
      * The event that is emitted when the admin claims rewards from the pool.
-     * @param builderPool_ The pool's id.
+     * @param builderPool The pool's id.
      * @param receiver The receiver's address.
      * @param amount The amount of tokens.
      */
-    event AdminClaimed(bytes32 indexed builderPool_, address receiver, uint256 amount);
+    event AdminClaimed(bytes32 indexed builderPool, address receiver, uint256 amount);
 
     /**
      * The event that is emitted when the user withdraws tokens from the pool.
-     * @param builderPool_ The pool's id.
+     * @param builderPool The pool's id.
      * @param user The user's address.
      * @param amount The amount of tokens.
      */
-    event UserWithdrawn(bytes32 indexed builderPool_, address indexed user, uint256 amount);
+    event UserWithdrawn(bytes32 indexed builderPool, address indexed user, uint256 amount);
 
     /**
      * The event that is emitted when the fee is paid.
@@ -180,6 +180,13 @@ interface IBuilders is IERC165 {
     function deposit(string calldata builderPoolName_, uint256 amount_) external;
 
     /**
+     * The function to withdraw tokens from the pool.
+     * @param builderPoolName_ The pool's name.
+     * @param amount_ The amount of tokens to withdraw.
+     */
+    function withdraw(string calldata builderPoolName_, uint256 amount_) external;
+
+    /**
      * The function to claim rewards from the pool.
      * @param builderPoolName_ The pool's name.
      * @param receiver_ The receiver's address.
@@ -187,11 +194,11 @@ interface IBuilders is IERC165 {
     function claim(string calldata builderPoolName_, address receiver_) external;
 
     /**
-     * The function to withdraw tokens from the pool.
+     * The function to get the current user multiplier.
      * @param builderPoolName_ The pool's name.
-     * @param amount_ The amount of tokens to withdraw.
+     * @param user_ The user's address.
      */
-    function withdraw(string calldata builderPoolName_, uint256 amount_) external;
+    function getCurrentUserMultiplier(string calldata builderPoolName_, address user_) external view returns (uint256);
 
     /**
      * The function to get the builder's reward.

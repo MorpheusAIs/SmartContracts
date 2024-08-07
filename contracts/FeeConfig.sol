@@ -9,15 +9,15 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 import {IFeeConfig, IERC165} from "./interfaces/IFeeConfig.sol";
 
 contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
-    address public treasury;
+    address private _treasury;
 
-    uint256 public baseFee;
-    mapping(bytes32 => uint256) public baseFeeForOperations;
+    uint256 private _baseFee;
+    mapping(bytes32 => uint256) private _baseFeeForOperations;
 
-    mapping(address => uint256) public fees;
+    mapping(address => uint256) private _fees;
 
-    mapping(address => mapping(bytes32 => uint256)) public feeForOperations;
-    mapping(address => mapping(bytes32 => bool)) public feeForOperationIsSet;
+    mapping(address => mapping(bytes32 => uint256)) private _feeForOperations;
+    mapping(address => mapping(bytes32 => bool)) private _feeForOperationIsSet;
 
     constructor() {
         _disableInitializers();
@@ -37,7 +37,7 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     function setFee(address sender_, uint256 fee_) external onlyOwner {
         require(fee_ < PRECISION, "FC: invalid fee");
 
-        fees[sender_] = fee_;
+        _fees[sender_] = fee_;
 
         emit FeeSet(sender_, fee_);
     }
@@ -45,14 +45,14 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     function setFeeForOperation(address sender_, bytes32 operation_, uint256 fee_) external onlyOwner {
         require(fee_ < PRECISION, "FC: invalid fee");
 
-        feeForOperations[sender_][operation_] = fee_;
-        feeForOperationIsSet[sender_][operation_] = true;
+        _feeForOperations[sender_][operation_] = fee_;
+        _feeForOperationIsSet[sender_][operation_] = true;
 
         emit FeeForOperationSet(sender_, operation_, fee_);
     }
 
     function discardCustomFee(address sender_, bytes32 operation_) external onlyOwner {
-        feeForOperationIsSet[sender_][operation_] = false;
+        _feeForOperationIsSet[sender_][operation_] = false;
 
         emit FeeForOperationDiscarded(sender_, operation_);
     }
@@ -60,7 +60,7 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     function setTreasury(address treasury_) public onlyOwner {
         require(treasury_ != address(0), "FC: invalid treasury");
 
-        treasury = treasury_;
+        _treasury = treasury_;
 
         emit TreasurySet(treasury_);
     }
@@ -68,7 +68,7 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     function setBaseFee(uint256 baseFee_) public onlyOwner {
         require(baseFee_ < PRECISION, "FC: invalid base fee");
 
-        baseFee = baseFee_;
+        _baseFee = baseFee_;
 
         emit BaseFeeSet(baseFee_);
     }
@@ -76,18 +76,18 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     function setBaseFeeForOperation(bytes32 operation_, uint256 baseFeeForOperation_) public onlyOwner {
         require(baseFeeForOperation_ < PRECISION, "FC: invalid base fee for op");
 
-        baseFeeForOperations[operation_] = baseFeeForOperation_;
+        _baseFeeForOperations[operation_] = baseFeeForOperation_;
 
         emit BaseFeeForOperationSet(operation_, baseFeeForOperation_);
     }
 
     function getFeeAndTreasury(address sender_) external view returns (uint256, address) {
-        uint256 fee_ = fees[sender_];
+        uint256 fee_ = _fees[sender_];
         if (fee_ == 0) {
-            fee_ = baseFee;
+            fee_ = _baseFee;
         }
 
-        return (fee_, treasury);
+        return (fee_, _treasury);
     }
 
     function getFeeAndTreasuryForOperation(
@@ -95,13 +95,13 @@ contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
         bytes32 operation_
     ) external view returns (uint256, address) {
         uint256 fee_;
-        if (feeForOperationIsSet[sender_][operation_]) {
-            fee_ = feeForOperations[sender_][operation_];
+        if (_feeForOperationIsSet[sender_][operation_]) {
+            fee_ = _feeForOperations[sender_][operation_];
         } else {
-            fee_ = baseFeeForOperations[operation_];
+            fee_ = _baseFeeForOperations[operation_];
         }
 
-        return (fee_, treasury);
+        return (fee_, _treasury);
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

@@ -56,61 +56,63 @@ interface IFeeConfig is IERC165 {
     function FeeConfig_init(address treasury_, uint256 baseFee_) external;
 
     /**
-     * The function that returns the treasury address.
-     */
-    function treasury() external view returns (address);
-
-    /**
-     * The function that returns the base fee.
-     */
-    function baseFee() external view returns (uint256);
-
-    /**
-     * The function that returns the fee for the sender.
-     * @dev If the fee is 0, the base fee is used.
-     */
-    function fees(address sender_) external view returns (uint256);
-
-    /**
-     * The function that returns the fee and treasury address for the sender.
-     */
-    function getFeeAndTreasury(address sender_) external view returns (uint256, address);
-
-    /**
-     * The function that returns the fee and treasury address for the sender for the operation.
-     */
-    function getFeeAndTreasuryForOperation(
-        address sender_,
-        bytes32 operation_
-    ) external view returns (uint256, address);
-
-    /**
      * The function that sets the fee for the sender.
+     * @param sender_ The sender address.
+     * @param fee_ The fee.
      */
     function setFee(address sender_, uint256 fee_) external;
 
     /**
      * The function that sets the fee for the sender for the operation.
+     * @param sender_ The sender address.
+     * @param operation_ The operation.
+     * @param fee_ The fee.
      */
     function setFeeForOperation(address sender_, bytes32 operation_, uint256 fee_) external;
 
     /**
      * The function that discards the fee for the sender for the operation.
+     * @param sender_ The sender address.
+     * @param operation_ The operation.
      */
     function discardCustomFee(address sender_, bytes32 operation_) external;
 
     /**
      * The function that sets the fee for the sender for the operation.
+     * @param operation_ The operation.
+     * @param baseFeeForOperation_ The base fee for the operation.
      */
     function setBaseFeeForOperation(bytes32 operation_, uint256 baseFeeForOperation_) external;
 
     /**
      * The function that sets the treasury address.
+     * @param treasury_ The treasury address.
      */
     function setTreasury(address treasury_) external;
 
     /**
      * The function that sets the base fee.
+     * @param baseFee_ The base fee.
      */
     function setBaseFee(uint256 baseFee_) external;
+
+    /**
+     * The function that returns the fee and treasury address for the sender.
+     * @param sender_ The sender address.
+     * @return The fee.
+     * @return The treasury address.
+     */
+    function getFeeAndTreasury(address sender_) external view returns (uint256, address);
+
+    /**
+     * The function that returns the fee and treasury address for the sender for the operation.
+     * @param sender_ The sender address.
+     * @param operation_ The operation.
+     * @return The fee.
+     * @return The treasury address.
+     */
+    function getFeeAndTreasuryForOperation(
+        address sender_,
+        bytes32 operation_
+    ) external view returns (uint256, address);
 }

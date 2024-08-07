@@ -45,16 +45,16 @@ contract BuildersTreasury is IBuildersTreasury, OwnableUpgradeable, UUPSUpgradea
         emit BuildersSet(builders_);
     }
 
-    function getAllRewards() public view returns (uint256) {
-        return IERC20(rewardToken).balanceOf(address(this)) + distributedRewards;
-    }
-
     function sendRewards(address receiver_, uint256 amount_) external onlyBuilders {
         distributedRewards += amount_;
 
         IERC20(rewardToken).transfer(receiver_, amount_);
 
         emit RewardSent(receiver_, amount_);
+    }
+
+    function getAllRewards() public view returns (uint256) {
+        return IERC20(rewardToken).balanceOf(address(this)) + distributedRewards;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

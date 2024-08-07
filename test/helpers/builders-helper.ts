@@ -1,18 +1,17 @@
 import { Addressable } from 'ethers';
 
-import { IBuilders } from '@/generated-types/ethers';
-import { ETHER_ADDR } from '@/scripts/utils/constants';
-import { wei } from '@/scripts/utils/utils';
+import { oneDay } from './distribution-helper';
 
-export const oneHour = 3600;
-export const oneDay = 86400;
+import { IBuilders } from '@/generated-types/ethers';
+import { wei } from '@/scripts/utils/utils';
 
 export const getDefaultBuilderPool = (admin: Addressable): IBuilders.BuilderPoolStruct => {
   return {
-    project: ETHER_ADDR,
+    name: 'Test Pool',
     admin: admin,
     poolStart: oneDay,
-    withdrawLockPeriodAfterStake: oneDay,
-    minimalStake: wei(0.1),
+    withdrawLockPeriodAfterDeposit: oneDay,
+    claimLockEnd: 10 * oneDay,
+    minimalDeposit: wei(0.1),
   };
 };

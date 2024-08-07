@@ -114,8 +114,6 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 builderPoolId_ = getPoolId(builderPool_.name);
         BuilderPool storage builderPool = builderPools[builderPoolId_];
 
-        require(getPoolId(builderPool.name) == builderPoolId_, "BU: invalid pool id");
-
         require(_msgSender() == builderPool.admin, "BU: only admin can edit pool");
 
         uint256 poolStart_ = builderPool.poolStart;
@@ -150,22 +148,21 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function withdraw(string calldata builderPoolName_, uint256 amount_) external poolExists(builderPoolName_) {
-        require(amount_ > 0, "BU: nothing to withdraw");
-
         address user_ = _msgSender();
         bytes32 builderPoolId_ = getPoolId(builderPoolName_);
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
         UserData storage userData = usersData[user_][builderPoolId_];
 
+        if (amount_ > userData.deposited) {
+            amount_ = userData.deposited;
+        }
+        require(amount_ > 0, "BU: nothing to withdraw");
+
         require(
             block.timestamp > userData.lastDeposit + builderPool.withdrawLockPeriodAfterDeposit,
             "BU: user withdraw is locked"
         );
-
-        if (amount_ > userData.deposited) {
-            amount_ = userData.deposited;
-        }
 
         uint256 newDeposited_ = userData.deposited - amount_;
         require(newDeposited_ >= builderPool.minimalDeposit || newDeposited_ == 0, "BU: invalid withdraw amount");
@@ -207,7 +204,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Transfer rewards
         (uint256 fee_, address treasuryAddress_) = _getFee(pendingRewards_, FEE_CLAIM_OPERATION);
         if (fee_ > 0) {
-            IERC20(depositToken).safeTransfer(treasuryAddress_, fee_);
+            IBuildersTreasury(buildersTreasury).sendRewards(treasuryAddress_, fee_);
 
             pendingRewards_ -= fee_;
         }
@@ -266,6 +263,10 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
         UserData storage userData = usersData[user_][builderPoolId_];
+
+        if (userData.claimLockStart == 0) {
+            return PRECISION;
+        }
 
         return LockMultiplierMath._getLockPeriodMultiplier(userData.claimLockStart, builderPool.claimLockEnd);
     }
