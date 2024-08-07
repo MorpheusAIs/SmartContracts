@@ -157,10 +157,12 @@ describe('BuildersTreasury', () => {
 
   describe('#getAllRewards', () => {
     let builderPool: IBuilders.BuilderPoolStruct;
+    let poolId: string;
     const amount = wei(100);
 
     beforeEach(async () => {
       builderPool = getDefaultBuilderPool(OWNER);
+      poolId = await builders.getPoolId(builderPool.name);
 
       await rewardToken.connect(MINTER).mint(OWNER, amount);
 
@@ -168,7 +170,7 @@ describe('BuildersTreasury', () => {
       await builders.createBuilderPool(builderPool);
 
       await setNextTime(oneDay * 20);
-      await builders.deposit(builderPool.name, amount);
+      await builders.deposit(poolId, amount);
     });
     it('should return all rewards, including distributed', async () => {
       expect(await buildersTreasury.getAllRewards()).to.be.equal(0);
@@ -177,7 +179,7 @@ describe('BuildersTreasury', () => {
 
       expect(await buildersTreasury.getAllRewards()).to.be.equal(amount);
 
-      await builders.claim(builderPool.name, OWNER);
+      await builders.claim(poolId, OWNER);
 
       expect(await buildersTreasury.getAllRewards()).to.be.equal(amount);
 
@@ -185,18 +187,20 @@ describe('BuildersTreasury', () => {
 
       expect(await buildersTreasury.getAllRewards()).to.be.equal(2n * amount);
 
-      await builders.claim(builderPool.name, OWNER);
+      await builders.claim(poolId, OWNER);
 
       expect(await buildersTreasury.getAllRewards()).to.be.equal(2n * amount);
     });
   });
 
-  describe('#sendRewards', () => {
+  describe('#sendRewards', async () => {
     let builderPool: IBuilders.BuilderPoolStruct;
+    let poolId: string;
     const amount = wei(100);
 
     beforeEach(async () => {
       builderPool = getDefaultBuilderPool(OWNER);
+      poolId = await builders.getPoolId(builderPool.name);
 
       await rewardToken.connect(MINTER).mint(buildersTreasury, amount);
       await rewardToken.connect(MINTER).mint(OWNER, amount);
@@ -205,23 +209,23 @@ describe('BuildersTreasury', () => {
       await builders.createBuilderPool(builderPool);
 
       await setNextTime(oneDay * 20);
-      await builders.deposit(builderPool.name, amount);
+      await builders.deposit(poolId, amount);
     });
 
     it('should send rewards', async () => {
-      const tx = await builders.claim(builderPool.name, OWNER);
+      const tx = await builders.claim(poolId, OWNER);
 
       await expect(tx).to.changeTokenBalances(rewardToken, [buildersTreasury, OWNER], [-amount, amount]);
     });
     it('should update distributedRewards', async () => {
       expect(await buildersTreasury.distributedRewards()).to.be.equal(0);
 
-      await builders.claim(builderPool.name, OWNER);
+      await builders.claim(poolId, OWNER);
 
       expect(await buildersTreasury.distributedRewards()).to.be.equal(amount);
 
       await rewardToken.connect(MINTER).mint(buildersTreasury, amount);
-      await builders.claim(builderPool.name, OWNER);
+      await builders.claim(poolId, OWNER);
 
       expect(await buildersTreasury.distributedRewards()).to.be.equal(2n * amount);
     });

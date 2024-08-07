@@ -148,7 +148,7 @@ describe('Builders', () => {
 
   describe('supportsInterface', () => {
     it('should support IBuilders', async () => {
-      expect(await builders.supportsInterface('0xca9fff17')).to.be.true;
+      expect(await builders.supportsInterface('0xe4156871')).to.be.true;
     });
     it('should support IERC165', async () => {
       expect(await builders.supportsInterface('0x01ffc9a7')).to.be.true;
@@ -370,7 +370,7 @@ describe('Builders', () => {
     beforeEach(async () => {
       const builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: payoutStart + 1742 * oneDay };
       await builders.createBuilderPool(builderPool);
-      poolId = builderPool.name;
+      poolId = await builders.getPoolId(builderPool.name);
 
       await setTime(periodStart - 3 * oneDay);
     });
@@ -386,7 +386,7 @@ describe('Builders', () => {
       expect(await builders.getCurrentUserMultiplier(poolId, OWNER)).to.equal(multiplier);
     });
     it('should return 1 if pool is not exist', async () => {
-      const multiplier = await builders.getCurrentUserMultiplier('bla', OWNER);
+      const multiplier = await builders.getCurrentUserMultiplier(await builders.getPoolId('bla'), OWNER);
 
       expect(multiplier).to.eq(wei(1, 25));
     });
@@ -404,7 +404,7 @@ describe('Builders', () => {
     beforeEach(async () => {
       builderPool = getDefaultBuilderPool(OWNER);
       await builders.createBuilderPool(builderPool);
-      poolId = builderPool.name;
+      poolId = await builders.getPoolId(builderPool.name);
 
       await setTime(Number(builderPool.poolStart));
     });
@@ -453,7 +453,7 @@ describe('Builders', () => {
     beforeEach(async () => {
       builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: oneDay * 9999999 };
       await builders.createBuilderPool(builderPool);
-      poolId = builderPool.name;
+      poolId = await builders.getPoolId(builderPool.name);
       structPoolId = await builders.getPoolId(builderPool.name);
     });
 
@@ -516,7 +516,9 @@ describe('Builders', () => {
       expect(await depositToken.balanceOf(builders)).to.eq(wei(12));
     });
     it("should revert if pool doesn't exist", async () => {
-      await expect(builders.deposit('bla', wei(1))).to.be.revertedWith("BU: pool doesn't exist");
+      await expect(builders.deposit(await builders.getPoolId('bla'), wei(1))).to.be.revertedWith(
+        "BU: pool doesn't exist",
+      );
     });
     it('should revert if amount is less than minimal deposit', async () => {
       await setNextTime(oneDay);
@@ -540,7 +542,7 @@ describe('Builders', () => {
     beforeEach(async () => {
       builderPool = getDefaultBuilderPool(OWNER);
       await builders.createBuilderPool(builderPool);
-      poolId = builderPool.name;
+      poolId = await builders.getPoolId(builderPool.name);
     });
 
     it('should return correct reward', async () => {
@@ -565,7 +567,7 @@ describe('Builders', () => {
       expect(reward).to.eq(wei(198));
     });
     it('should return 0 if pool is not exist', async () => {
-      const reward = await builders.getCurrentBuilderReward(builderPool.name);
+      const reward = await builders.getCurrentBuilderReward(await builders.getPoolId(builderPool.name));
 
       expect(reward).to.eq(0);
     });
@@ -577,7 +579,7 @@ describe('Builders', () => {
       expect(reward).to.eq(0);
     });
     it('should return 0 if pool is not exist', async () => {
-      const reward = await builders.getCurrentBuilderReward('bla');
+      const reward = await builders.getCurrentBuilderReward(await builders.getPoolId('bla'));
 
       expect(reward).to.eq(0);
     });
@@ -594,7 +596,7 @@ describe('Builders', () => {
     beforeEach(async () => {
       const builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: payoutStart + 1742 * oneDay };
       await builders.createBuilderPool(builderPool);
-      poolId = builderPool.name;
+      poolId = await builders.getPoolId(builderPool.name);
       structPoolId = await builders.getPoolId(builderPool.name);
 
       await setTime(payoutStart - 3 * oneDay);
@@ -744,7 +746,9 @@ describe('Builders', () => {
       expect((await depositToken.balanceOf(TREASURY)) - treasuryBalanceBefore).to.be.equal(0);
     });
     it("should revert if pool doesn't exist", async () => {
-      await expect(builders.connect(SECOND).claim('bla', SECOND)).to.be.revertedWith("BU: pool doesn't exist");
+      await expect(builders.connect(SECOND).claim(await builders.getPoolId('bla'), SECOND)).to.be.revertedWith(
+        "BU: pool doesn't exist",
+      );
     });
     it('should revert if nothing to claim', async () => {
       await expect(builders.claim(poolId, SECOND)).to.be.revertedWith('BU: nothing to claim');
@@ -763,7 +767,7 @@ describe('Builders', () => {
     beforeEach(async () => {
       const builderPool = { ...getDefaultBuilderPool(OWNER), withdrawLockPeriodAfterDeposit: oneDay - 1 };
       await builders.createBuilderPool(builderPool);
-      poolId = builderPool.name;
+      poolId = await builders.getPoolId(builderPool.name);
       structPoolId = await builders.getPoolId(builderPool.name);
     });
 
@@ -953,7 +957,7 @@ describe('Builders', () => {
       await expect(builders.withdraw(poolId, 1)).to.be.revertedWith('BU: nothing to withdraw');
     });
     it("should revert if pool isn't found", async () => {
-      await expect(builders.withdraw('bla', 1)).to.be.revertedWith("BU: pool doesn't exist");
+      await expect(builders.withdraw(await builders.getPoolId('bla'), 1)).to.be.revertedWith("BU: pool doesn't exist");
     });
     it("should revert if `minimaldeposit` didn't pass", async () => {
       await setNextTime(oneDay);

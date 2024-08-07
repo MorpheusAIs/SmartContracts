@@ -174,38 +174,38 @@ interface IBuilders is IERC165 {
 
     /**
      * The function to deposit tokens in the public pool.
-     * @param builderPoolName_ The pool's name.
+     * @param builderPoolId_ The pool's id.
      * @param amount_ The amount of tokens to deposit.
      */
-    function deposit(string calldata builderPoolName_, uint256 amount_) external;
+    function deposit(bytes32 builderPoolId_, uint256 amount_) external;
 
     /**
      * The function to withdraw tokens from the pool.
-     * @param builderPoolName_ The pool's name.
+     * @param builderPoolId_ The pool's id.
      * @param amount_ The amount of tokens to withdraw.
      */
-    function withdraw(string calldata builderPoolName_, uint256 amount_) external;
+    function withdraw(bytes32 builderPoolId_, uint256 amount_) external;
 
     /**
      * The function to claim rewards from the pool.
-     * @param builderPoolName_ The pool's name.
+     * @param builderPoolId_ The pool's id.
      * @param receiver_ The receiver's address.
      */
-    function claim(string calldata builderPoolName_, address receiver_) external;
+    function claim(bytes32 builderPoolId_, address receiver_) external;
 
     /**
      * The function to get the current user multiplier.
-     * @param builderPoolName_ The pool's name.
+     * @param builderPoolId_ The pool's id.
      * @param user_ The user's address.
      */
-    function getCurrentUserMultiplier(string calldata builderPoolName_, address user_) external view returns (uint256);
+    function getCurrentUserMultiplier(bytes32 builderPoolId_, address user_) external view returns (uint256);
 
     /**
      * The function to get the builder's reward.
-     * @param builderPoolName_ The pool's name.
+     * @param builderPoolId_ The pool's id.
      * @return The user's reward amount.
      */
-    function getCurrentBuilderReward(string calldata builderPoolName_) external view returns (uint256);
+    function getCurrentBuilderReward(bytes32 builderPoolId_) external view returns (uint256);
 
     /**
      * The function to get the address of deposit token.
