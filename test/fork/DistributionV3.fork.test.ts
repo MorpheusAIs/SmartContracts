@@ -56,14 +56,14 @@ describe('DistributionV3 Fork', () => {
       '0x47176B2Af9885dC6C4575d4eFd63895f7Aaa4790',
     ) as DistributionV2;
 
-    // Upgrade to V2
+    // Upgrade to V3
     const contractOwner = await ethers.getImpersonatedSigner(await distributionCurrent.owner());
     await SECOND.sendTransaction({ to: contractOwner, value: wei(100) });
     await distributionCurrent.connect(contractOwner).transferOwnership(OWNER);
 
     await distributionCurrent.upgradeTo(distributionV3Impl);
 
-    distribution = distributionV2Factory.attach(distributionCurrent) as DistributionV3;
+    distribution = distributionV3Factory.attach(distributionCurrent) as DistributionV3;
 
     assert((await distribution.version()) === 3n, 'Distribution should be upgraded to V3');
 
@@ -103,6 +103,15 @@ describe('DistributionV3 Fork', () => {
       );
       expect(await distribution.getCurrentUserReward(1, privatePoolAddress)).to.be.eq('2684429557387413871409');
     });
+    it('should have the same fields from V1', async () => {
+      const userData = await distribution.usersData('0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', 0);
+      expect(userData.lastStake).to.be.eq('1707393167');
+      expect(userData.deposited).to.be.eq('10014168892344354');
+      expect(userData.rate).to.be.eq('32003956152210102231154177');
+      expect(userData.pendingRewards).to.be.eq('0');
+      expect(userData.claimLockStart).to.be.eq('0');
+      expect(userData.claimLockEnd).to.be.eq('0');
+    });
   });
 
   describe('should correctly lock claim', () => {
@@ -132,6 +141,38 @@ describe('DistributionV3 Fork', () => {
       await distribution.connect(userPublicPool).withdraw(0, wei(1));
       // Stake should be availalble
       await distribution.connect(userPublicPool).stake(0, wei(1), 0);
+      const claimLockStart = await getCurrentBlockTime();
+      // Claim should be locked
+      await expect(
+        distribution
+          .connect(userPublicPool)
+          .claim(0, '0x473FFa6AB954a7A003C554eeA90153DADB05a4E7', { value: wei(0.1) }),
+      ).to.be.rejectedWith('DS: user claim is locked');
+
+      userData = await distribution.usersData(userPublicPool.address, 0);
+      expect(userData.claimLockStart).to.be.eq(claimLockStart);
+      expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
+    });
+    it('should lock claim, public pool from V1', async () => {
+      const userPublicPool = await ethers.getImpersonatedSigner('0x6cC37e13ceD30689b86a10819282027cA6BD1CDD');
+
+      let userData = await distribution.usersData(userPublicPool.address, 0);
+      expect(userData.lastStake).to.be.eq('1707393167');
+
+      // Move in feature to skip time restrictions
+      await setTime((await getCurrentBlockTime()) + 10 * oneDay);
+
+      const claimLockEnd = (await getCurrentBlockTime()) + 1000 * oneDay;
+
+      await distribution.connect(userPublicPool).lockClaim(0, claimLockEnd);
+      userData = await distribution.usersData(userPublicPool.address, 0);
+      expect(userData.claimLockStart).to.be.eq(userData.claimLockStart);
+      expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
+
+      // Withdraw should be available
+      await distribution.connect(userPublicPool).withdraw(0, wei(1));
+      // Stake should be availalble
+      await distribution.connect(userPublicPool).stake(0, wei(0.01), 0);
       const claimLockStart = await getCurrentBlockTime();
       // Claim should be locked
       await expect(
@@ -212,6 +253,55 @@ describe('DistributionV3 Fork', () => {
 
       userData = await distribution.usersData(userPublicPool.address, 0);
       expect(userData.claimLockStart).to.be.eq('1810366069');
+      expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
+    });
+    it('should stake, claim and withdraw from V1', async () => {
+      const userPublicPool = await ethers.getImpersonatedSigner('0x6cC37e13ceD30689b86a10819282027cA6BD1CDD');
+      const claimLockEnd = (await getCurrentBlockTime()) + 1050 * oneDay;
+
+      let userData = await distribution.usersData('0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', 0);
+      expect(userData.lastStake).to.be.eq('1707393167');
+
+      // Move in feature to skip time restrictions
+      await setNextTime((await getCurrentBlockTime()) + 1000 * oneDay);
+      // Withdraw two times to check that nothing can't lock this proccess
+      await distribution.connect(userPublicPool).withdraw(0, wei(0.000001));
+      await distribution.connect(userPublicPool).withdraw(0, wei(0.000001));
+      // Claim  two times to check that nothing can't lock this proccess
+      await distribution
+        .connect(userPublicPool)
+        .claim(0, '0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', { value: wei(0.1) });
+      await distribution
+        .connect(userPublicPool)
+        .claim(0, '0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', { value: wei(0.1) });
+
+      await distribution.connect(userPublicPool).withdraw(0, wei(1));
+      // Stake again
+      await distribution.connect(userPublicPool).stake(0, wei(0.01) + 5n, 0);
+      // Withdraw should be locked, claim should be available
+      await expect(distribution.connect(userPublicPool).withdraw(0, wei(1))).to.be.rejectedWith(
+        'DS: pool withdraw is locked',
+      );
+      await distribution
+        .connect(userPublicPool)
+        .claim(0, '0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', { value: wei(0.1) });
+
+      // Move in feature to skip time restrictions
+      await setNextTime((await getCurrentBlockTime()) + 20 * oneDay);
+      await distribution.connect(userPublicPool).lockClaim(0, claimLockEnd);
+      // Withdraw should be available
+      await distribution.connect(userPublicPool).withdraw(0, wei(1));
+      // Stake should be availalble
+      await distribution.connect(userPublicPool).stake(0, wei(0.01) + 5n, 0);
+      // Claim should be locked
+      await expect(
+        distribution
+          .connect(userPublicPool)
+          .claim(0, '0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', { value: wei(0.1) }),
+      ).to.be.rejectedWith('DS: user claim is locked');
+
+      userData = await distribution.usersData(userPublicPool.address, 0);
+      expect(userData.claimLockStart).to.be.eq('1810366070');
       expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
     });
   });
