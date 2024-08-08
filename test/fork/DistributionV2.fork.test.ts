@@ -10,7 +10,7 @@ import { Reverter } from '../helpers/reverter';
 import { Distribution, DistributionV2 } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
-describe('L2TokenReceiverV2 Fork', () => {
+describe('DistributionV2 Fork', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
