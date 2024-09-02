@@ -186,7 +186,6 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         BuilderPool storage builderPool = builderPools[builderPoolId_];
 
         require(user_ == builderPool.admin, "BU: only admin can claim rewards");
-
         require(block.timestamp > builderPool.claimLockEnd, "BU: claim is locked");
 
         BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
