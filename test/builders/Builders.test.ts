@@ -591,10 +591,10 @@ describe('Builders', () => {
 
     const payoutStart = 1707393600;
     const periodStart = 1721908800;
-    const withdrawLockEnd = periodStart + 300 * oneDay - 1;
+    const claimLockEnd = payoutStart + 1742 * oneDay;
 
     beforeEach(async () => {
-      const builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: payoutStart + 1742 * oneDay };
+      const builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd };
       await builders.createBuilderPool(builderPool);
       poolId = await builders.getPoolId(builderPool.name);
       structPoolId = await builders.getPoolId(builderPool.name);
@@ -611,7 +611,7 @@ describe('Builders', () => {
       const multiplier = await builders.getCurrentUserMultiplier(poolId, SECOND);
       expect(multiplier).to.gt(wei(1, 25));
 
-      await setTime(withdrawLockEnd);
+      await setTime(claimLockEnd);
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
       const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
       await builders.claim(poolId, SECOND);
@@ -646,7 +646,7 @@ describe('Builders', () => {
       builderPoolData = await builders.buildersPoolData(structPoolId);
       expect(builderPoolData.virtualDeposited).to.eq((wei(2) * multiplier) / PRECISION);
 
-      await setTime(withdrawLockEnd);
+      await setTime(claimLockEnd);
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100000000));
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
       const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
@@ -672,7 +672,7 @@ describe('Builders', () => {
       await builders.connect(SECOND).deposit(poolId, wei(1));
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100));
 
-      await setTime(withdrawLockEnd);
+      await setTime(claimLockEnd);
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100000000));
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
       const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
@@ -704,7 +704,7 @@ describe('Builders', () => {
       await builders.deposit(poolId, wei(3));
 
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100000000));
-      await setTime(withdrawLockEnd);
+      await setTime(claimLockEnd);
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
       const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
       await builders.claim(poolId, SECOND);
@@ -737,7 +737,7 @@ describe('Builders', () => {
       await builders.connect(SECOND).deposit(poolId, wei(1));
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(198));
 
-      await setNextTime(payoutStart + oneDay * 2);
+      await setTime(claimLockEnd);
 
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
       const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
@@ -751,12 +751,16 @@ describe('Builders', () => {
       );
     });
     it('should revert if nothing to claim', async () => {
+      await setTime(claimLockEnd);
       await expect(builders.claim(poolId, SECOND)).to.be.revertedWith('BU: nothing to claim');
     });
     it('should revert if caller is not-admin of the pool', async () => {
       await expect(builders.connect(SECOND).claim(poolId, SECOND)).to.be.revertedWith(
         'BU: only admin can claim rewards',
       );
+    });
+    it('should revert if claim is locked', async () => {
+      await expect(builders.claim(poolId, SECOND)).to.be.revertedWith('BU: claim is locked');
     });
   });
 
