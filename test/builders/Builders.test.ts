@@ -26,7 +26,7 @@ describe('Builders', () => {
 
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
-  let TREASURY: SignerWithAddress;
+  let FEE_TREASURY: SignerWithAddress;
   let MINTER: SignerWithAddress;
   let DELEGATE: SignerWithAddress;
   let LZ_ENDPOINT_OWNER: SignerWithAddress;
@@ -38,7 +38,7 @@ describe('Builders', () => {
   let depositToken: MOROFT;
 
   before(async () => {
-    [OWNER, SECOND, TREASURY, MINTER, DELEGATE, LZ_ENDPOINT_OWNER] = await ethers.getSigners();
+    [OWNER, SECOND, FEE_TREASURY, MINTER, DELEGATE, LZ_ENDPOINT_OWNER] = await ethers.getSigners();
 
     const [Builders, Mor, FeeConfig, BuildersTreasury, LZEndpointMock, ERC1967Proxy] = await Promise.all([
       ethers.getContractFactory('Builders'),
@@ -64,7 +64,7 @@ describe('Builders', () => {
     ]);
     buildersTreasury = BuildersTreasury.attach(buildersTreasuryProxy) as BuildersTreasury;
     feeConfig = FeeConfig.attach(feeConfigProxy) as FeeConfig;
-    await feeConfig.FeeConfig_init(TREASURY, 1);
+    await feeConfig.FeeConfig_init(FEE_TREASURY, 1);
     builders = Builders.attach(buildersProxy) as Builders;
     await builders.Builders_init(
       depositToken,
@@ -218,17 +218,17 @@ describe('Builders', () => {
 
   describe('#createBuilderPool', () => {
     let builderPool: IBuilders.BuilderPoolStruct;
-    let structPoolId: string;
+    let poolId: string;
 
     beforeEach(async () => {
       builderPool = getDefaultBuilderPool(OWNER);
-      structPoolId = await builders.getPoolId(builderPool.name);
+      poolId = await builders.getPoolId(builderPool.name);
     });
 
     it('should create builder pool', async () => {
       await builders.connect(SECOND).createBuilderPool(builderPool);
 
-      const builderPool_ = await builders.builderPools(structPoolId);
+      const builderPool_ = await builders.builderPools(poolId);
       expect(builderPool_.name).to.equal(builderPool.name);
       expect(builderPool_.admin).to.equal(builderPool.admin);
       expect(builderPool_.poolStart).to.equal(builderPool.poolStart);
@@ -261,12 +261,12 @@ describe('Builders', () => {
 
   describe('#editBuilderPool', () => {
     let builderPool: IBuilders.BuilderPoolStruct;
-    let structPoolId: string;
+    let poolId: string;
 
     beforeEach(async () => {
       builderPool = getDefaultBuilderPool(OWNER);
       await builders.createBuilderPool(builderPool);
-      structPoolId = await builders.getPoolId(builderPool.name);
+      poolId = await builders.getPoolId(builderPool.name);
     });
 
     it('should edit builder pool', async () => {
@@ -280,7 +280,7 @@ describe('Builders', () => {
       };
       await builders.editBuilderPool(newPool);
 
-      const newBuilderPool = await builders.builderPools(structPoolId);
+      const newBuilderPool = await builders.builderPools(poolId);
       expect(newBuilderPool.name).to.equal(newPool.name);
       expect(newBuilderPool.admin).to.equal(newPool.admin);
       expect(newBuilderPool.poolStart).to.equal(newPool.poolStart);
@@ -438,6 +438,7 @@ describe('Builders', () => {
       expect(reward).to.eq(wei(0));
       expect(await depositToken.balanceOf(builders)).to.eq(0);
 
+      await setTime(oneDay * 10);
       await builders.claim(poolId, OWNER);
       reward = await builders.getNotDistributedRewards();
       expect(reward).to.eq(wei(0));
@@ -448,13 +449,12 @@ describe('Builders', () => {
   describe('#deposit', () => {
     let builderPool: IBuilders.BuilderPoolStruct;
     let poolId: string;
-    let structPoolId: string;
 
     beforeEach(async () => {
       builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: oneDay * 9999999 };
       await builders.createBuilderPool(builderPool);
       poolId = await builders.getPoolId(builderPool.name);
-      structPoolId = await builders.getPoolId(builderPool.name);
+      poolId = await builders.getPoolId(builderPool.name);
     });
 
     it('should deposit with lock correctly', async () => {
@@ -464,9 +464,9 @@ describe('Builders', () => {
       await setNextTime(oneDay * 1);
       await builders.deposit(poolId, wei(1));
 
-      let userData = await builders.usersData(OWNER, structPoolId);
+      let userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(1));
-      let builderPoolData = await builders.buildersPoolData(structPoolId);
+      let builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
       expect(builderPoolData.rate).to.eq(0);
       expect(builderPoolData.pendingRewards).to.eq(0);
@@ -483,9 +483,9 @@ describe('Builders', () => {
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100));
       await setNextTime(oneDay * 2);
       await builders.deposit(poolId, wei(3));
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(4));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.virtualDeposited).to.eq((wei(4) * multiplier) / PRECISION);
       expect(builderPoolData.pendingRewards).to.closeTo(wei(100), wei(0.000001));
       expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
@@ -500,9 +500,9 @@ describe('Builders', () => {
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(98));
       await setNextTime(oneDay * 3);
       await builders.connect(SECOND).deposit(poolId, wei(8));
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(8));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.virtualDeposited).to.eq((wei(12) * multiplier) / PRECISION);
       expect(builderPoolData.pendingRewards).to.closeTo(wei(198), wei(0.000001));
       expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
@@ -587,19 +587,38 @@ describe('Builders', () => {
 
   describe('#claim', () => {
     let poolId: string;
-    let structPoolId: string;
+    let pool100Id: string;
+    let pool200Id: string;
 
-    const payoutStart = 1707393600;
-    const periodStart = 1721908800;
-    const withdrawLockEnd = periodStart + 300 * oneDay - 1;
+    const periodStart = 1721908800; // Start calculate multiplier from this point
+    const poolStart = periodStart; // Start pool from this point
+
+    const poolClaimLockEnd = poolStart + 1742 * oneDay;
+    const pool100ClaimLockEnd = poolStart + 343 * oneDay;
+    const pool200ClaimLockEnd = poolStart + 518 * oneDay;
 
     beforeEach(async () => {
-      const builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: payoutStart + 1742 * oneDay };
+      const builderPool = { ...getDefaultBuilderPool(OWNER), claimLockEnd: poolClaimLockEnd };
       await builders.createBuilderPool(builderPool);
       poolId = await builders.getPoolId(builderPool.name);
-      structPoolId = await builders.getPoolId(builderPool.name);
 
-      await setTime(payoutStart - 3 * oneDay);
+      const builderPool100 = {
+        ...getDefaultBuilderPool(OWNER),
+        name: 'Pool #100',
+        claimLockEnd: pool100ClaimLockEnd,
+      };
+      await builders.createBuilderPool(builderPool100);
+      pool100Id = await builders.getPoolId(builderPool100.name);
+
+      const builderPool200 = {
+        ...getDefaultBuilderPool(OWNER),
+        name: 'Pool #200',
+        claimLockEnd: pool200ClaimLockEnd,
+      };
+      await builders.createBuilderPool(builderPool200);
+      pool200Id = await builders.getPoolId(builderPool200.name);
+
+      await setTime(poolStart);
     });
 
     it('should correctly claim, one user, without redeposits', async () => {
@@ -611,23 +630,23 @@ describe('Builders', () => {
       const multiplier = await builders.getCurrentUserMultiplier(poolId, SECOND);
       expect(multiplier).to.gt(wei(1, 25));
 
-      await setTime(withdrawLockEnd);
+      await setTime(poolClaimLockEnd);
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
-      const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
+      const treasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
       await builders.claim(poolId, SECOND);
       expect((await depositToken.balanceOf(SECOND)) - secondBalanceBefore).to.be.closeTo(
         (wei(50) * (PRECISION - feeForClaim)) / PRECISION,
         wei(0.00001),
       );
-      expect((await depositToken.balanceOf(TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
+      expect((await depositToken.balanceOf(FEE_TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
         (wei(50) * feeForClaim) / PRECISION,
         wei(0.00001),
       );
 
-      const userData = await builders.usersData(SECOND, structPoolId);
+      const userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(1));
-      const builderPoolData = await builders.buildersPoolData(structPoolId);
-      expect(builderPoolData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+      const builderPoolData = await builders.buildersPoolData(poolId);
+      expect(builderPoolData.virtualDeposited).to.eq(wei(1));
       expect(builderPoolData.pendingRewards).to.eq(0);
     });
     it('should correctly claim, one user, with redeposits', async () => {
@@ -641,30 +660,30 @@ describe('Builders', () => {
 
       let multiplier = await builders.getCurrentUserMultiplier(poolId, SECOND);
       expect(multiplier).to.gt(wei(1, 25));
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(2));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.virtualDeposited).to.eq((wei(2) * multiplier) / PRECISION);
 
-      await setTime(withdrawLockEnd);
+      await setTime(poolClaimLockEnd);
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100000000));
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
-      const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
+      const treasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
       await builders.claim(poolId, SECOND);
       expect((await depositToken.balanceOf(SECOND)) - secondBalanceBefore).to.be.closeTo(
         (wei(100000100) * (PRECISION - feeForClaim)) / PRECISION,
         wei(0.00001),
       );
-      expect((await depositToken.balanceOf(TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
+      expect((await depositToken.balanceOf(FEE_TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
         (wei(100000100) * feeForClaim) / PRECISION,
         wei(0.00001),
       );
 
       multiplier = await builders.getCurrentUserMultiplier(poolId, SECOND);
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(2));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
-      expect(builderPoolData.virtualDeposited).to.eq((wei(2) * multiplier) / PRECISION);
+      builderPoolData = await builders.buildersPoolData(poolId);
+      expect(builderPoolData.virtualDeposited).to.eq(wei(2));
       expect(builderPoolData.pendingRewards).to.eq(0);
     });
     it('should correctly claim, one user, join after start', async () => {
@@ -672,78 +691,120 @@ describe('Builders', () => {
       await builders.connect(SECOND).deposit(poolId, wei(1));
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100));
 
-      await setTime(withdrawLockEnd);
+      await setTime(poolClaimLockEnd);
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100000000));
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
-      const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
+      const treasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
       await builders.claim(poolId, SECOND);
       expect((await depositToken.balanceOf(SECOND)) - secondBalanceBefore).to.be.closeTo(
         (wei(100000100) * (PRECISION - feeForClaim)) / PRECISION,
         wei(0.00001),
       );
-      expect((await depositToken.balanceOf(TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
+      expect((await depositToken.balanceOf(FEE_TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
         (wei(100000100) * feeForClaim) / PRECISION,
         wei(0.00001),
       );
 
-      const userData = await builders.usersData(SECOND, structPoolId);
+      const userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(1));
-      const builderPoolData = await builders.buildersPoolData(structPoolId);
-      expect(builderPoolData.virtualDeposited).to.eq(
-        (wei(1) * (await builders.getCurrentUserMultiplier(poolId, SECOND))) / PRECISION,
-      );
+      const builderPoolData = await builders.buildersPoolData(poolId);
+      expect(builderPoolData.virtualDeposited).to.eq(wei(1));
       expect(builderPoolData.pendingRewards).to.eq(0);
     });
     it('should correctly claim, few users, without redeposits', async () => {
       let userData;
 
       await builders.connect(SECOND).deposit(poolId, wei(1));
-
-      await setNextTime(periodStart);
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100));
-      await builders.deposit(poolId, wei(3));
 
+      await builders.deposit(poolId, wei(3));
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(100000000));
-      await setTime(withdrawLockEnd);
+
+      await setTime(poolClaimLockEnd);
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
-      const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
+      const treasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
       await builders.claim(poolId, SECOND);
       expect((await depositToken.balanceOf(SECOND)) - secondBalanceBefore).to.be.closeTo(
         (wei(100000100) * (PRECISION - feeForClaim)) / PRECISION,
         wei(0.00001),
       );
-      expect((await depositToken.balanceOf(TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
+      expect((await depositToken.balanceOf(FEE_TREASURY)) - treasuryBalanceBefore).to.be.closeTo(
         (wei(100000100) * feeForClaim) / PRECISION,
         wei(0.00001),
       );
 
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(3));
 
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(1));
 
-      const builderPoolData = await builders.buildersPoolData(structPoolId);
-      expect(builderPoolData.virtualDeposited).to.closeTo(
-        (wei(4) * (await builders.getCurrentUserMultiplier(poolId, SECOND))) / PRECISION,
-        wei(0.00001),
-      );
+      const builderPoolData = await builders.buildersPoolData(poolId);
+      expect(builderPoolData.virtualDeposited).to.eq(wei(4));
       expect(builderPoolData.pendingRewards).to.eq(0);
+    });
+    it('should correctly claim, few pools, different multipliers after the claim lock end', async () => {
+      // Deposit after poolStart
+      await builders.connect(SECOND).deposit(pool100Id, wei(1));
+      await builders.connect(SECOND).deposit(pool200Id, wei(1));
+
+      // Mint rewards to treasury
+      await depositToken.connect(MINTER).mint(buildersTreasury, wei(100));
+
+      const multiplierPool100 = await builders.getCurrentUserMultiplier(pool100Id, SECOND);
+      expect(multiplierPool100).closeTo(wei(2, 25), wei(0.01, 25));
+      const multiplierPool200 = await builders.getCurrentUserMultiplier(pool200Id, SECOND);
+      expect(multiplierPool200).closeTo(wei(3, 25), wei(0.01, 25));
+
+      //// Claim
+      await setTime(pool100ClaimLockEnd);
+      let secondBalanceBefore = await depositToken.balanceOf(SECOND);
+      let feeTreasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
+      await builders.claim(pool100Id, SECOND);
+      let secondBalanceAfter = await depositToken.balanceOf(SECOND);
+      let feeTreasuryBalanceAfter = await depositToken.balanceOf(FEE_TREASURY);
+      // Check that the SECOND receive funds: 100 * 0.4 - (100 * 0.4) * 0.02 = 39.2. Proportion 1:4
+      expect(secondBalanceAfter - secondBalanceBefore).to.be.closeTo(wei(39.2), wei(0.1));
+      // Check that the FEE_TREASURY receive funds: (100 * 0.4) * 0.02 = 0.8
+      expect(feeTreasuryBalanceAfter - feeTreasuryBalanceBefore).to.be.closeTo(wei(0.8), wei(0.001));
+
+      // Mint rewards to treasury
+      await depositToken.connect(MINTER).mint(buildersTreasury, wei(40));
+
+      //// Claim
+      await setTime(pool200ClaimLockEnd);
+      secondBalanceBefore = await depositToken.balanceOf(SECOND);
+      feeTreasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
+      await builders.claim(pool100Id, SECOND);
+      secondBalanceAfter = await depositToken.balanceOf(SECOND);
+      feeTreasuryBalanceAfter = await depositToken.balanceOf(FEE_TREASURY);
+      // Check that the SECOND receive funds: 40 * 0.25 - (40 * 0.25) * 0.02 = 9.8. Proportion 1:3
+      expect(secondBalanceAfter - secondBalanceBefore).to.be.closeTo(wei(9.8), wei(0.1));
+      // Check that the FEE_TREASURY receive funds: (40 * 0.25) * 0.02 = 0.2
+      expect(feeTreasuryBalanceAfter - feeTreasuryBalanceBefore).to.be.closeTo(wei(0.2), wei(0.001));
+
+      secondBalanceBefore = await depositToken.balanceOf(SECOND);
+      feeTreasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
+      await builders.claim(pool200Id, SECOND);
+      secondBalanceAfter = await depositToken.balanceOf(SECOND);
+      feeTreasuryBalanceAfter = await depositToken.balanceOf(FEE_TREASURY);
+      // Check that the SECOND receive funds: 100 * 0.6 - (100 * 0.6) * 0.02 + 40 * 0.75 - (40 * 0.75) * 0.02 = 88.2. Proportion 2:3 + 1:3
+      expect(secondBalanceAfter - secondBalanceBefore).to.be.closeTo(wei(88.2), wei(0.1));
+      // // Check that the FEE_TREASURY receive funds: (100 * 0.6) * 0.02 + (40 * 0.75) * 0.02 = 1.4
+      expect(feeTreasuryBalanceAfter - feeTreasuryBalanceBefore).to.be.closeTo(wei(1.8), wei(0.001));
     });
     it('should not pay fee, if percent is zero', async () => {
       await feeConfig.setFeeForOperation(builders, claimOperation, 0);
 
-      await setNextTime(payoutStart);
       await builders.connect(SECOND).deposit(poolId, wei(1));
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(198));
 
-      await setNextTime(payoutStart + oneDay * 2);
-
+      await setTime(poolClaimLockEnd);
       const secondBalanceBefore = await depositToken.balanceOf(SECOND);
-      const treasuryBalanceBefore = await depositToken.balanceOf(TREASURY);
+      const treasuryBalanceBefore = await depositToken.balanceOf(FEE_TREASURY);
       await builders.claim(poolId, SECOND);
       expect((await depositToken.balanceOf(SECOND)) - secondBalanceBefore).to.be.closeTo(wei(198), wei(0.00001));
-      expect((await depositToken.balanceOf(TREASURY)) - treasuryBalanceBefore).to.be.equal(0);
+      expect((await depositToken.balanceOf(FEE_TREASURY)) - treasuryBalanceBefore).to.be.equal(0);
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(builders.connect(SECOND).claim(await builders.getPoolId('bla'), SECOND)).to.be.revertedWith(
@@ -751,7 +812,11 @@ describe('Builders', () => {
       );
     });
     it('should revert if nothing to claim', async () => {
+      await setTime(poolClaimLockEnd);
       await expect(builders.claim(poolId, SECOND)).to.be.revertedWith('BU: nothing to claim');
+    });
+    it('should revert if claim is locked', async () => {
+      await expect(builders.claim(pool100Id, SECOND)).to.be.revertedWith('BU: claim is locked');
     });
     it('should revert if caller is not-admin of the pool', async () => {
       await expect(builders.connect(SECOND).claim(poolId, SECOND)).to.be.revertedWith(
@@ -762,13 +827,13 @@ describe('Builders', () => {
 
   describe('#withdraw', () => {
     let poolId: string;
-    let structPoolId: string;
+    let claimLockEnd: number;
 
     beforeEach(async () => {
       const builderPool = { ...getDefaultBuilderPool(OWNER), withdrawLockPeriodAfterDeposit: oneDay - 1 };
       await builders.createBuilderPool(builderPool);
       poolId = await builders.getPoolId(builderPool.name);
-      structPoolId = await builders.getPoolId(builderPool.name);
+      claimLockEnd = Number(builderPool.claimLockEnd);
     });
 
     it('should correctly withdraw, few users, withdraw all', async () => {
@@ -787,63 +852,64 @@ describe('Builders', () => {
       let tx = await builders.withdraw(poolId, wei(999));
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [OWNER, TREASURY],
+        [OWNER, FEE_TREASURY],
         [(wei(3) * (PRECISION - feeForWithdraw)) / PRECISION, (wei(3) * feeForWithdraw) / PRECISION],
       );
 
+      await setTime(claimLockEnd);
       tx = await builders.claim(poolId, OWNER);
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [OWNER, TREASURY],
+        [OWNER, FEE_TREASURY],
         [(wei(198) * (PRECISION - feeForClaim)) / PRECISION, (wei(198) * feeForClaim) / PRECISION],
       );
 
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(0));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
       expect(await depositToken.balanceOf(builders)).to.eq(wei(1));
 
       // Claim after 3 days
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(96));
-      await setNextTime(oneDay + oneDay * 3);
+      await setNextTime(claimLockEnd + oneDay * 3);
       tx = await builders.claim(poolId, SECOND);
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [SECOND, TREASURY],
+        [SECOND, FEE_TREASURY],
         [(wei(96) * (PRECISION - feeForClaim)) / PRECISION, (wei(96) * feeForClaim) / PRECISION],
       );
 
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(0));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(1));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
       // Withdraw after 4 days
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(94));
-      await setNextTime(oneDay + oneDay * 4);
+      await setNextTime(claimLockEnd + oneDay * 4);
       tx = await builders.connect(SECOND).withdraw(poolId, wei(999));
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [SECOND, TREASURY],
+        [SECOND, FEE_TREASURY],
         [(wei(1) * (PRECISION - feeForWithdraw)) / PRECISION, (wei(1) * feeForWithdraw) / PRECISION],
       );
 
       tx = await builders.claim(poolId, SECOND);
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [SECOND, TREASURY],
+        [SECOND, FEE_TREASURY],
         [(wei(94) * (PRECISION - feeForClaim)) / PRECISION, (wei(94) * feeForClaim) / PRECISION],
       );
 
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(0));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
       expect(await depositToken.balanceOf(builders)).to.eq(wei(0));
 
@@ -866,77 +932,78 @@ describe('Builders', () => {
       let tx = await builders.withdraw(poolId, wei(2));
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [OWNER, TREASURY],
+        [OWNER, FEE_TREASURY],
         [(wei(2) * (PRECISION - feeForWithdraw)) / PRECISION, (wei(2) * feeForWithdraw) / PRECISION],
       );
 
+      await setTime(claimLockEnd);
       tx = await builders.claim(poolId, OWNER);
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [OWNER, TREASURY],
+        [OWNER, FEE_TREASURY],
         [(wei(198) * (PRECISION - feeForClaim)) / PRECISION, (wei(198) * feeForClaim) / PRECISION],
       );
 
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(4));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
       // Claim after 3 days
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(96));
-      await setNextTime(oneDay + oneDay * 3);
+      await setNextTime(claimLockEnd + oneDay * 3);
       tx = await builders.claim(poolId, SECOND);
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [SECOND, TREASURY],
+        [SECOND, FEE_TREASURY],
         [(wei(96) * (PRECISION - feeForClaim)) / PRECISION, (wei(96) * feeForClaim) / PRECISION],
       );
 
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
 
       expect(userData.deposited).to.eq(wei(4));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(4));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
       // Withdraw after 4 days
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(94));
-      await setNextTime(oneDay + oneDay * 4);
+      await setNextTime(claimLockEnd + oneDay * 4);
       tx = await builders.connect(SECOND).withdraw(poolId, wei(2));
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [SECOND, TREASURY],
+        [SECOND, FEE_TREASURY],
         [(wei(2) * (PRECISION - feeForWithdraw)) / PRECISION, (wei(2) * feeForWithdraw) / PRECISION],
       );
 
       tx = await builders.claim(poolId, SECOND);
       await expect(tx).to.changeTokenBalances(
         depositToken,
-        [SECOND, TREASURY],
+        [SECOND, FEE_TREASURY],
         [(wei(94) * (PRECISION - feeForClaim)) / PRECISION, (wei(94) * feeForClaim) / PRECISION],
       );
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(2));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
       // Claim after 5 days
       await depositToken.connect(MINTER).mint(buildersTreasury, wei(92));
-      await setNextTime(oneDay + oneDay * 5);
+      await setNextTime(claimLockEnd + oneDay * 5);
       tx = await builders.claim(poolId, SECOND);
       await expect(tx).to.changeTokenBalance(depositToken, SECOND, (wei(92) * (PRECISION - feeForClaim)) / PRECISION);
-      userData = await builders.usersData(OWNER, structPoolId);
+      userData = await builders.usersData(OWNER, poolId);
       expect(userData.deposited).to.eq(wei(4));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
 
-      userData = await builders.usersData(SECOND, structPoolId);
+      userData = await builders.usersData(SECOND, poolId);
       expect(userData.deposited).to.eq(wei(2));
-      builderPoolData = await builders.buildersPoolData(structPoolId);
+      builderPoolData = await builders.buildersPoolData(poolId);
       expect(builderPoolData.pendingRewards).to.eq(0);
     });
     it('should not pay fee, if percent is zero', async () => {
@@ -948,7 +1015,7 @@ describe('Builders', () => {
       await setNextTime(oneDay * 3);
 
       const tx = await builders.withdraw(poolId, wei(1));
-      await expect(tx).to.changeTokenBalances(depositToken, [OWNER, TREASURY], [wei(1), 0]);
+      await expect(tx).to.changeTokenBalances(depositToken, [OWNER, FEE_TREASURY], [wei(1), 0]);
     });
     it('should revert if trying to withdraw zero', async () => {
       await expect(builders.withdraw(poolId, 0)).to.be.revertedWith('BU: nothing to withdraw');
@@ -986,3 +1053,6 @@ describe('Builders', () => {
     });
   });
 });
+
+// npx hardhat test "test/builders/Builders.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builders/Builders.test.ts"

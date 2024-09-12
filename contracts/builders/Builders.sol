@@ -184,6 +184,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         address user_ = _msgSender();
 
         require(user_ == builderPools[builderPoolId_].admin, "BU: only admin can claim rewards");
+        require(block.timestamp > builderPools[builderPoolId_].claimLockEnd, "BU: claim is locked");
 
         BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
 
@@ -194,9 +195,14 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update pool data
         totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
+        totalPoolData.totalVirtualDeposited =
+            totalPoolData.totalVirtualDeposited +
+            builderPoolData.deposited -
+            builderPoolData.virtualDeposited;
 
         // Update builder data
         builderPoolData.rate = currentRate_;
+        builderPoolData.virtualDeposited = builderPoolData.deposited;
         builderPoolData.pendingRewards = 0;
 
         // Transfer rewards
@@ -229,6 +235,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update pool data
         totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
+        totalPoolData.totallDeposited = totalPoolData.totallDeposited + newDeposited_ - userData.deposited;
         totalPoolData.totalVirtualDeposited =
             totalPoolData.totalVirtualDeposited +
             virtualDeposited_ -
@@ -237,6 +244,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update builder data
         builderPoolData.rate = currentRate_;
         builderPoolData.pendingRewards = pendingRewards_;
+        builderPoolData.deposited = builderPoolData.deposited + newDeposited_ - userData.deposited;
         builderPoolData.virtualDeposited =
             builderPoolData.virtualDeposited +
             virtualDeposited_ -
