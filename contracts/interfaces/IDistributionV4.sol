@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
  * This is the Distribution contract that stores all the pools and users data.
  * It is used to calculate the user's rewards and operate with overpluses.
  */
-interface IDistributionV3 {
+interface IDistributionV4 {
     /**
      * The structure that stores the core pool's data.
      * @param payoutStart The timestamp when the pool starts to pay out rewards.
@@ -17,6 +17,7 @@ interface IDistributionV3 {
      * @param rewardDecrease The reward decrease per interval.
      * @param minimalStake The minimal stake amount.
      * @param isPublic The flag that indicates if the pool is public.
+     * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
      */
     struct Pool {
         uint128 payoutStart;
@@ -28,6 +29,8 @@ interface IDistributionV3 {
         uint256 rewardDecrease;
         uint256 minimalStake;
         bool isPublic;
+        // Storage changes for the DistributionV4
+        uint128 claimLockPeriodAfterStake;
     }
 
     /**
@@ -57,7 +60,7 @@ interface IDistributionV3 {
         uint256 deposited;
         uint256 rate;
         uint256 pendingRewards;
-        // Storage changes for DistributionV2
+        // Storage changes for the DistributionV2
         uint128 claimLockStart;
         uint128 claimLockEnd;
         uint256 virtualDeposited;
@@ -131,11 +134,29 @@ interface IDistributionV3 {
     function createPool(Pool calldata pool_) external;
 
     /**
-     * The function to edit the pool's data.
+     * The function to edit the pool data.
      * @param poolId The pool's id.
      * @param pool_ The new pool's data.
      */
     function editPool(uint256 poolId, Pool calldata pool_) external;
+
+    /**
+     * The function to edit the pool limits.
+     * @param poolId_ The pool id.
+     * @param withdrawLockPeriod_ The period in seconds when the user can't withdraw his stake.
+     * @param withdrawLockPeriodAfterStake_ The period in seconds when the user can't withdraw his stake after staking.
+     * @param claimLockPeriod_ The period in seconds when the user can't claim his rewards.
+     * @param minimalStake_ The minimal stake amount.
+     * @param claimLockPeriodAfterStake_ The period in seconds when the user can't claim tokens after staking.
+     */
+    function editPoolLimits(
+        uint256 poolId_,
+        uint128 withdrawLockPeriod_,
+        uint128 withdrawLockPeriodAfterStake_,
+        uint128 claimLockPeriod_,
+        uint128 claimLockPeriodAfterStake_,
+        uint256 minimalStake_
+    ) external;
 
     /**
      * The function to calculate the total pool's reward for the specified period.

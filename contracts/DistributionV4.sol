@@ -10,11 +10,11 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
 import {L1Sender} from "./L1Sender.sol";
-import {IDistributionV3} from "./interfaces/IDistributionV3.sol";
+import {IDistributionV4} from "./interfaces/IDistributionV4.sol";
 
 import {LogExpMath} from "./libs/LogExpMath.sol";
 
-contract DistributionV3 is IDistributionV3, OwnableUpgradeable, UUPSUpgradeable {
+contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     uint128 constant DECIMAL = 1e18;
@@ -99,6 +99,25 @@ contract DistributionV3 is IDistributionV3, OwnableUpgradeable, UUPSUpgradeable 
         emit PoolEdited(poolId_, pool_);
     }
 
+    function editPoolLimits(
+        uint256 poolId_,
+        uint128 withdrawLockPeriod_,
+        uint128 withdrawLockPeriodAfterStake_,
+        uint128 claimLockPeriod_,
+        uint128 claimLockPeriodAfterStake_,
+        uint256 minimalStake_
+    ) external onlyOwner poolExists(poolId_) {
+        Pool storage pool = pools[poolId_];
+
+        pool.withdrawLockPeriod = withdrawLockPeriod_;
+        pool.withdrawLockPeriodAfterStake = withdrawLockPeriodAfterStake_;
+        pool.claimLockPeriod = claimLockPeriod_;
+        pool.claimLockPeriodAfterStake = claimLockPeriodAfterStake_;
+        pool.minimalStake = minimalStake_;
+
+        emit PoolEdited(poolId_, pool);
+    }
+
     function getPeriodReward(uint256 poolId_, uint128 startTime_, uint128 endTime_) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
             return 0;
@@ -168,7 +187,8 @@ contract DistributionV3 is IDistributionV3, OwnableUpgradeable, UUPSUpgradeable 
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
+        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
+        require(block.timestamp > userData.lastStake + pool.claimLockPeriodAfterStake, "DS: pool claim is locked (2)");
         require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
@@ -502,7 +522,7 @@ contract DistributionV3 is IDistributionV3, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function version() external pure returns (uint256) {
-        return 3;
+        return 4;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {
