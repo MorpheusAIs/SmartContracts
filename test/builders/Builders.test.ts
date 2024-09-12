@@ -823,6 +823,9 @@ describe('Builders', () => {
         'BU: only admin can claim rewards',
       );
     });
+    it('should revert if claim is locked', async () => {
+      await expect(builders.claim(poolId, SECOND)).to.be.revertedWith('BU: claim is locked');
+    });
   });
 
   describe('#withdraw', () => {

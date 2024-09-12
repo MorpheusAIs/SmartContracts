@@ -183,8 +183,10 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     function claim(bytes32 builderPoolId_, address receiver_) external poolExists(builderPoolId_) {
         address user_ = _msgSender();
 
-        require(user_ == builderPools[builderPoolId_].admin, "BU: only admin can claim rewards");
-        require(block.timestamp > builderPools[builderPoolId_].claimLockEnd, "BU: claim is locked");
+        BuilderPool storage builderPool = builderPools[builderPoolId_];
+
+        require(user_ == builderPool.admin, "BU: only admin can claim rewards");
+        require(block.timestamp > builderPool.claimLockEnd, "BU: claim is locked");
 
         BuilderPoolData storage builderPoolData = buildersPoolData[builderPoolId_];
 
