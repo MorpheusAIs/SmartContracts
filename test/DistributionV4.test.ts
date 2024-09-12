@@ -635,12 +635,48 @@ describe('DistributionV4', () => {
       expect(_comparePoolStructs(newPool, poolData)).to.be.true;
     });
     it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).editPool(poolId, getDefaultPoolV4())).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
+      const newPool = {
+        ...defaultPool,
+        withdrawLockPeriod: 100 * oneDay,
+        withdrawLockPeriodAfterStake: 101 * oneDay,
+        minimalStake: wei(333),
+        claimLockPeriod: 102 * oneDay,
+        claimLockPeriodAfterStake: 103 * oneDay,
+      };
+
+      await expect(
+        distribution
+          .connect(SECOND)
+          .editPoolLimits(
+            poolId,
+            newPool.withdrawLockPeriod,
+            newPool.withdrawLockPeriodAfterStake,
+            newPool.claimLockPeriod,
+            newPool.claimLockPeriodAfterStake,
+            newPool.minimalStake,
+          ),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
     it("should revert if pool doesn't exist", async () => {
-      await expect(distribution.editPool(1, getDefaultPoolV4())).to.be.revertedWith("DS: pool doesn't exist");
+      const newPool = {
+        ...defaultPool,
+        withdrawLockPeriod: 100 * oneDay,
+        withdrawLockPeriodAfterStake: 101 * oneDay,
+        minimalStake: wei(333),
+        claimLockPeriod: 102 * oneDay,
+        claimLockPeriodAfterStake: 103 * oneDay,
+      };
+
+      await expect(
+        distribution.editPoolLimits(
+          1,
+          newPool.withdrawLockPeriod,
+          newPool.withdrawLockPeriodAfterStake,
+          newPool.claimLockPeriod,
+          newPool.claimLockPeriodAfterStake,
+          newPool.minimalStake,
+        ),
+      ).to.be.revertedWith("DS: pool doesn't exist");
     });
   });
 
@@ -1754,7 +1790,7 @@ describe('DistributionV4', () => {
       expect(userData.pendingRewards).to.eq(0);
     });
     it('should not save reward to pending reward if cannot mint reward token', async () => {
-      const amountToMintMaximum = (await rewardToken.cap()) - (await rewardToken.totalSupply());
+      const amountToMintMaximum = BigInt((await rewardToken.cap()) - (await rewardToken.totalSupply()));
 
       await _getRewardTokenFromPool(distribution, amountToMintMaximum - wei(1), OWNER);
 
