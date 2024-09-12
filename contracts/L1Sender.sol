@@ -46,6 +46,7 @@ contract L1Sender is IL1Sender, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function setDistribution(address distribution_) public onlyOwner {
+        require(distribution_ != address(0), "L1S: invalid distribution");
         distribution = distribution_;
     }
 
@@ -56,12 +57,12 @@ contract L1Sender is IL1Sender, OwnableUpgradeable, UUPSUpgradeable {
     function setDepositTokenConfig(DepositTokenConfig calldata newConfig_) public onlyOwner {
         require(newConfig_.receiver != address(0), "L1S: invalid receiver");
 
-        DepositTokenConfig storage oldConfig = depositTokenConfig;
+        DepositTokenConfig memory oldConfig = depositTokenConfig;
+
+        depositTokenConfig = newConfig_;
 
         _replaceDepositToken(oldConfig.token, newConfig_.token);
         _replaceDepositTokenGateway(oldConfig.gateway, newConfig_.gateway, oldConfig.token, newConfig_.token);
-
-        depositTokenConfig = newConfig_;
     }
 
     function _replaceDepositToken(address oldToken_, address newToken_) private {
@@ -69,14 +70,14 @@ contract L1Sender is IL1Sender, OwnableUpgradeable, UUPSUpgradeable {
 
         if (oldToken_ != address(0) && isTokenChanged_) {
             // Remove allowance from stETH to wstETH
-            IERC20(unwrappedDepositToken).approve(oldToken_, 0);
+            require(IERC20(unwrappedDepositToken).approve(oldToken_, 0), "L1S: remove old token allowance failed");
         }
 
         if (isTokenChanged_) {
             // Get stETH from wstETH
             address unwrappedToken_ = IWStETH(newToken_).stETH();
             // Increase allowance from stETH to wstETH. To exchange stETH for wstETH
-            IERC20(unwrappedToken_).approve(newToken_, type(uint256).max);
+            require(IERC20(unwrappedToken_).approve(newToken_, type(uint256).max), "L1S: new token allowance failed");
 
             unwrappedDepositToken = unwrappedToken_;
         }
@@ -91,11 +92,17 @@ contract L1Sender is IL1Sender, OwnableUpgradeable, UUPSUpgradeable {
         bool isAllowedChanged_ = (oldToken_ != newToken_) || (oldGateway_ != newGateway_);
 
         if (oldGateway_ != address(0) && isAllowedChanged_) {
-            IERC20(oldToken_).approve(IGatewayRouter(oldGateway_).getGateway(oldToken_), 0);
+            require(
+                IERC20(oldToken_).approve(IGatewayRouter(oldGateway_).getGateway(oldToken_), 0),
+                "L1S: remove old gateway allowance failed"
+            );
         }
 
         if (isAllowedChanged_) {
-            IERC20(newToken_).approve(IGatewayRouter(newGateway_).getGateway(newToken_), type(uint256).max);
+            require(
+                IERC20(newToken_).approve(IGatewayRouter(newGateway_).getGateway(newToken_), type(uint256).max),
+                "L1S: new gateway allowance failed"
+            );
         }
     }
 
