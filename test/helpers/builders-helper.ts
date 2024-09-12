@@ -11,7 +11,7 @@ export const getDefaultBuilderPool = (admin: Addressable): IBuilders.BuilderPool
     admin: admin,
     poolStart: oneDay,
     withdrawLockPeriodAfterDeposit: oneDay,
-    claimLockEnd: 0,
+    claimLockEnd: 10 * oneDay,
     minimalDeposit: wei(0.1),
   };
 };

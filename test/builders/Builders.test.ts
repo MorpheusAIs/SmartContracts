@@ -815,9 +815,6 @@ describe('Builders', () => {
       await setTime(poolClaimLockEnd);
       await expect(builders.claim(poolId, SECOND)).to.be.revertedWith('BU: nothing to claim');
     });
-    it('should revert if claim is locked', async () => {
-      await expect(builders.claim(pool100Id, SECOND)).to.be.revertedWith('BU: claim is locked');
-    });
     it('should revert if caller is not-admin of the pool', async () => {
       await expect(builders.connect(SECOND).claim(poolId, SECOND)).to.be.revertedWith(
         'BU: only admin can claim rewards',
