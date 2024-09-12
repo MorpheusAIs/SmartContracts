@@ -237,7 +237,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update pool data
         totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
-        totalPoolData.totallDeposited = totalPoolData.totallDeposited + newDeposited_ - userData.deposited;
+        totalPoolData.totalDeposited = totalPoolData.totalDeposited + newDeposited_ - userData.deposited;
         totalPoolData.totalVirtualDeposited =
             totalPoolData.totalVirtualDeposited +
             virtualDeposited_ -
