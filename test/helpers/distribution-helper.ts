@@ -1,4 +1,4 @@
-import { IDistribution, IL2TokenReceiver } from '@/generated-types/ethers';
+import { IDistribution, IDistributionV4, IL2TokenReceiver } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
 export const oneHour = 3600;
@@ -15,6 +15,13 @@ export const getDefaultPool = (): IDistribution.PoolStruct => {
     rewardDecrease: wei(2),
     minimalStake: wei(0.1),
     isPublic: true,
+  };
+};
+
+export const getDefaultPoolV4 = (): IDistributionV4.PoolStruct => {
+  return {
+    ...getDefaultPool(),
+    claimLockPeriodAfterStake: oneHour,
   };
 };
 
