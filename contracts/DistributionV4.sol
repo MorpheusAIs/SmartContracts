@@ -105,6 +105,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         uint128 withdrawLockPeriodAfterStake_,
         uint128 claimLockPeriod_,
         uint128 claimLockPeriodAfterStake_,
+        uint128 claimLockPeriodAfterClaim_,
         uint256 minimalStake_
     ) external onlyOwner poolExists(poolId_) {
         Pool storage pool = pools[poolId_];
@@ -113,6 +114,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         pool.withdrawLockPeriodAfterStake = withdrawLockPeriodAfterStake_;
         pool.claimLockPeriod = claimLockPeriod_;
         pool.claimLockPeriodAfterStake = claimLockPeriodAfterStake_;
+        pool.claimLockPeriodAfterClaim = claimLockPeriodAfterClaim_;
         pool.minimalStake = minimalStake_;
 
         emit PoolEdited(poolId_, pool);
@@ -189,6 +191,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
 
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
         require(block.timestamp > userData.lastStake + pool.claimLockPeriodAfterStake, "DS: pool claim is locked (2)");
+        require(block.timestamp > userData.lastClaim + pool.claimLockPeriodAfterClaim, "DS: pool claim is locked (3)");
         require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
@@ -213,6 +216,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         userData.virtualDeposited = userData.deposited;
         userData.claimLockStart = 0;
         userData.claimLockEnd = 0;
+        userData.lastClaim = uint128(block.timestamp);
 
         // Transfer rewards
         L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);

@@ -18,6 +18,8 @@ interface IDistributionV4 {
      * @param minimalStake The minimal stake amount.
      * @param isPublic The flag that indicates if the pool is public.
      * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
+     * @param claimLockPeriodAfterClaim The period in seconds when the user can't claim tokens after claiming.
+
      */
     struct Pool {
         uint128 payoutStart;
@@ -30,7 +32,8 @@ interface IDistributionV4 {
         uint256 minimalStake;
         bool isPublic;
         // Storage changes for the DistributionV4
-        uint128 claimLockPeriodAfterStake;
+        uint256 claimLockPeriodAfterStake;
+        uint256 claimLockPeriodAfterClaim;
     }
 
     /**
@@ -64,6 +67,8 @@ interface IDistributionV4 {
         uint128 claimLockStart;
         uint128 claimLockEnd;
         uint256 virtualDeposited;
+        // Storage changes for the DistributionV4
+        uint128 lastClaim;
     }
 
     /**
@@ -148,6 +153,7 @@ interface IDistributionV4 {
      * @param claimLockPeriod_ The period in seconds when the user can't claim his rewards.
      * @param minimalStake_ The minimal stake amount.
      * @param claimLockPeriodAfterStake_ The period in seconds when the user can't claim tokens after staking.
+     * @param claimLockPeriodAfterClaim_ The period in seconds when the user can't claim tokens after claiming.
      */
     function editPoolLimits(
         uint256 poolId_,
@@ -155,6 +161,7 @@ interface IDistributionV4 {
         uint128 withdrawLockPeriodAfterStake_,
         uint128 claimLockPeriod_,
         uint128 claimLockPeriodAfterStake_,
+        uint128 claimLockPeriodAfterClaim_,
         uint256 minimalStake_
     ) external;
 
