@@ -627,6 +627,7 @@ describe('DistributionV4', () => {
         newPool.withdrawLockPeriodAfterStake,
         newPool.claimLockPeriod,
         newPool.claimLockPeriodAfterStake,
+        newPool.claimLockPeriodAfterClaim,
         newPool.minimalStake,
       );
       await expect(tx).to.emit(distribution, 'PoolEdited');
@@ -653,6 +654,7 @@ describe('DistributionV4', () => {
             newPool.withdrawLockPeriodAfterStake,
             newPool.claimLockPeriod,
             newPool.claimLockPeriodAfterStake,
+            newPool.claimLockPeriodAfterClaim,
             newPool.minimalStake,
           ),
       ).to.be.revertedWith('Ownable: caller is not the owner');
@@ -665,6 +667,7 @@ describe('DistributionV4', () => {
         minimalStake: wei(333),
         claimLockPeriod: 102 * oneDay,
         claimLockPeriodAfterStake: 103 * oneDay,
+        claimLockPeriodAfterClaim: 104 * oneDay,
       };
 
       await expect(
@@ -674,6 +677,7 @@ describe('DistributionV4', () => {
           newPool.withdrawLockPeriodAfterStake,
           newPool.claimLockPeriod,
           newPool.claimLockPeriodAfterStake,
+          newPool.claimLockPeriodAfterClaim,
           newPool.minimalStake,
         ),
       ).to.be.revertedWith("DS: pool doesn't exist");
@@ -1415,7 +1419,8 @@ describe('DistributionV4', () => {
     const poolId = 0;
 
     beforeEach(async () => {
-      await distribution.createPool(getDefaultPoolV4());
+      const pool = getDefaultPoolV4();
+      await distribution.createPool({ ...pool, claimLockPeriodAfterClaim: 60 });
     });
 
     it('should correctly claim, one user, without redeposits', async () => {
@@ -1933,6 +1938,18 @@ describe('DistributionV4', () => {
       await distribution.stake(poolId, wei(1), 0);
 
       await expect(distribution.claim(poolId, OWNER)).to.be.revertedWith('DS: pool claim is locked (2)');
+    });
+    it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
+      await setTime(oneDay * 2);
+      await distribution.stake(poolId, wei(1), 0);
+
+      await setTime(oneDay * 3);
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+      await expect(distribution.claim(poolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+        'DS: pool claim is locked (3)',
+      );
+      await setTime(oneDay * 3 + 61);
+      await distribution.claim(poolId, OWNER, { value: wei(0.5) });
     });
     it('should revert if nothing to claim', async () => {
       const newPool = {
@@ -2491,6 +2508,7 @@ describe('DistributionV4', () => {
         minimalStake: wei(0.1),
         isPublic: true,
         claimLockPeriodAfterStake: 0,
+        claimLockPeriodAfterClaim: 0,
       };
       await distribution.createPool(pool);
 
@@ -2754,6 +2772,7 @@ const _getRewardTokenFromPool = async (distribution: DistributionV4, amount: big
     isPublic: true,
     minimalStake: 0,
     claimLockPeriodAfterStake: 0,
+    claimLockPeriodAfterClaim: 0,
   };
 
   await distribution.createPool(pool);

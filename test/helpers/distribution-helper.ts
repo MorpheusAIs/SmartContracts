@@ -22,6 +22,7 @@ export const getDefaultPoolV4 = (): IDistributionV4.PoolStruct => {
   return {
     ...getDefaultPool(),
     claimLockPeriodAfterStake: oneHour,
+    claimLockPeriodAfterClaim: 0,
   };
 };
 
