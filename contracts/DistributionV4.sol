@@ -35,7 +35,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
     uint256 public totalDepositedInPublicPools;
 
     // Pools limits, V4 update
-    mapping(uint256 => PoolLimit) public poolsLimits;
+    mapping(uint256 => PoolLimits) public poolsLimits;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -102,7 +102,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         emit PoolEdited(poolId_, pool_);
     }
 
-    function editPoolLimits(uint256 poolId_, PoolLimit calldata poolLimits_) external onlyOwner poolExists(poolId_) {
+    function editPoolLimits(uint256 poolId_, PoolLimits calldata poolLimits_) external onlyOwner poolExists(poolId_) {
         poolsLimits[poolId_] = poolLimits_;
 
         emit PoolLimitsEdited(poolId_, poolLimits_);
@@ -174,7 +174,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         address user_ = _msgSender();
 
         Pool storage pool = pools[poolId_];
-        PoolLimit storage poolLimits = poolsLimits[poolId_];
+        PoolLimits storage poolLimits = poolsLimits[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 

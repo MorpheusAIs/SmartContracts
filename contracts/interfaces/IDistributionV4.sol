@@ -35,7 +35,7 @@ interface IDistributionV4 {
      * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
      * @param claimLockPeriodAfterClaim The period in seconds when the user can't claim tokens after claiming.
      */
-    struct PoolLimit {
+    struct PoolLimits {
         uint128 claimLockPeriodAfterStake;
         uint128 claimLockPeriodAfterClaim;
     }
@@ -94,7 +94,7 @@ interface IDistributionV4 {
      * @param poolId The pool's id.
      * @param poolLimit The pool's limit data.
      */
-    event PoolLimitsEdited(uint256 indexed poolId, PoolLimit poolLimit);
+    event PoolLimitsEdited(uint256 indexed poolId, PoolLimits poolLimit);
 
     /**
      * The event that is emitted when the user stakes tokens in the pool.
@@ -161,7 +161,7 @@ interface IDistributionV4 {
      * @param poolId_ The pool id.
      * @param poolLimits_ The pool's limit data.
      */
-    function editPoolLimits(uint256 poolId_, PoolLimit calldata poolLimits_) external;
+    function editPoolLimits(uint256 poolId_, PoolLimits calldata poolLimits_) external;
 
     /**
      * The function to calculate the total pool's reward for the specified period.
