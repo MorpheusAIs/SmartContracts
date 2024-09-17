@@ -17,7 +17,6 @@ interface IDistributionV5 {
      * @param rewardDecrease The reward decrease per interval.
      * @param minimalStake The minimal stake amount.
      * @param isPublic The flag that indicates if the pool is public.
-     * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
      */
     struct Pool {
         uint128 payoutStart;
@@ -29,8 +28,16 @@ interface IDistributionV5 {
         uint256 rewardDecrease;
         uint256 minimalStake;
         bool isPublic;
-        // Storage changes for the DistributionV4
+    }
+
+    /**
+     * The structure that stores the limits pool's data.
+     * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
+     * @param claimLockPeriodAfterClaim The period in seconds when the user can't claim tokens after claiming.
+     */
+    struct PoolLimits {
         uint128 claimLockPeriodAfterStake;
+        uint128 claimLockPeriodAfterClaim;
     }
 
     /**
@@ -64,6 +71,24 @@ interface IDistributionV5 {
         uint128 claimLockStart;
         uint128 claimLockEnd;
         uint256 virtualDeposited;
+        // Storage changes for the DistributionV4
+        uint128 lastClaim;
+        // Storage changes for the DistributionV5
+        address referrer;
+    }
+
+    struct ReferralBonus {
+        uint256[] amountStaked;
+        uint256[] referrerMultiplier;
+    }
+
+    struct ReferralData {
+        address referrer;
+        uint256 amountStaked;
+        uint256 virtualAmountStaked;
+        uint256 rate;
+        uint256 pendingRewards;
+        uint128 lastStake;
     }
 
     /**
@@ -79,6 +104,13 @@ interface IDistributionV5 {
      * @param pool The pool's data.
      */
     event PoolEdited(uint256 indexed poolId, Pool pool);
+
+    /**
+     * The event that is emitted when the pool limits are edited.
+     * @param poolId The pool's id.
+     * @param poolLimit The pool's limit data.
+     */
+    event PoolLimitsEdited(uint256 indexed poolId, PoolLimits poolLimit);
 
     /**
      * The event that is emitted when the user stakes tokens in the pool.
@@ -120,6 +152,15 @@ interface IDistributionV5 {
     event UserClaimLocked(uint256 indexed poolId, address indexed user, uint128 claimLockStart, uint128 claimLockEnd);
 
     /**
+     * The event that is emitted when the user is referred.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param referrer The referrer's address.
+     * @param amount The amount of tokens.
+     */
+    event UserReferred(uint256 indexed poolId, address indexed user, address indexed referrer, uint256 amount);
+
+    /**
      * The function to initialize the contract.
      * @param depositToken_ The address of the deposit token.
      * @param l1Sender_ The address of the bridge contract.
@@ -143,20 +184,9 @@ interface IDistributionV5 {
     /**
      * The function to edit the pool limits.
      * @param poolId_ The pool id.
-     * @param withdrawLockPeriod_ The period in seconds when the user can't withdraw his stake.
-     * @param withdrawLockPeriodAfterStake_ The period in seconds when the user can't withdraw his stake after staking.
-     * @param claimLockPeriod_ The period in seconds when the user can't claim his rewards.
-     * @param minimalStake_ The minimal stake amount.
-     * @param claimLockPeriodAfterStake_ The period in seconds when the user can't claim tokens after staking.
+     * @param poolLimits_ The pool's limit data.
      */
-    function editPoolLimits(
-        uint256 poolId_,
-        uint128 withdrawLockPeriod_,
-        uint128 withdrawLockPeriodAfterStake_,
-        uint128 claimLockPeriod_,
-        uint128 claimLockPeriodAfterStake_,
-        uint256 minimalStake_
-    ) external;
+    function editPoolLimits(uint256 poolId_, PoolLimits calldata poolLimits_) external;
 
     /**
      * The function to calculate the total pool's reward for the specified period.
@@ -186,8 +216,9 @@ interface IDistributionV5 {
      * @param poolId_ The pool's id.
      * @param amount_ The amount of tokens to stake.
      * @param claimLockEnd_ The timestamp when the user can claim his rewards.
+     * @param referral_ The referral address.
      */
-    function stake(uint256 poolId_, uint256 amount_, uint128 claimLockEnd_) external;
+    function stake(uint256 poolId_, uint256 amount_, uint128 claimLockEnd_, address referral_) external;
 
     /**
      * The function to claim rewards from the pool.
