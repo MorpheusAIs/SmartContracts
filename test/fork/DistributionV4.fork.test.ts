@@ -143,7 +143,7 @@ describe('DistributionV4 Fork', () => {
         distribution
           .connect(userPublicPool)
           .claim(0, '0x819D7A3EB883D7a2F0b9e87561298E294C66c538', { value: wei(0.1) }),
-      ).to.be.rejectedWith('DS: pool claim is locked (2)');
+      ).to.be.rejectedWith('DS: pool claim is locked (S)');
 
       await setTime((await getCurrentBlockTime()) + 3600);
       await expect(

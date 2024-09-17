@@ -181,7 +181,7 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
         require(
             block.timestamp > userData.lastStake + poolLimits.claimLockPeriodAfterStake,
-            "DS: pool claim is locked (2)"
+            "DS: pool claim is locked (S)"
         );
         require(
             block.timestamp > userData.lastClaim + poolLimits.claimLockPeriodAfterClaim,

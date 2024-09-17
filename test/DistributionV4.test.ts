@@ -1892,7 +1892,7 @@ describe('DistributionV4', () => {
       await distribution.stake(poolId, wei(1), 0);
       await distribution.editPoolLimits(poolId, { claimLockPeriodAfterStake: oneHour, claimLockPeriodAfterClaim: 0 });
 
-      await expect(distribution.claim(poolId, OWNER)).to.be.revertedWith('DS: pool claim is locked (2)');
+      await expect(distribution.claim(poolId, OWNER)).to.be.revertedWith('DS: pool claim is locked (S)');
     });
     it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
       await distribution.editPoolLimits(poolId, { claimLockPeriodAfterStake: 0, claimLockPeriodAfterClaim: 60 });
