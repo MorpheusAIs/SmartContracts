@@ -63,7 +63,6 @@ describe('DistributionV4 Fork', () => {
     await distributionCurrent.upgradeTo(DistributionV4Impl);
 
     distribution = DistributionV4Factory.attach(distributionCurrent) as DistributionV4;
-
     assert((await distribution.version()) === 4n, 'Distribution should be upgraded to V4');
 
     await reverter.snapshot();
@@ -94,7 +93,6 @@ describe('DistributionV4 Fork', () => {
       expect(pool.rewardDecrease).to.be.eq('592558728240000000');
       expect(pool.minimalStake).to.be.eq('10000000000000000');
       expect(pool.isPublic).to.be.eq(true);
-      expect(pool.claimLockPeriodAfterStake).to.be.eq('0');
     });
     it('should have the same fields from V1', async () => {
       const userData = await distribution.usersData('0x6cC37e13ceD30689b86a10819282027cA6BD1CDD', 0);
@@ -109,7 +107,7 @@ describe('DistributionV4 Fork', () => {
 
   describe('should correctly update claim lock period after stake', () => {
     it('should reset claim lock period after stake', async () => {
-      await distribution.editPoolLimits(0, 604800, 604800, 7776000, 86400, wei(0.01));
+      await distribution.editPoolLimits(0, { claimLockPeriodAfterStake: 86400, claimLockPeriodAfterClaim: 3600 });
       const pool = await distribution.pools(0);
       expect(pool.payoutStart).to.be.eq('1707393600');
       expect(pool.decreaseInterval).to.be.eq('86400');
@@ -120,9 +118,8 @@ describe('DistributionV4 Fork', () => {
       expect(pool.rewardDecrease).to.be.eq('592558728240000000');
       expect(pool.minimalStake).to.be.eq('10000000000000000');
       expect(pool.isPublic).to.be.eq(true);
-      expect(pool.claimLockPeriodAfterStake).to.be.eq('86400');
     });
-    it('should lock claim after the stake', async () => {
+    it('should lock claim after the stake and after the claim', async () => {
       const userPublicPool = await ethers.getImpersonatedSigner('0x819D7A3EB883D7a2F0b9e87561298E294C66c538');
 
       // Claim should be available
@@ -141,12 +138,19 @@ describe('DistributionV4 Fork', () => {
         .claim(0, '0x819D7A3EB883D7a2F0b9e87561298E294C66c538', { value: wei(0.1) });
 
       // Set limits
-      await distribution.editPoolLimits(0, 604800, 604800, 7776000, 86400, wei(0.01));
+      await distribution.editPoolLimits(0, { claimLockPeriodAfterStake: 3600, claimLockPeriodAfterClaim: 8400 });
       await expect(
         distribution
           .connect(userPublicPool)
           .claim(0, '0x819D7A3EB883D7a2F0b9e87561298E294C66c538', { value: wei(0.1) }),
-      ).to.be.rejectedWith('DS: pool claim is locked (2)');
+      ).to.be.rejectedWith('DS: pool claim is locked (S)');
+
+      await setTime((await getCurrentBlockTime()) + 3600);
+      await expect(
+        distribution
+          .connect(userPublicPool)
+          .claim(0, '0x819D7A3EB883D7a2F0b9e87561298E294C66c538', { value: wei(0.1) }),
+      ).to.be.rejectedWith('DS: pool claim is locked (C)');
 
       // Move in feature to skip time restrictions
       await setTime((await getCurrentBlockTime()) + 86400);
