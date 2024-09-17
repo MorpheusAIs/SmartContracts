@@ -29,11 +29,13 @@ interface IBuilders is IERC165 {
      * The structure that stores the pool's rate data.
      * @param distributedRewards The amount of rewards at the last update.
      * @param rate The current reward rate.
+     * @param totalDeposited The total amount of tokens deposited in the pool without multiplier.
      * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
      */
     struct TotalPoolData {
         uint256 distributedRewards;
         uint256 rate;
+        uint256 totalDeposited;
         uint256 totalVirtualDeposited;
     }
 
@@ -54,12 +56,14 @@ interface IBuilders is IERC165 {
     /**
      * The structure that stores the pool's data.
      * @param lastDeposit The timestamp when the user last deposited tokens.
-     * @param virtualDeposited The amount of tokens deposited in the pool with user multiplier.
+     * @param deposited The amount of tokens deposited in the pool without users multiplier.
+     * @param virtualDeposited The amount of tokens deposited in the pool with users multiplier.
      * @param rate The current reward rate.
      * @param pendingRewards The amount of pending rewards.
      */
     struct BuilderPoolData {
         uint128 lastDeposit;
+        uint256 deposited;
         uint256 virtualDeposited;
         uint256 rate;
         uint256 pendingRewards;

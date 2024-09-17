@@ -197,9 +197,14 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update pool data
         totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
+        totalPoolData.totalVirtualDeposited =
+            totalPoolData.totalVirtualDeposited +
+            builderPoolData.deposited -
+            builderPoolData.virtualDeposited;
 
         // Update builder data
         builderPoolData.rate = currentRate_;
+        builderPoolData.virtualDeposited = builderPoolData.deposited;
         builderPoolData.pendingRewards = 0;
 
         // Transfer rewards
@@ -232,6 +237,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update pool data
         totalPoolData.distributedRewards += newPoolRewards_;
         totalPoolData.rate = currentRate_;
+        totalPoolData.totalDeposited = totalPoolData.totalDeposited + newDeposited_ - userData.deposited;
         totalPoolData.totalVirtualDeposited =
             totalPoolData.totalVirtualDeposited +
             virtualDeposited_ -
@@ -240,6 +246,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         // Update builder data
         builderPoolData.rate = currentRate_;
         builderPoolData.pendingRewards = pendingRewards_;
+        builderPoolData.deposited = builderPoolData.deposited + newDeposited_ - userData.deposited;
         builderPoolData.virtualDeposited =
             builderPoolData.virtualDeposited +
             virtualDeposited_ -
