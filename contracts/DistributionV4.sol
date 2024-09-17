@@ -34,6 +34,9 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
     // Total deposited storage
     uint256 public totalDepositedInPublicPools;
 
+    // Pools limits, V4 update
+    mapping(uint256 => PoolLimit) public poolsLimits;
+
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
     /**********************************************************************************************/
@@ -99,25 +102,10 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         emit PoolEdited(poolId_, pool_);
     }
 
-    function editPoolLimits(
-        uint256 poolId_,
-        uint128 withdrawLockPeriod_,
-        uint128 withdrawLockPeriodAfterStake_,
-        uint128 claimLockPeriod_,
-        uint128 claimLockPeriodAfterStake_,
-        uint128 claimLockPeriodAfterClaim_,
-        uint256 minimalStake_
-    ) external onlyOwner poolExists(poolId_) {
-        Pool storage pool = pools[poolId_];
+    function editPoolLimits(uint256 poolId_, PoolLimit calldata poolLimits_) external onlyOwner poolExists(poolId_) {
+        poolsLimits[poolId_] = poolLimits_;
 
-        pool.withdrawLockPeriod = withdrawLockPeriod_;
-        pool.withdrawLockPeriodAfterStake = withdrawLockPeriodAfterStake_;
-        pool.claimLockPeriod = claimLockPeriod_;
-        pool.claimLockPeriodAfterStake = claimLockPeriodAfterStake_;
-        pool.claimLockPeriodAfterClaim = claimLockPeriodAfterClaim_;
-        pool.minimalStake = minimalStake_;
-
-        emit PoolEdited(poolId_, pool);
+        emit PoolLimitsEdited(poolId_, poolLimits_);
     }
 
     function getPeriodReward(uint256 poolId_, uint128 startTime_, uint128 endTime_) public view returns (uint256) {
@@ -186,12 +174,19 @@ contract DistributionV4 is IDistributionV4, OwnableUpgradeable, UUPSUpgradeable 
         address user_ = _msgSender();
 
         Pool storage pool = pools[poolId_];
+        PoolLimit storage poolLimits = poolsLimits[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
-        require(block.timestamp > userData.lastStake + pool.claimLockPeriodAfterStake, "DS: pool claim is locked (2)");
-        require(block.timestamp > userData.lastClaim + pool.claimLockPeriodAfterClaim, "DS: pool claim is locked (3)");
+        require(
+            block.timestamp > userData.lastStake + poolLimits.claimLockPeriodAfterStake,
+            "DS: pool claim is locked (2)"
+        );
+        require(
+            block.timestamp > userData.lastClaim + poolLimits.claimLockPeriodAfterClaim,
+            "DS: pool claim is locked (C)"
+        );
         require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);

@@ -17,9 +17,6 @@ interface IDistributionV4 {
      * @param rewardDecrease The reward decrease per interval.
      * @param minimalStake The minimal stake amount.
      * @param isPublic The flag that indicates if the pool is public.
-     * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
-     * @param claimLockPeriodAfterClaim The period in seconds when the user can't claim tokens after claiming.
-
      */
     struct Pool {
         uint128 payoutStart;
@@ -31,13 +28,20 @@ interface IDistributionV4 {
         uint256 rewardDecrease;
         uint256 minimalStake;
         bool isPublic;
-        // Storage changes for the DistributionV4
-        uint256 claimLockPeriodAfterStake;
-        uint256 claimLockPeriodAfterClaim;
     }
 
     /**
-     * The structure that stores the pool's rate data.
+     * The structure that stores the limits pool's data.
+     * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
+     * @param claimLockPeriodAfterClaim The period in seconds when the user can't claim tokens after claiming.
+     */
+    struct PoolLimit {
+        uint128 claimLockPeriodAfterStake;
+        uint128 claimLockPeriodAfterClaim;
+    }
+
+    /**
+     * The structure that stores the pool rate data.
      * @param lastUpdate The timestamp when the pool was updated.
      * @param rate The current reward rate.
      * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
@@ -84,6 +88,13 @@ interface IDistributionV4 {
      * @param pool The pool's data.
      */
     event PoolEdited(uint256 indexed poolId, Pool pool);
+
+    /**
+     * The event that is emitted when the pool limits are edited.
+     * @param poolId The pool's id.
+     * @param poolLimit The pool's limit data.
+     */
+    event PoolLimitsEdited(uint256 indexed poolId, PoolLimit poolLimit);
 
     /**
      * The event that is emitted when the user stakes tokens in the pool.
@@ -148,22 +159,9 @@ interface IDistributionV4 {
     /**
      * The function to edit the pool limits.
      * @param poolId_ The pool id.
-     * @param withdrawLockPeriod_ The period in seconds when the user can't withdraw his stake.
-     * @param withdrawLockPeriodAfterStake_ The period in seconds when the user can't withdraw his stake after staking.
-     * @param claimLockPeriod_ The period in seconds when the user can't claim his rewards.
-     * @param minimalStake_ The minimal stake amount.
-     * @param claimLockPeriodAfterStake_ The period in seconds when the user can't claim tokens after staking.
-     * @param claimLockPeriodAfterClaim_ The period in seconds when the user can't claim tokens after claiming.
+     * @param poolLimits_ The pool's limit data.
      */
-    function editPoolLimits(
-        uint256 poolId_,
-        uint128 withdrawLockPeriod_,
-        uint128 withdrawLockPeriodAfterStake_,
-        uint128 claimLockPeriod_,
-        uint128 claimLockPeriodAfterStake_,
-        uint128 claimLockPeriodAfterClaim_,
-        uint256 minimalStake_
-    ) external;
+    function editPoolLimits(uint256 poolId_, PoolLimit calldata poolLimits_) external;
 
     /**
      * The function to calculate the total pool's reward for the specified period.
