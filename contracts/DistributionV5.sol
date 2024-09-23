@@ -41,8 +41,8 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
     mapping(uint256 => PoolLimits) public poolsLimits;
 
     // Referall storage, V5 update
+    mapping(uint256 => ReferralTier[]) public referralTiers;
     mapping(address => mapping(uint256 => ReferralData)) public referralsData;
-    mapping(uint256 => ReferralTier[]) internal referralTiers;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
