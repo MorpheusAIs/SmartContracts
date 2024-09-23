@@ -77,9 +77,9 @@ interface IDistributionV5 {
         address referrer;
     }
 
-    struct ReferralBonus {
-        uint256[] amountStaked;
-        uint256[] referrerMultiplier;
+    struct ReferralTier {
+        uint256 amount;
+        uint256 multiplier;
     }
 
     struct ReferralData {
@@ -111,6 +111,13 @@ interface IDistributionV5 {
      * @param poolLimit The pool's limit data.
      */
     event PoolLimitsEdited(uint256 indexed poolId, PoolLimits poolLimit);
+
+    /**
+     * The event that is emitted when the pool refferal tiers are edited.
+     * @param poolId The pool's id.
+     * @param tiers The pool's referral tiers.
+     */
+    event ReferralTiersEdited(uint256 indexed poolId, ReferralTier[] tiers);
 
     /**
      * The event that is emitted when the user stakes tokens in the pool.
@@ -203,12 +210,14 @@ interface IDistributionV5 {
      * @param users_ The array of users.
      * @param amounts_ The array of amounts.
      * @param claimLockEnds_ The array of lock ends.
+     * @param referrals_ The array of referrals.
      */
     function manageUsersInPrivatePool(
         uint256 poolId_,
         address[] calldata users_,
         uint256[] calldata amounts_,
-        uint128[] calldata claimLockEnds_
+        uint128[] calldata claimLockEnds_,
+        address[] calldata referrals_
     ) external;
 
     /**

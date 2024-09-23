@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IDistributionV5} from "../interfaces/IDistributionV5.sol";
-import {IL1Sender} from "../interfaces/IL1Sender.sol";
-
-import {ArrayHelper} from "@solarity/solidity-lib/libs/arrays/ArrayHelper.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-library DistributionReferral {
-    using ArrayHelper for *;
+import {IDistributionV5} from "../interfaces/IDistributionV5.sol";
+import {IL1Sender} from "../interfaces/IL1Sender.sol";
 
+library ReferralLib {
     /**
      * The event that is emitted when the referrer claims rewards.
      * @param poolId The pool's id.
@@ -22,8 +20,8 @@ library DistributionReferral {
 
     uint256 constant REFERRAL_MULTIPLIER = (PRECISION * 101) / 100; // 1% referral bonus
 
-    function getRefferalMultiplier(address referral_) external pure returns (uint256) {
-        if (referral_ == address(0)) {
+    function getReferralMultiplier(address referrer_) external pure returns (uint256) {
+        if (referrer_ == address(0)) {
             return PRECISION;
         }
 
@@ -39,22 +37,16 @@ library DistributionReferral {
         return referralData_.pendingRewards + newRewards_;
     }
 
-    function applyReferralBonus(
+    function applyReferralTier(
         IDistributionV5.ReferralData storage referralData,
-        IDistributionV5.ReferralBonus storage referralBonus,
-        IDistributionV5.PoolData storage poolData,
+        IDistributionV5.ReferralTier[] storage referralTiers,
         uint256 oldAmount_,
         uint256 newAmount_,
         uint256 currentPoolRate_
     ) external {
         uint256 newAmountStaked_ = referralData.amountStaked + newAmount_ - oldAmount_;
-        uint256 multiplier_ = _getReferrerMultiplier(referralBonus, newAmountStaked_);
+        uint256 multiplier_ = _getReferrerMultiplier(referralTiers, newAmountStaked_);
         uint256 newVirtualAmountStaked_ = (newAmountStaked_ * multiplier_) / PRECISION;
-
-        poolData.totalVirtualDeposited =
-            poolData.totalVirtualDeposited +
-            newVirtualAmountStaked_ -
-            referralData.virtualAmountStaked;
 
         referralData.lastStake = uint128(block.timestamp);
         referralData.rate = currentPoolRate_;
@@ -62,10 +54,9 @@ library DistributionReferral {
         referralData.virtualAmountStaked = newVirtualAmountStaked_;
     }
 
-    function claimReferralBonus(
+    function claimReferralTier(
         IDistributionV5.ReferralData storage referralData,
         IDistributionV5.Pool storage pool,
-        IDistributionV5.PoolData storage poolData,
         uint256 poolId_,
         address user_,
         uint256 currentPoolRate_,
@@ -75,10 +66,6 @@ library DistributionReferral {
 
         uint256 pendingRewards_ = getCurrentReferrerReward(referralData, currentPoolRate_);
         require(pendingRewards_ > 0, "DS: nothing to claim");
-
-        // Update pool data
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
 
         // Update user data
         referralData.rate = currentPoolRate_;
@@ -95,9 +82,29 @@ library DistributionReferral {
     }
 
     function _getReferrerMultiplier(
-        IDistributionV5.ReferralBonus storage referralBonus,
+        IDistributionV5.ReferralTier[] storage referralTiers,
         uint256 amount_
     ) internal view returns (uint256) {
-        return referralBonus.referrerMultiplier[referralBonus.amountStaked.lowerBound(amount_)];
+        (uint256 low_, uint256 high_) = (0, referralTiers.length);
+
+        if (high_ == 0) {
+            return PRECISION;
+        }
+
+        while (low_ < high_) {
+            uint256 mid_ = Math.average(low_, high_);
+
+            if (referralTiers[mid_].amount > amount_) {
+                high_ = mid_;
+            } else {
+                low_ = mid_ + 1;
+            }
+        }
+
+        if (high_ == referralTiers.length) {
+            high_--;
+        }
+
+        return referralTiers[high_].multiplier;
     }
 }
