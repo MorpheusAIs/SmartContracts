@@ -9,15 +9,6 @@ import {IDistributionV5} from "../interfaces/IDistributionV5.sol";
 import {IL1Sender} from "../interfaces/IL1Sender.sol";
 
 library ReferrerLib {
-    /**
-     * The event that is emitted when the referrer claims rewards.
-     * @param poolId The pool's id.
-     * @param user The user's address.
-     * @param receiver The receiver's address.
-     * @param amount The amount of tokens.
-     */
-    event ReferrerClaimed(uint256 indexed poolId, address indexed user, address receiver, uint256 amount);
-
     uint256 constant REFERRAL_MULTIPLIER = (PRECISION * 101) / 100; // 1% referral bonus
 
     function getReferralMultiplier(address referrer_) external pure returns (uint256) {
@@ -29,56 +20,47 @@ library ReferrerLib {
     }
 
     function getCurrentReferrerReward(
-        IDistributionV5.ReferrerData memory referrerData_,
+        IDistributionV5.ReferrerData storage referrerData,
         uint256 currentPoolRate_
-    ) public pure returns (uint256) {
-        uint256 newRewards_ = ((currentPoolRate_ - referrerData_.rate) * referrerData_.virtualAmountStaked) / PRECISION;
+    ) public view returns (uint256) {
+        uint256 newRewards_ = ((currentPoolRate_ - referrerData.rate) * referrerData.virtualAmountStaked) / PRECISION;
 
-        return referrerData_.pendingRewards + newRewards_;
+        return referrerData.pendingRewards + newRewards_;
     }
 
     function applyReferrerTier(
-        IDistributionV5.ReferrerData storage referrerData_,
+        IDistributionV5.ReferrerData storage referrerData,
         IDistributionV5.ReferrerTier[] storage referrerTiers,
         uint256 oldAmount_,
         uint256 newAmount_,
         uint256 currentPoolRate_
     ) external {
-        uint256 newAmountStaked_ = referrerData_.amountStaked + newAmount_ - oldAmount_;
+        uint256 newAmountStaked_ = referrerData.amountStaked + newAmount_ - oldAmount_;
         uint256 multiplier_ = _getReferrerMultiplier(referrerTiers, newAmountStaked_);
         uint256 newVirtualAmountStaked_ = (newAmountStaked_ * multiplier_) / PRECISION;
 
-        referrerData_.lastStake = uint128(block.timestamp);
-        referrerData_.rate = currentPoolRate_;
-        referrerData_.amountStaked = newAmountStaked_;
-        referrerData_.virtualAmountStaked = newVirtualAmountStaked_;
+        referrerData.pendingRewards = getCurrentReferrerReward(referrerData, currentPoolRate_);
+        referrerData.lastStake = uint128(block.timestamp);
+        referrerData.rate = currentPoolRate_;
+        referrerData.amountStaked = newAmountStaked_;
+        referrerData.virtualAmountStaked = newVirtualAmountStaked_;
     }
 
     function claimReferrerTier(
-        IDistributionV5.ReferrerData storage referrerData_,
+        IDistributionV5.ReferrerData storage referrerData,
         IDistributionV5.Pool storage pool,
-        uint256 poolId_,
-        address user_,
-        uint256 currentPoolRate_,
-        address receiver_
-    ) external {
+        uint256 currentPoolRate_
+    ) external returns (uint256) {
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
 
-        uint256 pendingRewards_ = getCurrentReferrerReward(referrerData_, currentPoolRate_);
+        uint256 pendingRewards_ = getCurrentReferrerReward(referrerData, currentPoolRate_);
         require(pendingRewards_ > 0, "DS: nothing to claim");
 
         // Update user data
-        referrerData_.rate = currentPoolRate_;
-        referrerData_.pendingRewards = 0;
+        referrerData.rate = currentPoolRate_;
+        referrerData.pendingRewards = 0;
 
-        // Transfer rewards
-        IL1Sender(IDistributionV5(address(this)).l1Sender()).sendMintMessage{value: msg.value}(
-            receiver_,
-            pendingRewards_,
-            user_
-        );
-
-        emit ReferrerClaimed(poolId_, user_, receiver_, pendingRewards_);
+        return pendingRewards_;
     }
 
     function _getReferrerMultiplier(

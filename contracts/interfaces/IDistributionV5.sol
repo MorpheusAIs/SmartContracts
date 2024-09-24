@@ -136,6 +136,15 @@ interface IDistributionV5 {
     event UserClaimed(uint256 indexed poolId, address indexed user, address receiver, uint256 amount);
 
     /**
+     * The event that is emitted when the referrer claims rewards.
+     * @param poolId The pool's id.
+     * @param user The user's address.
+     * @param receiver The receiver's address.
+     * @param amount The amount of tokens.
+     */
+    event ReferrerClaimed(uint256 indexed poolId, address indexed user, address receiver, uint256 amount);
+
+    /**
      * The event that is emitted when the user withdraws tokens from the pool.
      * @param poolId The pool's id.
      * @param user The user's address.
