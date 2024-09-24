@@ -122,14 +122,19 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
         delete referrerTiers[poolId_];
 
         uint256 lastAmount_;
+        uint256 lastMultiplier_;
         for (uint256 i = 0; i < referrerTiers_.length; i++) {
             uint256 amount_ = referrerTiers_[i].amount;
+            uint256 multiplier_ = referrerTiers_[i].multiplier;
 
-            require(amount_ > lastAmount_, "DS: invalid referrer tiers");
+            require(amount_ > lastAmount_, "DS: invalid referrer tiers (1)");
+            require(multiplier_ > lastMultiplier_, "DS: invalid referrer tiers (2)");
+            require(multiplier_ >= PRECISION, "DS: invalid referrer tiers (3)");
 
             referrerTiers[poolId_].push(referrerTiers_[i]);
 
             lastAmount_ = amount_;
+            lastMultiplier_ = multiplier_;
         }
 
         emit ReferrerTiersEdited(poolId_, referrerTiers_);
