@@ -8,7 +8,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 import {IDistributionV5} from "../interfaces/IDistributionV5.sol";
 import {IL1Sender} from "../interfaces/IL1Sender.sol";
 
-library ReferralLib {
+library ReferrerLib {
     /**
      * The event that is emitted when the referrer claims rewards.
      * @param poolId The pool's id.
@@ -29,33 +29,33 @@ library ReferralLib {
     }
 
     function getCurrentReferrerReward(
-        IDistributionV5.ReferralData memory referralData_,
+        IDistributionV5.ReferrerData memory referrerData_,
         uint256 currentPoolRate_
     ) public pure returns (uint256) {
-        uint256 newRewards_ = ((currentPoolRate_ - referralData_.rate) * referralData_.virtualAmountStaked) / PRECISION;
+        uint256 newRewards_ = ((currentPoolRate_ - referrerData_.rate) * referrerData_.virtualAmountStaked) / PRECISION;
 
-        return referralData_.pendingRewards + newRewards_;
+        return referrerData_.pendingRewards + newRewards_;
     }
 
-    function applyReferralTier(
-        IDistributionV5.ReferralData storage referralData,
-        IDistributionV5.ReferralTier[] storage referralTiers,
+    function applyReferrerTier(
+        IDistributionV5.ReferrerData storage referrerData_,
+        IDistributionV5.ReferrerTier[] storage referrerTiers,
         uint256 oldAmount_,
         uint256 newAmount_,
         uint256 currentPoolRate_
     ) external {
-        uint256 newAmountStaked_ = referralData.amountStaked + newAmount_ - oldAmount_;
-        uint256 multiplier_ = _getReferrerMultiplier(referralTiers, newAmountStaked_);
+        uint256 newAmountStaked_ = referrerData_.amountStaked + newAmount_ - oldAmount_;
+        uint256 multiplier_ = _getReferrerMultiplier(referrerTiers, newAmountStaked_);
         uint256 newVirtualAmountStaked_ = (newAmountStaked_ * multiplier_) / PRECISION;
 
-        referralData.lastStake = uint128(block.timestamp);
-        referralData.rate = currentPoolRate_;
-        referralData.amountStaked = newAmountStaked_;
-        referralData.virtualAmountStaked = newVirtualAmountStaked_;
+        referrerData_.lastStake = uint128(block.timestamp);
+        referrerData_.rate = currentPoolRate_;
+        referrerData_.amountStaked = newAmountStaked_;
+        referrerData_.virtualAmountStaked = newVirtualAmountStaked_;
     }
 
-    function claimReferralTier(
-        IDistributionV5.ReferralData storage referralData,
+    function claimReferrerTier(
+        IDistributionV5.ReferrerData storage referrerData_,
         IDistributionV5.Pool storage pool,
         uint256 poolId_,
         address user_,
@@ -64,12 +64,12 @@ library ReferralLib {
     ) external {
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
 
-        uint256 pendingRewards_ = getCurrentReferrerReward(referralData, currentPoolRate_);
+        uint256 pendingRewards_ = getCurrentReferrerReward(referrerData_, currentPoolRate_);
         require(pendingRewards_ > 0, "DS: nothing to claim");
 
         // Update user data
-        referralData.rate = currentPoolRate_;
-        referralData.pendingRewards = 0;
+        referrerData_.rate = currentPoolRate_;
+        referrerData_.pendingRewards = 0;
 
         // Transfer rewards
         IL1Sender(IDistributionV5(address(this)).l1Sender()).sendMintMessage{value: msg.value}(
@@ -82,10 +82,10 @@ library ReferralLib {
     }
 
     function _getReferrerMultiplier(
-        IDistributionV5.ReferralTier[] storage referralTiers,
+        IDistributionV5.ReferrerTier[] storage referrerTiers,
         uint256 amount_
     ) internal view returns (uint256) {
-        (uint256 low_, uint256 high_) = (0, referralTiers.length);
+        (uint256 low_, uint256 high_) = (0, referrerTiers.length);
 
         if (high_ == 0) {
             return PRECISION;
@@ -94,17 +94,17 @@ library ReferralLib {
         while (low_ < high_) {
             uint256 mid_ = Math.average(low_, high_);
 
-            if (referralTiers[mid_].amount > amount_) {
+            if (referrerTiers[mid_].amount > amount_) {
                 high_ = mid_;
             } else {
                 low_ = mid_ + 1;
             }
         }
 
-        if (high_ == referralTiers.length) {
+        if (high_ == referrerTiers.length) {
             high_--;
         }
 
-        return referralTiers[high_].multiplier;
+        return referrerTiers[high_].multiplier;
     }
 }

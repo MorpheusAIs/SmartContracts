@@ -4,7 +4,6 @@ import { ethers } from 'hardhat';
 
 import {
   Distribution,
-  DistributionReferral,
   DistributionV5,
   DistributionV5__factory,
   GatewayRouterMock,
@@ -17,6 +16,7 @@ import {
   LinearDistributionIntervalDecrease,
   MOR,
   NonfungiblePositionManagerMock,
+  ReferrerLib,
   StETHMock,
   SwapRouterMock,
   WStETHMock,
@@ -41,7 +41,7 @@ describe('DistributionV5', () => {
   let distributionImplementation: DistributionV5;
 
   let lib: LinearDistributionIntervalDecrease;
-  let distributionReferral: DistributionReferral;
+  let ReferrerLib: ReferrerLib;
 
   let rewardToken: MOR;
   let depositToken: StETHMock;
@@ -59,7 +59,7 @@ describe('DistributionV5', () => {
 
     const [
       libFactory,
-      distributionReferralFactory,
+      ReferrerLibFactory,
       ERC1967ProxyFactory,
       MORFactory,
       stETHMockFactory,
@@ -73,7 +73,7 @@ describe('DistributionV5', () => {
       NonfungiblePositionManagerMock,
     ] = await Promise.all([
       ethers.getContractFactory('LinearDistributionIntervalDecrease'),
-      ethers.getContractFactory('DistributionReferral'),
+      ethers.getContractFactory('ReferrerLib'),
       ethers.getContractFactory('ERC1967Proxy'),
       ethers.getContractFactory('MOR'),
       ethers.getContractFactory('StETHMock'),
@@ -96,7 +96,7 @@ describe('DistributionV5', () => {
     // START deploy contracts without deps
     [
       lib,
-      distributionReferral,
+      ReferrerLib,
       depositToken,
       lZEndpointMockSender,
       lZEndpointMockReceiver,
@@ -108,7 +108,7 @@ describe('DistributionV5', () => {
       l1SenderImplementation,
     ] = await Promise.all([
       libFactory.deploy(),
-      distributionReferralFactory.deploy(),
+      ReferrerLibFactory.deploy(),
       stETHMockFactory.deploy(),
       LZEndpointMock.deploy(senderChainId),
       LZEndpointMock.deploy(receiverChainId),
@@ -123,7 +123,7 @@ describe('DistributionV5', () => {
     distributionFactory = await ethers.getContractFactory('DistributionV5', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
-        DistributionReferral: await distributionReferral.getAddress(),
+        ReferrerLib: await ReferrerLib.getAddress(),
       },
     });
     distributionImplementation = await distributionFactory.deploy();
@@ -287,7 +287,7 @@ describe('DistributionV5', () => {
         const DistributionV5Factory = await ethers.getContractFactory('DistributionV5', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
-            DistributionReferral: await distributionReferral.getAddress(),
+            ReferrerLib: await ReferrerLib.getAddress(),
           },
         });
         const DistributionV5 = DistributionV5Factory.attach(await distributionV1.getAddress()) as DistributionV5;
@@ -372,7 +372,7 @@ describe('DistributionV5', () => {
         const DistributionV5Factory = await ethers.getContractFactory('DistributionV5', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
-            DistributionReferral: await distributionReferral.getAddress(),
+            ReferrerLib: await ReferrerLib.getAddress(),
           },
         });
         const DistributionV5 = DistributionV5Factory.attach(await distributionV1.getAddress()) as DistributionV5;
@@ -466,7 +466,7 @@ describe('DistributionV5', () => {
         const DistributionV5Factory = await ethers.getContractFactory('DistributionV5', {
           libraries: {
             LinearDistributionIntervalDecrease: await lib.getAddress(),
-            DistributionReferral: await distributionReferral.getAddress(),
+            ReferrerLib: await ReferrerLib.getAddress(),
           },
         });
         const DistributionV5 = DistributionV5Factory.attach(await distributionV1.getAddress()) as DistributionV5;
@@ -666,6 +666,7 @@ describe('DistributionV5', () => {
         [SECOND.address, OWNER.address],
         [wei(1), wei(4)],
         [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
       );
       await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(1));
       await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, OWNER.address, wei(4));
@@ -696,6 +697,7 @@ describe('DistributionV5', () => {
         [SECOND.address, OWNER.address],
         [wei(10), wei(1)],
         [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
       );
       await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(9));
       await expect(tx)
@@ -722,7 +724,13 @@ describe('DistributionV5', () => {
       let userData;
 
       await setNextTime(oneHour * 2);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 1);
@@ -745,7 +753,13 @@ describe('DistributionV5', () => {
 
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(0), wei(0)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(0), wei(0)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(20), wei(0.001));
@@ -767,11 +781,23 @@ describe('DistributionV5', () => {
       let userData;
 
       await setNextTime(oneHour * 2);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       // Stake after 1 day
       await setNextTime(oneDay + oneDay * 1);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(5), wei(5)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(5), wei(5)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
@@ -809,7 +835,13 @@ describe('DistributionV5', () => {
     it('should correctly calculate rewards if change before distribution start and claim after', async () => {
       let userData;
 
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       await setNextTime(oneDay * 20000);
       await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
@@ -833,7 +865,13 @@ describe('DistributionV5', () => {
       let userData;
 
       await setNextTime(oneDay + oneDay * 25);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       await setNextTime(oneDay * 20000);
       await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
@@ -856,7 +894,13 @@ describe('DistributionV5', () => {
     it('should correctly calculate rewards if change after distribution end', async () => {
       let userData;
       await setNextTime(oneDay * 20000);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(2), wei(5)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(2), wei(5)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(0);
@@ -876,10 +920,22 @@ describe('DistributionV5', () => {
       let userData;
 
       await setNextTime(oneDay + oneDay * 25);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       await setNextTime(oneDay * 20000);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(2), wei(5)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(2), wei(5)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(0);
@@ -907,24 +963,28 @@ describe('DistributionV5', () => {
         [SECOND.address, OWNER.address],
         [wei(1), wei(4)],
         [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
       );
       const tx2 = distribution.manageUsersInPrivatePool(
         poolId,
         [SECOND.address, OWNER.address],
         [wei(2), wei(1)],
         [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
       );
       const tx3 = distribution.manageUsersInPrivatePool(
         poolId,
         [SECOND.address, OWNER.address],
         [wei(10), wei(0)],
         [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
       );
       const tx4 = distribution.manageUsersInPrivatePool(
         poolId,
         [SECOND.address, OWNER.address],
         [wei(1), wei(4)],
         [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
       );
 
       await ethers.provider.send('evm_setAutomine', [true]);
@@ -956,7 +1016,13 @@ describe('DistributionV5', () => {
 
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(0), wei(0)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(0), wei(0)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
       await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
       await distribution.claim(poolId, OWNER, { value: wei(0.5) });
 
@@ -978,7 +1044,13 @@ describe('DistributionV5', () => {
       let userData;
 
       await setNextTime(oneHour * 2);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
@@ -995,7 +1067,13 @@ describe('DistributionV5', () => {
       expect(userData.pendingRewards).to.eq(0);
 
       await setNextTime(oneDay * 2);
-      await distribution.manageUsersInPrivatePool(poolId, [SECOND.address, OWNER.address], [wei(1), wei(4)], [0, 0]);
+      await distribution.manageUsersInPrivatePool(
+        poolId,
+        [SECOND.address, OWNER.address],
+        [wei(1), wei(4)],
+        [0, 0],
+        [ZERO_ADDR, ZERO_ADDR],
+      );
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
@@ -1037,6 +1115,7 @@ describe('DistributionV5', () => {
           [SECOND.address, OWNER.address],
           [wei(1), wei(4)],
           [claimLockEnd, claimLockEnd],
+          [ZERO_ADDR, ZERO_ADDR],
         );
         await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(1));
         await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, OWNER.address, wei(4));
@@ -1069,6 +1148,7 @@ describe('DistributionV5', () => {
           [SECOND.address, OWNER.address],
           [wei(10), wei(1)],
           [claimLockEnd, claimLockEnd],
+          [ZERO_ADDR, ZERO_ADDR],
         );
         await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(9));
         await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, OWNER.address, wei(3));
@@ -1100,6 +1180,7 @@ describe('DistributionV5', () => {
           [SECOND.address, OWNER.address],
           [wei(1), wei(4)],
           [claimLockEnd, claimLockEnd],
+          [ZERO_ADDR, ZERO_ADDR],
         );
 
         await setTime(claimLockEnd);
@@ -1128,6 +1209,7 @@ describe('DistributionV5', () => {
           [SECOND.address, OWNER.address],
           [wei(1), wei(4)],
           [claimLockEnd, claimLockEnd * 2],
+          [ZERO_ADDR, ZERO_ADDR],
         );
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
@@ -1157,6 +1239,7 @@ describe('DistributionV5', () => {
           [SECOND.address, OWNER.address],
           [wei(1), wei(4)],
           [claimLockEnd * 2, claimLockEnd * 2 + 200 * oneDay],
+          [ZERO_ADDR, ZERO_ADDR],
         );
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
@@ -1180,54 +1263,58 @@ describe('DistributionV5', () => {
         expect(userData.claimLockEnd).to.eq(claimLockEnd * 2 + 200 * oneDay);
       });
       it('should set claimLockEnd properly if providing 0', async () => {
-        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0]);
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0], [ZERO_ADDR]);
         let userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
 
-        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0]);
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0], [ZERO_ADDR]);
         userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.claimLockEnd).to.eq(await getCurrentBlockTime());
 
-        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [claimLockEnd]);
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [claimLockEnd], [ZERO_ADDR]);
         userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.claimLockEnd).to.eq(claimLockEnd);
 
-        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0]);
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0], [ZERO_ADDR]);
         userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.claimLockEnd).to.eq(claimLockEnd);
       });
     });
 
     it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [], [])).to.be.revertedWith(
+      await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [], [], [])).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
     it('should revert if caller is not owner', async () => {
-      await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [], [])).to.be.revertedWith(
+      await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [], [], [])).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
     it("should revert if pool doesn't exist", async () => {
-      await expect(distribution.manageUsersInPrivatePool(1, [], [], [])).to.be.revertedWith("DS: pool doesn't exist");
+      await expect(distribution.manageUsersInPrivatePool(1, [], [], [], [])).to.be.revertedWith(
+        "DS: pool doesn't exist",
+      );
     });
     it('should revert if pool is public', async () => {
       const pool = getDefaultPool();
 
       await distribution.createPool(pool);
 
-      await expect(distribution.manageUsersInPrivatePool(1, [], [], [])).to.be.revertedWith('DS: pool is public');
+      await expect(distribution.manageUsersInPrivatePool(1, [], [], [], [])).to.be.revertedWith('DS: pool is public');
     });
     it('should revert if lengths of arrays are not equal', async () => {
-      await expect(distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [], [])).to.be.revertedWith(
+      await expect(distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [], [], [])).to.be.revertedWith(
         'DS: invalid length',
       );
 
-      await expect(distribution.manageUsersInPrivatePool(poolId, [], [wei(1)], [])).to.be.revertedWith(
+      await expect(distribution.manageUsersInPrivatePool(poolId, [], [wei(1)], [], [])).to.be.revertedWith(
         'DS: invalid length',
       );
 
-      await expect(distribution.manageUsersInPrivatePool(poolId, [], [], [0])).to.be.revertedWith('DS: invalid length');
+      await expect(distribution.manageUsersInPrivatePool(poolId, [], [], [0], [])).to.be.revertedWith(
+        'DS: invalid length',
+      );
     });
   });
 
@@ -2263,7 +2350,7 @@ describe('DistributionV5', () => {
       await distribution.createPool(poolPrivate);
       const poolId = 1;
 
-      await distribution.manageUsersInPrivatePool(poolId, [OWNER], [wei(10)], [0]);
+      await distribution.manageUsersInPrivatePool(poolId, [OWNER], [wei(10)], [0], [ZERO_ADDR]);
 
       const initialTime = await getCurrentBlockTime();
 
