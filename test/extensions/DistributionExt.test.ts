@@ -33,11 +33,10 @@ describe('DistributionExt', () => {
         LinearDistributionIntervalDecrease: await lib.getAddress(),
       },
     });
-
     const distributionImpl = await distributionFactory.deploy();
-    const distributionProxy = await ERC1967ProxyFactory.deploy(await distributionImpl.getAddress(), '0x');
-    distribution = distributionFactory.attach(await distributionProxy.getAddress()) as DistributionV2;
-    await distribution.Distribution_init(SECOND, SECOND, []);
+    const distributionProxy = await ERC1967ProxyFactory.deploy(distributionImpl, '0x');
+    distribution = distributionFactory.attach(distributionProxy) as DistributionV2;
+    await distribution.Distribution_init(ZERO_ADDR, ZERO_ADDR, []);
 
     const distributionExtImpl = await DistributionExtFactory.deploy();
     const distributionExtProxy = await ERC1967ProxyFactory.deploy(distributionExtImpl, '0x');
