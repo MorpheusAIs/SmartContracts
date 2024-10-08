@@ -36,6 +36,8 @@ describe('DistributionV5', () => {
 
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
+  let REFERRER_1: SignerWithAddress;
+  let REFERRER_2: SignerWithAddress;
 
   let distributionFactory: DistributionV5__factory;
   let distribution: DistributionV5;
@@ -56,7 +58,7 @@ describe('DistributionV5', () => {
   let l2TokenReceiver: L2TokenReceiverV2;
 
   before(async () => {
-    [OWNER, SECOND] = await ethers.getSigners();
+    [OWNER, SECOND, REFERRER_1, REFERRER_2] = await ethers.getSigners();
 
     const [
       libFactory,
@@ -479,7 +481,7 @@ describe('DistributionV5', () => {
         await setTime(oneDay + oneDay * 3);
         expect(await DistributionV5.getCurrentUserReward(poolId, OWNER.address)).to.closeTo(wei(72), wei(0.01));
         expect((await DistributionV5.poolsData(poolId)).totalVirtualDeposited).to.eq(wei(4));
-        expect(await DistributionV5.version()).to.eq(4);
+        expect(await DistributionV5.version()).to.eq(5);
 
         // Claim after 1 day
         await DistributionV5.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
@@ -1290,6 +1292,392 @@ describe('DistributionV5', () => {
       });
     });
 
+    describe('with provided referrer', () => {
+      const referrerTiers = getDefaultReferrerTiers();
+
+      beforeEach(async () => {
+        await distribution.editReferrerTiers(poolId, referrerTiers);
+      });
+
+      it('should correctly imitate stake and withdraw process', async () => {
+        let userData, multiplier, referrerData;
+
+        let tx = await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(1), wei(4)],
+          [0, 0],
+          [REFERRER_1, REFERRER_2],
+        );
+        await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(1));
+        await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, OWNER.address, wei(4));
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(1));
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, OWNER.address, REFERRER_2, wei(4));
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(multiplier).to.eq(wei(1.01, 25));
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(0));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(multiplier).to.eq(wei(1.01, 25));
+        expect(userData.deposited).to.eq(wei(4));
+        expect(userData.virtualDeposited).to.eq((wei(4) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(4));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        await setNextTime((await getCurrentBlockTime()) + 1);
+        tx = await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(10), wei(1)],
+          [0, 0],
+          [REFERRER_1, REFERRER_2],
+        );
+        await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(9));
+        await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, OWNER.address, wei(3));
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(9));
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(multiplier).to.eq(wei(1.01, 25));
+        expect(userData.deposited).to.eq(wei(10));
+        expect(userData.virtualDeposited).to.eq((wei(10) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(10));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(10) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(0));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(multiplier).to.eq(wei(1.01, 25));
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+      });
+      it('should correctly calculate and withdraw rewards', async () => {
+        let userData, referrerData;
+
+        await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(1), wei(4)],
+          [0, 0],
+          [REFERRER_1, REFERRER_2],
+        );
+
+        await setTime(oneDay * 2);
+        await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
+        await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+        const totalReward = wei(100);
+        const secondPart = 1n * (await distribution.getCurrentUserMultiplier(poolId, SECOND));
+        const ownerPart = 4n * (await distribution.getCurrentUserMultiplier(poolId, OWNER));
+        const referrer1Part = 1n * BigInt(referrerTiers[0].multiplier);
+        const referrer2Part = 4n * BigInt(referrerTiers[0].multiplier);
+        const totalParts = secondPart + ownerPart + referrer1Part + referrer2Part;
+        const rewardPerPart = (totalReward * PRECISION) / totalParts;
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(
+          (rewardPerPart * secondPart) / PRECISION,
+          wei(0.001),
+        );
+        userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq(wei(1.01));
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.not.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(
+          (rewardPerPart * ownerPart) / PRECISION,
+          wei(0.1),
+        );
+        userData = await distribution.usersData(OWNER.address, poolId);
+        expect(userData.deposited).to.eq(wei(4));
+        expect(userData.virtualDeposited).to.eq(wei(4.04));
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(4));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.not.eq(await getCurrentBlockTime());
+      });
+      it('should save referrer changes only', async () => {
+        let userData, multiplier, referrerData;
+
+        await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(1), wei(4)],
+          [0, 0],
+          [ZERO_ADDR, ZERO_ADDR],
+        );
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        expect(userData.referrer).to.eq(ZERO_ADDR);
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(0));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, OWNER);
+        expect(userData.deposited).to.eq(wei(4));
+        expect(userData.virtualDeposited).to.eq((wei(4) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        expect(userData.referrer).to.eq(ZERO_ADDR);
+
+        await setNextTime(oneDay * 2);
+
+        await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(1), wei(4)],
+          [0, 0],
+          [REFERRER_1, REFERRER_2],
+        );
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.lt(wei(4570722 / 5));
+        expect(userData.referrer).to.eq(REFERRER_1);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(0));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, OWNER);
+        expect(userData.deposited).to.eq(wei(4));
+        expect(userData.virtualDeposited).to.eq((wei(4) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.gt(0);
+        expect(userData.referrer).to.eq(REFERRER_2);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(4));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+      });
+      it('should set referrer properly if providing zero address', async () => {
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0], [ZERO_ADDR]);
+        let userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.referrer).to.eq(ZERO_ADDR);
+
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0], [REFERRER_1]);
+        userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.referrer).to.eq(REFERRER_1);
+
+        await distribution.manageUsersInPrivatePool(poolId, [SECOND.address], [wei(1)], [0], [ZERO_ADDR]);
+        userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.referrer).to.eq(REFERRER_1);
+      });
+    });
+
+    describe('with provided claimLockEnd and referrer', () => {
+      const payoutStart = 1707393600;
+      const periodStart = 1721908800;
+      const claimLockEnd = periodStart + 300 * oneDay - 1;
+      const referrerTiers = getDefaultReferrerTiers();
+
+      const newPool = {
+        ...getDefaultPool(),
+        isPublic: false,
+        payoutStart: payoutStart,
+        initialReward: wei(10000),
+        rewardDecrease: wei(1),
+      };
+
+      beforeEach(async () => {
+        await distribution.editReferrerTiers(poolId, referrerTiers);
+        await distribution.editPool(poolId, newPool);
+      });
+
+      it('should correctly imitate stake and withdraw process', async () => {
+        let userData, multiplier, referrerData;
+
+        let tx = await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(1), wei(4)],
+          [claimLockEnd, claimLockEnd],
+          [REFERRER_1, REFERRER_2],
+        );
+        await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(1));
+        await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, OWNER.address, wei(4));
+        await expect(tx)
+          .to.emit(distribution, 'UserClaimLocked')
+          .withArgs(poolId, SECOND.address, await getCurrentBlockTime(), claimLockEnd);
+        await expect(tx)
+          .to.emit(distribution, 'UserClaimLocked')
+          .withArgs(poolId, OWNER.address, await getCurrentBlockTime(), claimLockEnd);
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(1));
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, OWNER.address, REFERRER_2, wei(4));
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(0));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(userData.deposited).to.eq(wei(4));
+        expect(userData.virtualDeposited).to.eq((wei(4) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(4));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        await setNextTime((await getCurrentBlockTime()) + 1);
+        tx = await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(10), wei(1)],
+          [claimLockEnd, claimLockEnd],
+          [ZERO_ADDR, ZERO_ADDR],
+        );
+        await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(9));
+        await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, OWNER.address, wei(3));
+        await expect(tx)
+          .to.emit(distribution, 'UserClaimLocked')
+          .withArgs(poolId, SECOND.address, await getCurrentBlockTime(), claimLockEnd);
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(9));
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(userData.deposited).to.eq(wei(10));
+        expect(userData.virtualDeposited).to.eq((wei(10) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(10));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(10) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(0));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        multiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq((wei(1) * multiplier) / PRECISION);
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+      });
+      it('should correctly calculate and withdraw rewards', async () => {
+        let userData, referrerData;
+
+        await distribution.manageUsersInPrivatePool(
+          poolId,
+          [SECOND.address, OWNER.address],
+          [wei(1), wei(4)],
+          [claimLockEnd, claimLockEnd],
+          [REFERRER_1, REFERRER_2],
+        );
+
+        const totalReward = wei(4570722);
+        const secondPart = 1n * (await distribution.getCurrentUserMultiplier(poolId, SECOND));
+        const ownerPart = 4n * (await distribution.getCurrentUserMultiplier(poolId, OWNER));
+        const referrer1Part = 1n * BigInt(referrerTiers[0].multiplier);
+        const referrer2Part = 4n * BigInt(referrerTiers[0].multiplier);
+        const totalParts = secondPart + ownerPart + referrer1Part + referrer2Part;
+        const rewardPerPart = (totalReward * PRECISION) / totalParts;
+
+        await setTime(claimLockEnd);
+        await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
+        await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+
+        expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(
+          (rewardPerPart * secondPart) / PRECISION,
+          wei(0.001),
+        );
+        userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq(wei(1.01));
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_1, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.not.eq(await getCurrentBlockTime());
+
+        expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(
+          (rewardPerPart * ownerPart) / PRECISION,
+          wei(0.1),
+        );
+        userData = await distribution.usersData(OWNER.address, poolId);
+        expect(userData.deposited).to.eq(wei(4));
+        expect(userData.virtualDeposited).to.eq(wei(4.04));
+        expect(userData.pendingRewards).to.eq(0);
+        referrerData = await distribution.referrersData(REFERRER_2, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(4));
+        expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+        expect(referrerData.pendingRewards).to.eq(0);
+        expect(referrerData.lastStake).to.not.eq(await getCurrentBlockTime());
+      });
+    });
+
     it('should revert if caller is not owner', async () => {
       await expect(distribution.connect(SECOND).manageUsersInPrivatePool(poolId, [], [], [], [])).to.be.revertedWith(
         'Ownable: caller is not the owner',
@@ -1322,6 +1710,10 @@ describe('DistributionV5', () => {
       );
 
       await expect(distribution.manageUsersInPrivatePool(poolId, [], [], [0], [])).to.be.revertedWith(
+        'DS: invalid length',
+      );
+
+      await expect(distribution.manageUsersInPrivatePool(poolId, [], [], [], [ZERO_ADDR])).to.be.revertedWith(
         'DS: invalid length',
       );
     });
@@ -1457,6 +1849,231 @@ describe('DistributionV5', () => {
       );
       expect(poolData.rate).to.eq(wei(124.5, 25));
       expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(12));
+    });
+    it('should stake with referrer correctly', async () => {
+      const referrerTiers = getDefaultReferrerTiers();
+      await distribution.editReferrerTiers(poolId, referrerTiers);
+
+      // A stakes 1 token
+      const tx = await distribution.stake(poolId, wei(1), 0, REFERRER_1);
+      await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, OWNER.address, wei(1));
+      await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, OWNER.address, REFERRER_1, wei(1));
+
+      let userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(1));
+      expect(userData.virtualDeposited).to.eq(wei(1.01));
+      expect(userData.rate).to.eq(0);
+      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.referrer).to.eq(REFERRER_1);
+      let poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(wei(1.02));
+      expect(poolData.rate).to.eq(0);
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(1));
+      let referrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(1));
+      expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(referrerData.pendingRewards).to.eq(0);
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+      // A stakes 3 tokens
+      await setNextTime(oneDay * 2);
+      await distribution.stake(poolId, wei(3), 0, REFERRER_1);
+
+      let totalReward = wei(100);
+      let secondPart = 0n;
+      const ownerPart = 4n * (await distribution.getCurrentUserMultiplier(poolId, OWNER));
+      const referrer1Part = 4n * BigInt(referrerTiers[0].multiplier);
+      let referrer2Part = 0n;
+      let totalParts = secondPart + ownerPart + referrer1Part + referrer2Part;
+      let rewardPerPart = (totalReward * PRECISION) / totalParts;
+
+      userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(4));
+      expect(userData.virtualDeposited).to.eq(
+        (wei(4) * (await distribution.getCurrentUserMultiplier(poolId, OWNER))) / PRECISION,
+      );
+      expect(userData.rate).to.closeTo(wei(98, 25), wei(0.1, 25));
+      expect(userData.pendingRewards).to.closeTo((rewardPerPart * ownerPart) / PRECISION, wei(0.0001));
+      expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
+      expect(userData.referrer).to.eq(REFERRER_1);
+      referrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(4));
+      expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(referrerData.pendingRewards).to.be.closeTo((rewardPerPart * referrer1Part) / PRECISION, wei(0.0001));
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(
+        (wei(4) * (await distribution.getCurrentUserMultiplier(poolId, OWNER))) / PRECISION + (wei(4) * 1n) / 100n,
+      );
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(4));
+
+      // B stakes 8 tokens
+      await setNextTime(oneDay * 3);
+      await distribution.connect(SECOND).stake(poolId, wei(8), 0, REFERRER_2);
+
+      totalReward = wei(198);
+      secondPart = 8n * (await distribution.getCurrentUserMultiplier(poolId, OWNER));
+      referrer2Part = 8n * BigInt(referrerTiers[0].multiplier);
+      totalParts = secondPart + ownerPart + referrer1Part + referrer2Part;
+      rewardPerPart = (totalReward * PRECISION) / totalParts;
+
+      userData = await distribution.usersData(SECOND.address, poolId);
+      expect(userData.deposited).to.eq(wei(8));
+      expect(userData.virtualDeposited).to.eq(wei(secondPart) / PRECISION);
+      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.referrer).to.eq(REFERRER_2);
+      referrerData = await distribution.referrersData(REFERRER_2, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(8));
+      expect(referrerData.virtualAmountStaked).to.eq(wei(referrer2Part) / PRECISION);
+      expect(referrerData.pendingRewards).to.eq(0);
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(wei(totalParts) / PRECISION);
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(12));
+    });
+    it('should stake with lock and referrer correctly', async () => {
+      const referrerTiers = getDefaultReferrerTiers();
+      await distribution.editReferrerTiers(poolId, referrerTiers);
+
+      const claimLockEnd = oneDay * 10;
+      // A stakes 1 token
+      const tx = await distribution.stake(poolId, wei(1), claimLockEnd, REFERRER_1);
+      await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, OWNER.address, wei(1));
+      await expect(tx)
+        .to.emit(distribution, 'UserClaimLocked')
+        .withArgs(poolId, OWNER.address, await getCurrentBlockTime(), claimLockEnd);
+      await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, OWNER.address, REFERRER_1, wei(1));
+
+      let userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(1));
+      expect(userData.virtualDeposited).to.eq(wei(1.01));
+      expect(userData.rate).to.eq(0);
+      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
+      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.referrer).to.eq(REFERRER_1);
+      let poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(wei(1.02));
+      expect(poolData.rate).to.eq(0);
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(1));
+      let referrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(1));
+      expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(referrerData.pendingRewards).to.eq(0);
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+      // A stakes 3 tokens
+      await setNextTime(oneDay * 2);
+      await distribution.stake(poolId, wei(3), claimLockEnd, REFERRER_1);
+
+      let totalReward = wei(100);
+      let secondPart = 0n;
+      const ownerPart = 4n * (await distribution.getCurrentUserMultiplier(poolId, OWNER));
+      const referrer1Part = 4n * BigInt(referrerTiers[0].multiplier);
+      let referrer2Part = 0n;
+      let totalParts = secondPart + ownerPart + referrer1Part + referrer2Part;
+      let rewardPerPart = (totalReward * PRECISION) / totalParts;
+
+      userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(4));
+      expect(userData.virtualDeposited).to.eq(
+        (wei(4) * (await distribution.getCurrentUserMultiplier(poolId, OWNER))) / PRECISION,
+      );
+      expect(userData.rate).to.closeTo(wei(98, 25), wei(0.1, 25));
+      expect(userData.pendingRewards).to.closeTo((rewardPerPart * ownerPart) / PRECISION, wei(0.0001));
+      expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
+      expect(userData.claimLockEnd).to.eq(claimLockEnd);
+      expect(userData.claimLockStart).to.eq(await getCurrentBlockTime());
+      expect(userData.referrer).to.eq(REFERRER_1);
+      referrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(4));
+      expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(referrerData.pendingRewards).to.be.closeTo((rewardPerPart * referrer1Part) / PRECISION, wei(0.0001));
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(
+        (wei(4) * (await distribution.getCurrentUserMultiplier(poolId, OWNER))) / PRECISION + (wei(4) * 1n) / 100n,
+      );
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(4));
+
+      // B stakes 8 tokens
+      await setNextTime(oneDay * 3);
+      await distribution.connect(SECOND).stake(poolId, wei(8), claimLockEnd, REFERRER_2);
+
+      totalReward = wei(198);
+      secondPart = 8n * (await distribution.getCurrentUserMultiplier(poolId, OWNER));
+      referrer2Part = 8n * BigInt(referrerTiers[0].multiplier);
+      totalParts = secondPart + ownerPart + referrer1Part + referrer2Part;
+      rewardPerPart = (totalReward * PRECISION) / totalParts;
+
+      userData = await distribution.usersData(SECOND.address, poolId);
+      expect(userData.deposited).to.eq(wei(8));
+      expect(userData.virtualDeposited).to.eq(wei(secondPart) / PRECISION);
+      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.referrer).to.eq(REFERRER_2);
+      referrerData = await distribution.referrersData(REFERRER_2, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(8));
+      expect(referrerData.virtualAmountStaked).to.eq(wei(referrer2Part) / PRECISION);
+      expect(referrerData.pendingRewards).to.eq(0);
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(wei(totalParts) / PRECISION);
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(12));
+    });
+    it('should change referrer correctly', async () => {
+      const referrerTiers = getDefaultReferrerTiers();
+      await distribution.editReferrerTiers(poolId, referrerTiers);
+
+      // A stakes 1 token for referrer 1
+      await distribution.stake(poolId, wei(1), 0, REFERRER_1);
+
+      let userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(1));
+      expect(userData.virtualDeposited).to.eq(wei(1.01));
+      expect(userData.rate).to.eq(0);
+      expect(userData.pendingRewards).to.eq(0);
+      expect(userData.referrer).to.eq(REFERRER_1);
+      let poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(wei(1.02));
+      expect(poolData.rate).to.eq(0);
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(1));
+      let referrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(1));
+      expect(referrerData.virtualAmountStaked).to.eq((wei(1) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(referrerData.pendingRewards).to.eq(0);
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+
+      // A stakes 3 tokens for referrer 2
+      await setNextTime(oneDay * 2);
+      await distribution.stake(poolId, wei(3), 0, REFERRER_2);
+
+      userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(4));
+      expect(userData.virtualDeposited).to.eq(wei(4.04));
+      expect(userData.referrer).to.eq(REFERRER_2);
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
+      expect(poolData.totalVirtualDeposited).to.eq(wei(4.08));
+      expect(await distribution.totalDepositedInPublicPools()).to.eq(wei(4));
+      referrerData = await distribution.referrersData(REFERRER_2, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(4));
+      expect(referrerData.virtualAmountStaked).to.eq((wei(4) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(referrerData.pendingRewards).to.eq(0);
+      expect(referrerData.lastStake).to.eq(await getCurrentBlockTime());
+      const oldReferrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(oldReferrerData.amountStaked).to.eq(wei(0));
+      expect(oldReferrerData.virtualAmountStaked).to.eq((wei(0) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
+      expect(oldReferrerData.pendingRewards).to.closeTo((wei(100) * 1n) / 102n, wei(0.0001));
+      expect(oldReferrerData.lastStake).to.eq(await getCurrentBlockTime());
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.stake(1, wei(1), 0, ZERO_ADDR)).to.be.revertedWith("DS: pool doesn't exist");
@@ -1995,102 +2612,148 @@ describe('DistributionV5', () => {
     });
 
     describe('with referrer', () => {
-      const poolId = 0;
-
-      const newPool = {
-        ...getDefaultPool(),
-        initialReward: wei(10000),
-        rewardDecrease: wei(1),
-      };
-
-      const periodStart = Number(newPool.payoutStart);
-
       beforeEach(async () => {
-        await distribution.editPool(poolId, newPool);
+        await distribution.editReferrerTiers(poolId, getDefaultReferrerTiers());
       });
 
       it('should correctly claim, one user, without redeposits', async () => {
         await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
 
-        await setNextTime(periodStart + oneDay / 2);
-
         const userMultiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
-        expect(userMultiplier).to.gt(wei(1, 25));
+        expect(userMultiplier).to.equal(wei(1.01, 25));
 
         const referrerMultiplier = await distribution.getReferrerMultiplier(poolId, OWNER);
-        expect(referrerMultiplier).to.equal(wei(1.01, 25));
+        expect(referrerMultiplier).to.equal(wei(0.01, 25));
 
+        await setNextTime(oneDay + oneDay);
         const tx = await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
         await expect(tx)
           .to.emit(distribution, 'UserClaimed')
           .withArgs(poolId, SECOND.address, SECOND.address, () => true);
 
-        expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei(4570722), wei(0.000001));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei((100 * 101) / 102), wei(0.000001));
         const userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(1));
-        expect(userData.virtualDeposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq(wei(1.01));
         expect(userData.pendingRewards).to.eq(0);
+        const referrerData = await distribution.referrersData(OWNER, poolId);
+        expect(referrerData.amountStaked).to.eq(wei(1));
+        expect(referrerData.virtualAmountStaked).to.eq(wei(0.01));
+        expect(referrerData.pendingRewards).to.eq(0);
       });
       it('should correctly claim, one user, with redeposits', async () => {
-        let userData;
+        let userData, referralData;
 
         await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
-        let userMultiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
+
+        await setNextTime(oneDay + oneDay / 2);
+
+        await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
+
+        const userMultiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
         expect(userMultiplier).to.equal(wei(1.01, 25));
 
         const referrerMultiplier = await distribution.getReferrerMultiplier(poolId, OWNER);
-        expect(referrerMultiplier).to.equal(wei(1.01, 25));
+        expect(referrerMultiplier).to.equal(wei(0.01, 25));
 
-        await setNextTime(periodStart + oneDay);
+        await setNextTime(oneDay + oneDay);
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
         userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(2));
         expect(userData.virtualDeposited).to.eq((wei(2) * userMultiplier) / PRECISION);
+        referralData = await distribution.referrersData(OWNER, poolId);
+        expect(referralData.amountStaked).to.eq(wei(2));
+        expect(referralData.virtualAmountStaked).to.eq(wei(0.02));
+        expect(referralData.pendingRewards).to.be.closeTo(wei((50 * 1) / 102), wei(0.000001));
 
         await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
 
-        userMultiplier = await distribution.getCurrentUserMultiplier(poolId, SECOND);
-        expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei(4570722), wei(0.000001));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei((100 * 101) / 102), wei(0.000001));
         userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(2));
-        expect(userData.virtualDeposited).to.eq(wei(2));
+        expect(userData.virtualDeposited).to.eq(wei(2.02));
         expect(userData.pendingRewards).to.eq(0);
+        referralData = await distribution.referrersData(OWNER, poolId);
+        expect(referralData.amountStaked).to.eq(wei(2));
+        expect(referralData.virtualAmountStaked).to.eq(wei(0.02));
+        expect(referralData.pendingRewards).to.be.closeTo(wei((50 * 1) / 102), wei(0.000001));
       });
-      it('should correctly claim, one user, join after start', async () => {
-        await setNextTime(periodStart + oneDay);
-        await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
 
-        await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
-
-        expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei(2894918), wei(0.000001));
-        const userData = await distribution.usersData(SECOND.address, poolId);
-        expect(userData.deposited).to.eq(wei(1));
-        expect(userData.virtualDeposited).to.eq(wei(1));
-        expect(userData.pendingRewards).to.eq(0);
-      });
       it('should correctly claim, few users, without redeposits', async () => {
-        let userData;
+        let userData, referralData;
 
-        await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
+        await setNextTime(oneHour * 2);
+        await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
 
-        await setNextTime(periodStart);
-        await distribution.connect(OWNER).stake(poolId, wei(3), 0, ZERO_ADDR);
+        await setNextTime(oneDay + oneDay);
+        await distribution.connect(OWNER).stake(poolId, wei(3), 0, OWNER);
 
+        // Claim after 2 days
+        await setNextTime(oneDay + oneDay * 2);
         await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
         await distribution.claim(poolId, OWNER, { value: wei(0.5) }); // The reward will be slightly larger since the calculation is a second later.
 
-        expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(2904750 * 0.75), wei(0.1));
+        expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(72.6), wei(0.01));
         userData = await distribution.usersData(OWNER.address, poolId);
         expect(userData.deposited).to.eq(wei(3));
-        expect(userData.virtualDeposited).to.eq(wei(3));
+        expect(userData.virtualDeposited).to.eq(wei(3.03));
         expect(userData.pendingRewards).to.eq(0);
 
-        expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(1665972 + 2904750 * 0.25), wei(0.1));
+        expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(123.22), wei(0.0001));
         userData = await distribution.usersData(SECOND.address, poolId);
         expect(userData.deposited).to.eq(wei(1));
-        expect(userData.virtualDeposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq(wei(1.01));
         expect(userData.pendingRewards).to.eq(0);
+
+        referralData = await distribution.referrersData(OWNER, poolId);
+        expect(referralData.amountStaked).to.eq(wei(4));
+        expect(referralData.virtualAmountStaked).to.eq(wei(0.04));
+        expect(referralData.pendingRewards).to.gt(0);
+
+        // Claim after 1 day
+        await setNextTime(oneDay + oneDay * 3);
+        await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
+        await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(72.6 + 72), wei(1));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        expect(userData.deposited).to.eq(wei(3));
+        expect(userData.virtualDeposited).to.eq(wei(3.03));
+        expect(userData.pendingRewards).to.eq(0);
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(123.22 + 24), wei(1));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq(wei(1.01));
+        expect(userData.pendingRewards).to.eq(0);
+
+        referralData = await distribution.referrersData(OWNER, poolId);
+        expect(referralData.amountStaked).to.eq(wei(4));
+        expect(referralData.virtualAmountStaked).to.eq(wei(0.04));
+        expect(referralData.pendingRewards).to.gt(0);
+
+        // Claim after 3 days
+        await setNextTime(oneDay + oneDay * 6);
+        await distribution.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
+        await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(72.6 + 72 + 208.3), wei(1));
+        userData = await distribution.usersData(OWNER.address, poolId);
+        expect(userData.deposited).to.eq(wei(3));
+        expect(userData.virtualDeposited).to.eq(wei(3.03));
+        expect(userData.pendingRewards).to.eq(0);
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(123.22 + 24 + 69), wei(1));
+        userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.deposited).to.eq(wei(1));
+        expect(userData.virtualDeposited).to.eq(wei(1.01));
+        expect(userData.pendingRewards).to.eq(0);
+
+        referralData = await distribution.referrersData(OWNER, poolId);
+        expect(referralData.amountStaked).to.eq(wei(4));
+        expect(referralData.virtualAmountStaked).to.eq(wei(0.04));
+        expect(referralData.pendingRewards).to.gt(0);
       });
     });
 
@@ -2351,6 +3014,24 @@ describe('DistributionV5', () => {
       userData = await distribution.usersData(SECOND.address, poolId);
       expect(userData.deposited).to.eq(wei(4));
       expect(await depositToken.balanceOf(distribution)).to.eq(wei(0));
+    });
+    it('should correctly modify referral rewards after withdraw', async () => {
+      const referrerTiers = getDefaultReferrerTiers();
+      await distribution.editReferrerTiers(poolId, referrerTiers);
+
+      await distribution.stake(poolId, wei(10), 0, REFERRER_1);
+
+      await setNextTime(oneDay + oneDay);
+      await distribution.withdraw(poolId, wei(5));
+      const userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(5));
+      expect(userData.pendingRewards).to.closeTo(wei(99), wei(0.1));
+      const referralData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referralData.amountStaked).to.eq(wei(5));
+      expect(referralData.virtualAmountStaked).to.eq(wei(5 * 0.01));
+      expect(referralData.pendingRewards).to.closeTo(wei(1), wei(0.1));
+      expect(referralData.lastStake).to.eq(await getCurrentBlockTime());
+      expect(referralData.rate).to.eq(userData.rate);
     });
     it('should revert if trying to withdraw zero', async () => {
       await distribution.stake(poolId, wei(10), 0, ZERO_ADDR);
@@ -2614,13 +3295,17 @@ describe('DistributionV5', () => {
 
         await setNextTime(oneDay + oneDay);
 
-        const referrerPart = ((10 + 10 * 0.01) / 10) * 0.01;
-        const expectedReferrerReward = wei(100 * referrerPart);
+        const totalReward = wei(100);
+        const secondPart = 1n * (await distribution.getCurrentUserMultiplier(poolId, SECOND));
+        const referrerPart = 1n * BigInt(referrerTiers[0].multiplier);
+        const totalParts = secondPart + referrerPart;
+        const rewardPerPart = (totalReward * PRECISION) / totalParts;
+
         const tx = await distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) });
         await expect(tx)
           .to.emit(distribution, 'ReferrerClaimed')
-          .withArgs(poolId, OWNER, OWNER, expectedReferrerReward);
-        await expect(tx).to.changeTokenBalance(rewardToken, OWNER, expectedReferrerReward);
+          .withArgs(poolId, OWNER, OWNER, (rewardPerPart * referrerPart) / PRECISION);
+        await expect(tx).to.changeTokenBalance(rewardToken, OWNER, (rewardPerPart * referrerPart) / PRECISION);
 
         const poolData = await distribution.poolsData(poolId);
         expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
@@ -2631,6 +3316,22 @@ describe('DistributionV5', () => {
         const referrerData = await distribution.referrersData(OWNER, poolId);
         expect(referrerData.rate).to.eq(poolData.rate);
         expect(referrerData.pendingRewards).to.eq(0);
+      });
+      it('should revert if claimLockPeriod is not passed', async () => {
+        await expect(distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+          'DS: pool claim is locked',
+        );
+      });
+      it('should revert if nothing to claim', async () => {
+        await setNextTime(oneDay + oneDay);
+        await expect(distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+          'DS: nothing to claim',
+        );
+      });
+      it('should revert if pool is not found', async () => {
+        await expect(distribution.claimReferrerTier(1, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+          "DS: pool doesn't exist",
+        );
       });
     });
 
@@ -2647,44 +3348,43 @@ describe('DistributionV5', () => {
         expect(reward).to.eq(0);
       });
       it('should correctly calculate rewards for 1 users', async () => {
+        await distribution.editReferrerTiers(poolId, getDefaultReferrerTiers());
+
         await distribution.connect(SECOND).stake(poolId, wei(10), 0, OWNER);
         let reward = await distribution.getCurrentReferrerReward(poolId, OWNER);
         expect(reward).to.eq(0);
 
-        await setNextTime(oneDay + oneDay);
+        await setTime(oneDay + oneDay);
 
-        const referrerPart = ((10 + 10 * 0.01) / 10) * 0.01;
-        let expectedReferrerReward = wei(100 * referrerPart);
+        let totalReward = wei(100);
+        const secondPart = 1n * (await distribution.getCurrentUserMultiplier(poolId, SECOND));
+        const referrerPart = 1n * BigInt(referrerTiers[0].multiplier);
+        const totalParts = secondPart + referrerPart;
+        let rewardPerPart = (totalReward * PRECISION) / totalParts;
         reward = await distribution.getCurrentReferrerReward(poolId, OWNER);
-        expect(reward).to.eq(expectedReferrerReward);
+        expect(reward).to.eq((rewardPerPart * referrerPart) / PRECISION);
 
         await setTime(oneDay + oneDay * 2);
-        expectedReferrerReward = wei(198 * referrerPart);
+        totalReward = wei(198);
+        rewardPerPart = (totalReward * PRECISION) / totalParts;
         reward = await distribution.getCurrentReferrerReward(poolId, OWNER);
-        expect(reward).to.eq(expectedReferrerReward);
+        expect(reward).to.eq((rewardPerPart * referrerPart) / PRECISION);
 
         await setNextTime(oneDay + oneDay * 3);
         await distribution.connect(SECOND).withdraw(poolId, wei(1));
         await distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) });
 
         await setTime(oneDay + oneDay * 4);
-        expectedReferrerReward = wei(94 * referrerPart);
+        totalReward = wei(94);
+        rewardPerPart = (totalReward * PRECISION) / totalParts;
         reward = await distribution.getCurrentReferrerReward(poolId, OWNER);
-        expect(reward).to.closeTo(expectedReferrerReward, wei(0.01));
+        expect(reward).to.closeTo((rewardPerPart * referrerPart) / PRECISION, wei(0.1));
 
         await setNextTime(oneDay + oneDay * 5);
         await distribution.connect(SECOND).withdraw(poolId, wei(1));
         await distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) });
         reward = await distribution.getCurrentReferrerReward(poolId, OWNER);
         expect(reward).to.eq(0);
-
-        await setNextTime(oneDay + oneDay * 7);
-        await distribution.stake(poolId, wei(1), 0, OWNER);
-
-        await setTime(oneDay + oneDay * 8);
-        expectedReferrerReward = wei(86 * referrerPart);
-        reward = await distribution.getCurrentReferrerReward(poolId, OWNER);
-        expect(reward).to.eq(expectedReferrerReward);
       });
       it("should return 0 if pool isn't found", async () => {
         const reward = await distribution.getCurrentReferrerReward(3, OWNER);
@@ -3047,9 +3747,9 @@ describe('DistributionV5', () => {
       await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
       expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(multiplier);
 
-      for (let i = 0; i < referrerTiers.length; i++) {
+      for (let i = 1; i < referrerTiers.length; i++) {
         multiplier = BigInt(referrerTiers[i].multiplier);
-        const amount = BigInt(referrerTiers[i].amount) + 1n;
+        const amount = BigInt(referrerTiers[i].amount);
 
         await distribution.connect(SECOND).stake(poolId, amount, 0, OWNER);
         expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(multiplier);

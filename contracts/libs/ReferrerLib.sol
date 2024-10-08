@@ -48,15 +48,11 @@ library ReferrerLib {
 
     function claimReferrerTier(
         IDistributionV5.ReferrerData storage referrerData,
-        IDistributionV5.Pool storage pool,
         uint256 currentPoolRate_
     ) external returns (uint256) {
-        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
-
         uint256 pendingRewards_ = getCurrentReferrerReward(referrerData, currentPoolRate_);
         require(pendingRewards_ > 0, "DS: nothing to claim");
 
-        // Update user data
         referrerData.rate = currentPoolRate_;
         referrerData.pendingRewards = 0;
 
@@ -67,22 +63,12 @@ library ReferrerLib {
         IDistributionV5.ReferrerTier[] storage referrerTiers,
         uint256 amount_
     ) public view returns (uint256) {
-        (uint256 low_, uint256 high_) = (0, referrerTiers.length);
-
-        while (low_ < high_) {
-            uint256 mid_ = Math.average(low_, high_);
-
-            if (referrerTiers[mid_].amount > amount_) {
-                high_ = mid_;
-            } else {
-                low_ = mid_ + 1;
+        for (uint256 i = referrerTiers.length; i > 0; i--) {
+            if (amount_ >= referrerTiers[i - 1].amount) {
+                return referrerTiers[i - 1].multiplier;
             }
         }
 
-        if (high_ == 0) {
-            return 0;
-        }
-
-        return referrerTiers[high_ - 1].multiplier;
+        return 0;
     }
 }
