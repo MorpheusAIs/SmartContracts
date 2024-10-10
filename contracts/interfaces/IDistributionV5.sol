@@ -87,7 +87,6 @@ interface IDistributionV5 {
         uint256 virtualAmountStaked;
         uint256 rate;
         uint256 pendingRewards;
-        uint128 lastStake;
     }
 
     /**

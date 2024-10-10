@@ -295,7 +295,6 @@ describe('DistributionV5 Fork', () => {
       let referrerData = await distribution.referrersData(SECOND, 0);
       expect(referrerData.amountStaked).to.be.eq(wei(0.1));
       expect(referrerData.virtualAmountStaked).to.be.eq(wei(0.1 * 0.01));
-      expect(referrerData.lastStake).to.be.eq(await getCurrentBlockTime());
 
       await setNextTime((await getCurrentBlockTime()) + 100 * oneDay);
       await distribution
@@ -309,14 +308,12 @@ describe('DistributionV5 Fork', () => {
       expect(referrerData.amountStaked).to.be.eq(wei(0));
       expect(referrerData.virtualAmountStaked).to.be.eq(0);
       expect(referrerData.pendingRewards).to.be.gt(0);
-      expect(referrerData.lastStake).to.be.eq(await getCurrentBlockTime());
 
       await distribution.connect(SECOND).claimReferrerTier(0, SECOND, { value: wei(0.1) });
       referrerData = await distribution.referrersData(SECOND, 0);
       expect(referrerData.amountStaked).to.be.eq(0);
       expect(referrerData.virtualAmountStaked).to.be.eq(0);
       expect(referrerData.pendingRewards).to.be.eq(0);
-      expect(referrerData.lastStake).to.be.eq((await getCurrentBlockTime()) - 1);
     });
     it('should lock claim, public pool from V1', async () => {
       const userPublicPool = await ethers.getImpersonatedSigner('0x6cC37e13ceD30689b86a10819282027cA6BD1CDD');
@@ -328,7 +325,6 @@ describe('DistributionV5 Fork', () => {
       let referrerData = await distribution.referrersData(SECOND, 0);
       expect(referrerData.amountStaked).to.be.gt(wei(0.01));
       expect(referrerData.virtualAmountStaked).to.be.gt(wei(0.01 * 0.01));
-      expect(referrerData.lastStake).to.be.eq(await getCurrentBlockTime());
 
       await setNextTime((await getCurrentBlockTime()) + 100 * oneDay);
       await distribution
@@ -342,14 +338,12 @@ describe('DistributionV5 Fork', () => {
       expect(referrerData.amountStaked).to.be.eq(wei(0));
       expect(referrerData.virtualAmountStaked).to.be.eq(0);
       expect(referrerData.pendingRewards).to.be.gt(0);
-      expect(referrerData.lastStake).to.be.eq(await getCurrentBlockTime());
 
       await distribution.connect(SECOND).claimReferrerTier(0, SECOND, { value: wei(0.1) });
       referrerData = await distribution.referrersData(SECOND, 0);
       expect(referrerData.amountStaked).to.be.eq(0);
       expect(referrerData.virtualAmountStaked).to.be.eq(0);
       expect(referrerData.pendingRewards).to.be.eq(0);
-      expect(referrerData.lastStake).to.be.eq((await getCurrentBlockTime()) - 1);
     });
   });
 });

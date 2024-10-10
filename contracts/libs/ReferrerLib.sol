@@ -40,7 +40,6 @@ library ReferrerLib {
         uint256 newVirtualAmountStaked_ = (newAmountStaked_ * multiplier_) / PRECISION;
 
         referrerData.pendingRewards = getCurrentReferrerReward(referrerData, currentPoolRate_);
-        referrerData.lastStake = uint128(block.timestamp);
         referrerData.rate = currentPoolRate_;
         referrerData.amountStaked = newAmountStaked_;
         referrerData.virtualAmountStaked = newVirtualAmountStaked_;
