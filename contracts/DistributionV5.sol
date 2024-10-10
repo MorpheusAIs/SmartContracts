@@ -266,11 +266,17 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
 
-        IDistributionV5.Pool storage pool = pools[poolId_];
+        Pool storage pool = pools[poolId_];
+        PoolLimits storage poolLimits = poolsLimits[poolId_];
+        ReferrerData storage referrerData = referrersData[referrer_][poolId_];
 
         require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
+        require(
+            block.timestamp > referrerData.lastClaim + poolLimits.claimLockPeriodAfterClaim,
+            "DS: pool claim is locked (C)"
+        );
 
-        uint256 pendingRewards_ = referrersData[referrer_][poolId_].claimReferrerTier(currentPoolRate_);
+        uint256 pendingRewards_ = referrerData.claimReferrerTier(currentPoolRate_);
 
         // Update pool data
         PoolData storage poolData = poolsData[poolId_];

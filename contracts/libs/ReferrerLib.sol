@@ -54,6 +54,7 @@ library ReferrerLib {
 
         referrerData.rate = currentPoolRate_;
         referrerData.pendingRewards = 0;
+        referrerData.lastClaim = uint128(block.timestamp);
 
         return pendingRewards_;
     }

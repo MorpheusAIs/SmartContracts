@@ -3380,6 +3380,20 @@ describe('DistributionV5', () => {
           'DS: pool claim is locked',
         );
       });
+      it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
+        await distribution.editPoolLimits(poolId, { claimLockPeriodAfterStake: 0, claimLockPeriodAfterClaim: 60 });
+
+        await setTime(oneDay * 2);
+        await distribution.stake(poolId, wei(1), 0, OWNER);
+
+        await setTime(oneDay * 3);
+        await distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) });
+        await expect(distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+          'DS: pool claim is locked (C)',
+        );
+        await setTime(oneDay * 3 + 61);
+        await distribution.claim(poolId, OWNER, { value: wei(0.5) });
+      });
       it('should revert if nothing to claim', async () => {
         await setNextTime(oneDay + oneDay);
         await expect(distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
