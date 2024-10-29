@@ -2055,6 +2055,68 @@ describe('DistributionV5', () => {
       expect(oldReferrerData.virtualAmountStaked).to.eq((wei(0) * BigInt(referrerTiers[0].multiplier)) / PRECISION);
       expect(oldReferrerData.pendingRewards).to.closeTo((wei(100) * 1n) / 102n, wei(0.0001));
     });
+    it('should change total virtual amount correctly', async () => {
+      let previousTotalDeposited = 0n;
+
+      const referrerTiers = getDefaultReferrerTiers();
+      await distribution.editReferrerTiers(poolId, referrerTiers);
+
+      // A stakes 1 token from OWNER for referrer 1
+      await distribution.stake(poolId, wei(100), 0, REFERRER_1);
+
+      let userData = await distribution.usersData(OWNER.address, poolId);
+      expect(userData.deposited).to.eq(wei(100));
+      expect(userData.virtualDeposited).to.eq(wei(100 * 1.01));
+      expect(userData.referrer).to.eq(REFERRER_1);
+      let referrerData = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(100));
+      expect(referrerData.virtualAmountStaked).to.eq(wei(100 * 0.025));
+      let poolData = await distribution.poolsData(poolId);
+      expect(poolData.totalVirtualDeposited).to.closeTo(wei(100 * (1 + 0.01 + 0.025)), wei(0.000001));
+      previousTotalDeposited = wei(100 * (1 + 0.01 + 0.025));
+
+      // A stakes 1 token from SECOND for referrer 2
+      await setNextTime(oneDay * 2);
+      await distribution.connect(SECOND).stake(poolId, wei(200), 0, REFERRER_2);
+
+      userData = await distribution.usersData(SECOND.address, poolId);
+      expect(userData.deposited).to.eq(wei(200));
+      expect(userData.virtualDeposited).to.eq(wei(200 * 1.01));
+      expect(userData.referrer).to.eq(REFERRER_2);
+      referrerData = await distribution.referrersData(REFERRER_2, poolId);
+      expect(referrerData.amountStaked).to.eq(wei(200));
+      expect(referrerData.virtualAmountStaked).to.eq(wei(200 * 0.025));
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.totalVirtualDeposited).to.closeTo(
+        previousTotalDeposited + wei(200 * (1 + 0.01 + 0.025)),
+        wei(0.000001),
+      );
+      previousTotalDeposited = previousTotalDeposited + wei(200 * (1 + 0.01 + 0.025));
+
+      // A stakes 1 token from SECOND for referrer 1, move stake from referrer 2 to 1
+      await setNextTime(oneDay * 3);
+      await distribution.connect(SECOND).stake(poolId, wei(10), 0, REFERRER_1);
+
+      const userDataSecond = await distribution.usersData(SECOND.address, poolId);
+      expect(userDataSecond.deposited).to.eq(wei(210));
+      expect(userDataSecond.virtualDeposited).to.eq(wei(210 * 1.01));
+      expect(userDataSecond.referrer).to.eq(REFERRER_1);
+      const userDataOwner = await distribution.usersData(OWNER.address, poolId);
+      expect(userDataOwner.deposited).to.eq(wei(100));
+      expect(userDataOwner.virtualDeposited).to.eq(wei(100 * 1.01));
+      expect(userDataOwner.referrer).to.eq(REFERRER_1);
+      const referrerData1 = await distribution.referrersData(REFERRER_1, poolId);
+      expect(referrerData1.amountStaked).to.eq(wei(310));
+      expect(referrerData1.virtualAmountStaked).to.eq(wei(100 * 0.025) + wei(210 * 0.025));
+      const referrerData2 = await distribution.referrersData(REFERRER_2, poolId);
+      expect(referrerData2.amountStaked).to.eq(wei(0));
+      expect(referrerData2.virtualAmountStaked).to.eq(wei(0));
+      poolData = await distribution.poolsData(poolId);
+      expect(poolData.totalVirtualDeposited).to.closeTo(
+        wei(100 * (1 + 0.01 + 0.025)) + wei(210 * (1 + 0.01 + 0.025)),
+        wei(0.000001),
+      );
+    });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.stake(1, wei(1), 0, ZERO_ADDR)).to.be.revertedWith("DS: pool doesn't exist");
     });

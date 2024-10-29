@@ -500,30 +500,34 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
         ReferrerData storage newReferrerData = referrersData[newReferrer_][poolId_];
 
         uint256 oldVirtualAmountStaked;
+        uint256 newVirtualAmountStaked;
 
         if (oldReferrer_ == address(0)) {
             oldVirtualAmountStaked = newReferrerData.virtualAmountStaked;
 
             newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
+            newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
         } else {
             ReferrerData storage oldReferrerData = referrersData[oldReferrer_][poolId_];
 
-            oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
-
             if (oldReferrer_ == newReferrer_) {
+                oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
+
                 newReferrerData.applyReferrerTier(
                     referrerTiers[poolId_],
                     oldDeposited_,
                     newDeposited_,
                     currentPoolRate_
                 );
+                newVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
             } else {
+                oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
+
                 oldReferrerData.applyReferrerTier(referrerTiers[poolId_], oldDeposited_, 0, currentPoolRate_);
                 newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
+                newVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
             }
         }
-
-        uint256 newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
 
         PoolData storage poolData = poolsData[poolId_];
         poolData.totalVirtualDeposited =
