@@ -69,6 +69,6 @@ library ReferrerLib {
             }
         }
 
-        return 0;
+        return PRECISION;
     }
 }

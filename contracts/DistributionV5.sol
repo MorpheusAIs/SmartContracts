@@ -591,12 +591,15 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
     function getReferrerMultiplier(uint256 poolId_, address referrer_) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
-            return 0;
+            return PRECISION;
         }
 
         ReferrerData storage referrerData = referrersData[referrer_][poolId_];
+        if (referrerData.amountStaked == 0) {
+            return PRECISION;
+        }
 
-        return ReferrerLib.getReferrerMultiplier(referrerTiers[poolId_], referrerData.amountStaked);
+        return (referrerData.virtualAmountStaked * PRECISION) / referrerData.amountStaked;
     }
 
     /**
