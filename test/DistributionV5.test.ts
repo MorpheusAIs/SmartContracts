@@ -1350,7 +1350,7 @@ describe('DistributionV5', () => {
         );
         await expect(tx).to.emit(distribution, 'UserStaked').withArgs(poolId, SECOND.address, wei(9));
         await expect(tx).to.emit(distribution, 'UserWithdrawn').withArgs(poolId, OWNER.address, wei(3));
-        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(9));
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(10));
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
         expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
@@ -1585,7 +1585,7 @@ describe('DistributionV5', () => {
         await expect(tx)
           .to.emit(distribution, 'UserClaimLocked')
           .withArgs(poolId, SECOND.address, await getCurrentBlockTime(), claimLockEnd);
-        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(9));
+        await expect(tx).to.emit(distribution, 'UserReferred').withArgs(poolId, SECOND.address, REFERRER_1, wei(10));
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
         expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(0));
@@ -3875,7 +3875,7 @@ describe('DistributionV5', () => {
 
     it('should calculate multiplier correctly', async () => {
       let multiplier = referrerTiers[0].multiplier;
-      expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(wei(1, 25));
+      expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(0);
 
       await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
       expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(multiplier);
@@ -3890,7 +3890,7 @@ describe('DistributionV5', () => {
     });
     it('should calculate multiplier correctly from multiple users', async () => {
       let multiplier = referrerTiers[0].multiplier;
-      expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(wei(1, 25));
+      expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.equal(0);
 
       await distribution.connect(OWNER).stake(poolId, wei(1), 0, OWNER);
       await distribution.connect(SECOND).stake(poolId, wei(1), 0, OWNER);
@@ -3906,22 +3906,22 @@ describe('DistributionV5', () => {
         expect(await distribution.getReferrerMultiplier(poolId, OWNER)).to.closeTo(multiplier, wei(0.00001, 25));
       }
     });
-    it('should return 1 if pool is not exist', async () => {
+    it('should return 0 if pool is not exist', async () => {
       const multiplier = await distribution.getReferrerMultiplier(1, OWNER);
 
-      expect(multiplier).to.eq(wei(1, 25));
+      expect(multiplier).to.eq(0);
     });
     it('should return 1 if referrals is not staked', async () => {
       const multiplier = await distribution.getReferrerMultiplier(poolId, OWNER);
 
-      expect(multiplier).to.eq(wei(1, 25));
+      expect(multiplier).to.eq(0);
     });
-    it('should return 1 if referrerTiers is empty', async () => {
+    it('should return 0 if referrerTiers is empty', async () => {
       await distribution.editReferrerTiers(poolId, []);
 
       const multiplier = await distribution.getReferrerMultiplier(poolId, OWNER);
 
-      expect(multiplier).to.eq(wei(1, 25));
+      expect(multiplier).to.eq(0);
     });
     it('should works correctly with a lot referrerTiers', async () => {
       const newReferrerTiers = [];
@@ -3933,7 +3933,7 @@ describe('DistributionV5', () => {
 
       const multiplier = await distribution.getReferrerMultiplier(poolId, OWNER);
 
-      expect(multiplier).to.eq(wei(1, 25));
+      expect(multiplier).to.eq(0);
     });
   });
 

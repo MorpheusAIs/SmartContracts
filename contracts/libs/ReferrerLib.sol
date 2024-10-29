@@ -36,7 +36,7 @@ library ReferrerLib {
         uint256 currentPoolRate_
     ) external {
         uint256 newAmountStaked_ = referrerData.amountStaked + newAmount_ - oldAmount_;
-        uint256 multiplier_ = getReferrerMultiplier(referrerTiers, newAmountStaked_);
+        uint256 multiplier_ = _getReferrerMultiplier(referrerTiers, newAmountStaked_);
         uint256 newVirtualAmountStaked_ = (newAmountStaked_ * multiplier_) / PRECISION;
 
         referrerData.pendingRewards = getCurrentReferrerReward(referrerData, currentPoolRate_);
@@ -59,16 +59,16 @@ library ReferrerLib {
         return pendingRewards_;
     }
 
-    function getReferrerMultiplier(
+    function _getReferrerMultiplier(
         IDistributionV5.ReferrerTier[] storage referrerTiers,
         uint256 amount_
-    ) public view returns (uint256) {
+    ) private view returns (uint256) {
         for (uint256 i = referrerTiers.length; i > 0; i--) {
             if (amount_ >= referrerTiers[i - 1].amount) {
                 return referrerTiers[i - 1].multiplier;
             }
         }
 
-        return PRECISION;
+        return 0;
     }
 }

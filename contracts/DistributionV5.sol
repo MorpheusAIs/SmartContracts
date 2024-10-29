@@ -394,7 +394,15 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
             userData.virtualDeposited = userData.deposited;
         }
 
-        _applyReferrerTier(poolId_, currentPoolRate_, userData.deposited, deposited_, userData.referrer, referrer_);
+        _applyReferrerTier(
+            user_,
+            poolId_,
+            currentPoolRate_,
+            userData.deposited,
+            deposited_,
+            userData.referrer,
+            referrer_
+        );
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
@@ -464,7 +472,15 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
             userData.virtualDeposited = userData.deposited;
         }
 
-        _applyReferrerTier(poolId_, currentPoolRate_, deposited_, newDeposited_, userData.referrer, userData.referrer);
+        _applyReferrerTier(
+            user_,
+            poolId_,
+            currentPoolRate_,
+            deposited_,
+            newDeposited_,
+            userData.referrer,
+            userData.referrer
+        );
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
@@ -487,6 +503,7 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function _applyReferrerTier(
+        address user_,
         uint256 poolId_,
         uint256 currentPoolRate_,
         uint256 oldDeposited_,
@@ -510,7 +527,7 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
             newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
             newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
 
-            emit UserReferred(poolId_, _msgSender(), newReferrer_, newDeposited_);
+            emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
         } else {
             ReferrerData storage oldReferrerData = referrersData[oldReferrer_][poolId_];
 
@@ -525,7 +542,7 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
                 );
                 newVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
 
-                emit UserReferred(poolId_, _msgSender(), newReferrer_, newDeposited_);
+                emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
             } else {
                 oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
 
@@ -533,8 +550,8 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
                 newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
                 newVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
 
-                emit UserReferred(poolId_, _msgSender(), oldReferrer_, 0);
-                emit UserReferred(poolId_, _msgSender(), newReferrer_, newDeposited_);
+                emit UserReferred(poolId_, user_, oldReferrer_, 0);
+                emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
             }
         }
 
@@ -597,12 +614,12 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
     function getReferrerMultiplier(uint256 poolId_, address referrer_) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
-            return PRECISION;
+            return 0;
         }
 
         ReferrerData storage referrerData = referrersData[referrer_][poolId_];
         if (referrerData.amountStaked == 0) {
-            return PRECISION;
+            return 0;
         }
 
         return (referrerData.virtualAmountStaked * PRECISION) / referrerData.amountStaked;
