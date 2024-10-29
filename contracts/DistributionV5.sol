@@ -412,7 +412,6 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
         emit UserStaked(poolId_, user_, amount_);
         emit UserClaimLocked(poolId_, user_, uint128(block.timestamp), claimLockEnd_);
-        emit UserReferred(poolId_, user_, referrer_, amount_);
     }
 
     function _withdraw(address user_, uint256 poolId_, uint256 amount_, uint256 currentPoolRate_) private {
@@ -510,6 +509,8 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
             newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
             newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+            emit UserReferred(poolId_, _msgSender(), newReferrer_, newDeposited_);
         } else {
             ReferrerData storage oldReferrerData = referrersData[oldReferrer_][poolId_];
 
@@ -523,12 +524,17 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
                     currentPoolRate_
                 );
                 newVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
+
+                emit UserReferred(poolId_, _msgSender(), newReferrer_, newDeposited_);
             } else {
                 oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
 
                 oldReferrerData.applyReferrerTier(referrerTiers[poolId_], oldDeposited_, 0, currentPoolRate_);
                 newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
                 newVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
+
+                emit UserReferred(poolId_, _msgSender(), oldReferrer_, 0);
+                emit UserReferred(poolId_, _msgSender(), newReferrer_, newDeposited_);
             }
         }
 
