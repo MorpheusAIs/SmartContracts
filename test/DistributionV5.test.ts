@@ -2061,7 +2061,7 @@ describe('DistributionV5', () => {
       const referrerTiers = getDefaultReferrerTiers();
       await distribution.editReferrerTiers(poolId, referrerTiers);
 
-      // A stakes 1 token from OWNER for referrer 1
+      // A stakes 100 token from OWNER for referrer 1
       await distribution.stake(poolId, wei(100), 0, REFERRER_1);
 
       let userData = await distribution.usersData(OWNER.address, poolId);
@@ -2075,7 +2075,7 @@ describe('DistributionV5', () => {
       expect(poolData.totalVirtualDeposited).to.closeTo(wei(100 * (1 + 0.01 + 0.025)), wei(0.000001));
       previousTotalDeposited = wei(100 * (1 + 0.01 + 0.025));
 
-      // A stakes 1 token from SECOND for referrer 2
+      // A stakes 200 token from SECOND for referrer 2
       await setNextTime(oneDay * 2);
       await distribution.connect(SECOND).stake(poolId, wei(200), 0, REFERRER_2);
 
@@ -2093,7 +2093,7 @@ describe('DistributionV5', () => {
       );
       previousTotalDeposited = previousTotalDeposited + wei(200 * (1 + 0.01 + 0.025));
 
-      // A stakes 1 token from SECOND for referrer 1, move stake from referrer 2 to 1
+      // Stakes 10 tokens from SECOND for referrer 1, move stake from referrer 2 to 1
       await setNextTime(oneDay * 3);
       await distribution.connect(SECOND).stake(poolId, wei(10), 0, REFERRER_1);
 
