@@ -3116,24 +3116,24 @@ describe('DistributionV5', () => {
       expect(userData.pendingRewards).to.eq(0);
     });
     it('should correctly withdraw, when not enough tokens', async () => {
-      await distribution.stake(poolId, wei(10), 0, ZERO_ADDR);
-      await distribution.connect(SECOND).stake(poolId, wei(10), 0, ZERO_ADDR);
-      expect(await depositToken.balanceOf(distribution)).to.eq(wei(20));
+      await distribution.stake(poolId, wei(0.1), 0, ZERO_ADDR);
+      await distribution.connect(SECOND).stake(poolId, wei(0.1), 0, ZERO_ADDR);
+      expect(await depositToken.balanceOf(distribution)).to.eq(wei(0.2));
 
       await setNextTime(oneDay + oneDay);
       await depositToken.setTotalPooledEther(((await depositToken.totalPooledEther()) * 8n) / 10n);
-      expect(await depositToken.balanceOf(distribution)).to.eq(wei(16));
+      expect(await depositToken.balanceOf(distribution)).to.eq(wei(0.16));
 
       let tx = await distribution.withdraw(poolId, wei(999));
-      await expect(tx).to.changeTokenBalance(depositToken, OWNER.address, wei(10));
+      await expect(tx).to.changeTokenBalance(depositToken, OWNER.address, wei(0.1));
       let userData = await distribution.usersData(OWNER.address, poolId);
       expect(userData.deposited).to.eq(wei(0));
-      expect(await depositToken.balanceOf(distribution)).to.eq(wei(6));
+      expect(await depositToken.balanceOf(distribution)).to.eq(wei(0.06));
 
       tx = await distribution.connect(SECOND).withdraw(poolId, wei(999));
-      await expect(tx).to.changeTokenBalance(depositToken, SECOND.address, wei(6));
+      await expect(tx).to.changeTokenBalance(depositToken, SECOND.address, wei(0.06));
       userData = await distribution.usersData(SECOND.address, poolId);
-      expect(userData.deposited).to.eq(wei(4));
+      expect(userData.deposited).to.eq(wei(0.04));
       expect(await depositToken.balanceOf(distribution)).to.eq(wei(0));
     });
     it('should correctly modify referral rewards after withdraw', async () => {
