@@ -529,10 +529,8 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
             emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
         } else {
-            ReferrerData storage oldReferrerData = referrersData[oldReferrer_][poolId_];
-
             if (oldReferrer_ == newReferrer_) {
-                oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
+                oldVirtualAmountStaked = newReferrerData.virtualAmountStaked;
 
                 newReferrerData.applyReferrerTier(
                     referrerTiers[poolId_],
@@ -540,10 +538,12 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
                     newDeposited_,
                     currentPoolRate_
                 );
-                newVirtualAmountStaked = oldReferrerData.virtualAmountStaked;
+                newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
 
                 emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
             } else {
+                ReferrerData storage oldReferrerData = referrersData[oldReferrer_][poolId_];
+
                 oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
 
                 oldReferrerData.applyReferrerTier(referrerTiers[poolId_], oldDeposited_, 0, currentPoolRate_);
