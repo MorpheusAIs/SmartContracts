@@ -6,7 +6,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IDistributionV5} from "../interfaces/IDistributionV5.sol";
-import {IL1Sender} from "../interfaces/IL1Sender.sol";
 
 library ReferrerLib {
     uint256 constant REFERRAL_MULTIPLIER = (PRECISION * 101) / 100; // 1% referral bonus

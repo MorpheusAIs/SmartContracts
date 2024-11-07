@@ -9,7 +9,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
-import {L1Sender} from "./L1Sender.sol";
+import {IL1Sender} from "./interfaces/IL1Sender.sol";
 import {IDistributionV5} from "./interfaces/IDistributionV5.sol";
 
 import {LogExpMath} from "./libs/LogExpMath.sol";
@@ -256,7 +256,7 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
         userData.lastClaim = uint128(block.timestamp);
 
         // Transfer rewards
-        L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
+        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
 
         emit UserClaimed(poolId_, user_, receiver_, pendingRewards_);
     }
@@ -284,7 +284,7 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
         poolData.rate = currentPoolRate_;
 
         // Transfer rewards
-        L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, referrer_);
+        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, referrer_);
 
         emit ReferrerClaimed(poolId_, referrer_, receiver_, pendingRewards_);
     }
@@ -696,7 +696,7 @@ contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable 
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        bytes memory bridgeMessageId_ = L1Sender(l1Sender).sendDepositToken{value: msg.value}(
+        bytes memory bridgeMessageId_ = IL1Sender(l1Sender).sendDepositToken{value: msg.value}(
             gasLimit_,
             maxFeePerGas_,
             maxSubmissionCost_
