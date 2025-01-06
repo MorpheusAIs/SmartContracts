@@ -180,6 +180,8 @@ describe('DistributionV2', () => {
     ]);
 
     await reverter.snapshot();
+
+    await setTime(3830);
   });
 
   afterEach(reverter.revert);
