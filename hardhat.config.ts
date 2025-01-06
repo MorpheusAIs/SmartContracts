@@ -40,13 +40,22 @@ const config: HardhatUserConfig = {
       //   url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
       // forking: {
+      //   url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+      // },
+      // forking: {
       //   url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      // },
+      // forking: {
+      //   url: `https://arb-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
       // forking: {
       //   url: `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
       // forking: {
       //   url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
+      // },
+      // forking: {
+      //   url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
     },
     localhost: {
@@ -128,7 +137,7 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.1,
     },
     base: {
-      url: `https://mainnet.base.org`,
+      url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.1,
     },

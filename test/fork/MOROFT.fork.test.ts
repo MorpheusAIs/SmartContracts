@@ -58,8 +58,7 @@ describe('MOROFT', () => {
   after(async () => {
     await ethers.provider.send('hardhat_reset', []);
   });
-  0x000000000000000000000000901f2d23823730fb7f2356920e0e273efdcdfe17;
-  0x901f2d23823730fb7f2356920e0e273efdcdfe17;
+
   describe('send', () => {
     it('should send token to LZ endpoint and burn tokens', async () => {
       // Mint tokens to `SECOND`
