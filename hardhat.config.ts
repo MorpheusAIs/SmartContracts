@@ -57,6 +57,14 @@ const config: HardhatUserConfig = {
       // forking: {
       //   url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
+      // forking: {
+      //   url: `https://base-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+      //   // blockNumber: 25936700,
+      // },
+      // forking: {
+      //   url: `https://base.llamarpc.com`,
+      //   blockNumber: 25164000,
+      // },
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
