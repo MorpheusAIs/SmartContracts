@@ -167,6 +167,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         );
         require(subnet_.minClaimLockEnd >= subnet_.startsAt, "BS: invalid claim lock timestamp");
         require(subnet_.fee <= PRECISION, "BS: invalid fee percent");
+        require(subnet_.feeTreasury != address(0), "BS: invalid fee treasury");
         if (isMigrationOver && _msgSender() != owner()) {
             require(subnet_.startsAt > block.timestamp, "BS: invalid starts at timestamp");
         }
@@ -204,6 +205,16 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         subnet.minStake = newValue_;
 
         emit SubnetMinStakeSet(subnetId_, oldValue_, newValue_);
+    }
+
+    function setSubnetFeeTreasury(bytes32 subnetId_, address newValue_) public onlySubnetOwner(subnetId_) {
+        BuildersSubnet storage subnet = buildersSubnets[subnetId_];
+        address oldValue_ = subnet.feeTreasury;
+
+        require(newValue_ != address(0), "BS: invalid fee treasury");
+        subnet.feeTreasury = newValue_;
+
+        emit SubnetFeeTreasurySet(subnetId_, oldValue_, newValue_);
     }
 
     function getSubnetId(string memory name_) public pure returns (bytes32) {

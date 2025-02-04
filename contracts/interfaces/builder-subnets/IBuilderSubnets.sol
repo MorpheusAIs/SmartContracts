@@ -53,9 +53,29 @@ interface IBuilderSubnets is IERC165 {
         uint128 interval;
     }
 
+    /**
+     * The event that is emitted when the Subnet owner changed.
+     * @param subnetId The Subnet ID.
+     * @param oldValue The old Subnet owner.
+     * @param newValue The new Subnet owner.
+     */
     event SubnetOwnerSet(bytes32 subnetId, address oldValue, address newValue);
 
+    /**
+     * The event that is emitted when the Subnet min stake changed.
+     * @param subnetId The Subnet ID.
+     * @param oldValue The old Subnet min stake.
+     * @param newValue The new Subnet min stake.
+     */
     event SubnetMinStakeSet(bytes32 subnetId, uint256 oldValue, uint256 newValue);
+
+    /**
+     * The event that is emitted when the Subnet fee treasury changed.
+     * @param subnetId The Subnet ID.
+     * @param oldValue The old Subnet fee treasury.
+     * @param newValue The new Subnet fee treasury.
+     */
+    event SubnetFeeTreasurySet(bytes32 subnetId, address oldValue, address newValue);
     /**
      * The event that is emitted when the FeeConfig contract address is set.
      * @param feeConfig The address of the new FeeConfig contract.

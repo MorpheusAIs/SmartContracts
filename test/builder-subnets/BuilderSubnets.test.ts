@@ -298,6 +298,11 @@ describe('BuilderSubnets', () => {
         'BS: invalid fee percent',
       );
     });
+    it('should revert when invalid fee percent', async () => {
+      await expect(builders.createSubnet({ ...subnet, feeTreasury: ZERO_ADDR }, metadata)).to.be.revertedWith(
+        'BS: invalid fee treasury',
+      );
+    });
     it('should revert when invalid starts at timestamp', async () => {
       await setNextTime(Number(subnet.startsAt) + 1);
       await builders.setIsMigrationOver(true);
@@ -394,6 +399,38 @@ describe('BuilderSubnets', () => {
       const subnetId = await builders.getSubnetId(subnet.name);
 
       await expect(builders.setSubnetMinStake(subnetId, 2)).to.be.revertedWith('BS: not a Subnet owner');
+    });
+  });
+
+  describe('#setSubnetFeeTreasury', () => {
+    let subnet: IBuilderSubnets.BuildersSubnetStruct;
+    let metadata: IBuilderSubnets.BuildersSubnetMetadataStruct;
+
+    beforeEach(() => {
+      subnet = getDefaultSubnet(BOB, SUBNET_TREASURY);
+      metadata = getDefaultSubnetMetadata();
+    });
+    it('should set the new Subnet min stake', async () => {
+      await builders.connect(BOB).createSubnet(subnet, metadata);
+      const subnetId = await builders.getSubnetId(subnet.name);
+      await builders.connect(BOB).setSubnetFeeTreasury(subnetId, FEE_TREASURY);
+
+      const subnetData = await builders.buildersSubnets(subnetId);
+      expect(subnetData.feeTreasury).to.eq(FEE_TREASURY);
+    });
+    it('should revert when the Subnet already exist', async () => {
+      await builders.connect(BOB).createSubnet(subnet, metadata);
+      const subnetId = await builders.getSubnetId(subnet.name);
+
+      await expect(builders.setSubnetFeeTreasury(subnetId, BOB)).to.be.revertedWith('BS: not a Subnet owner');
+    });
+    it('should revert when the Subnet already exist', async () => {
+      await builders.connect(BOB).createSubnet(subnet, metadata);
+      const subnetId = await builders.getSubnetId(subnet.name);
+
+      await expect(builders.connect(BOB).setSubnetFeeTreasury(subnetId, ZERO_ADDR)).to.be.revertedWith(
+        'BS: invalid fee treasury',
+      );
     });
   });
 
