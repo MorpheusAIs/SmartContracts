@@ -436,7 +436,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      * `reward` = Σ(`rewardForPeriod`)
      */
     function getPeriodRewardForStake(uint256 virtualStaked_, uint128 from_, uint128 to_) public view returns (uint256) {
-        uint128 period_ = 86400;
+        uint128 period_ = 1 days;
         if (to_ <= from_) {
             return 0;
         }
@@ -456,10 +456,10 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
                 continue;
             }
 
-            uint256 emissionFromPeriodStartToPeriodEnd = getPeriodRewardForBuildersPool(from_, toForPeriod_);
+            uint256 emissionFromPeriodStartToPeriodEnd_ = getPeriodRewardForBuildersPool(from_, toForPeriod_);
             uint256 shareForPeriod_ = (virtualStaked_ * PRECISION) / emissionToPeriodEnd_;
 
-            rewards_ += (shareForPeriod_ * emissionFromPeriodStartToPeriodEnd) / PRECISION;
+            rewards_ += (shareForPeriod_ * emissionFromPeriodStartToPeriodEnd_) / PRECISION;
             from_ = toForPeriod_;
         }
 
