@@ -148,6 +148,24 @@ interface IBuildersV2 is IERC165 {
     event UserMigrated(bytes32 indexed builderPoolId, address indexed user);
 
     /**
+     * The event that is emitted when the migration owner set.
+     * @param migrationOwner The new migration owner.
+     */
+    event MigrationOwnerSet(address migrationOwner);
+
+    /**
+     * The event that is emitted when the BuilderSubnets contract set.
+     * @param builderSubnets The new BuilderSubnets contract.
+     */
+    event BuilderSubnetsSet(address builderSubnets);
+
+    /**
+     * The event that is emitted when the `isPaused` set.
+     * @param isPaused The new value.
+     */
+    event IsPausedSet(bool isPaused);
+
+    /**
      * The function to set the fee config address.
      * @param feeConfig_ The address of the fee config.
      */

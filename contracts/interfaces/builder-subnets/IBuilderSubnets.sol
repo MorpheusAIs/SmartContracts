@@ -102,15 +102,21 @@ interface IBuilderSubnets is IERC165 {
 
     /**
      * The event that is emitted when the max staked share from builders pool is set.
-     * @param maxStakedShareFromBuildersPool The new value.
+     * @param maxStakedShareForBuildersPool The new value.
      */
-    event MaxStakedShareFromBuildersPoolSet(uint128 maxStakedShareFromBuildersPool);
+    event MaxStakedShareForBuildersPoolSet(uint256 maxStakedShareForBuildersPool);
 
     /**
      * The event that is emitted when the minimal withdraw lock period after stake is set.
      * @param minWithdrawLockPeriodAfterStake The minimal withdraw lock period.
      */
     event MinimalWithdrawLockPeriodSet(uint256 minWithdrawLockPeriodAfterStake);
+
+    /**
+     * The event that is emitted when the `isMigrationOver` is set.
+     * @param isMigrationOver The new value.
+     */
+    event IsMigrationOverSet(bool isMigrationOver);
 
     /**
      * The event that is emitted when the Subnet created or edited.
@@ -162,6 +168,14 @@ interface IBuilderSubnets is IERC165 {
     event Claimed(bytes32 indexed subnetId, address stakerAddress, Staker staker, uint256 amount);
 
     /**
+     * The event that is emitted when the Staker collect the rewards.
+     * @param subnetId The Subnet ID.
+     * @param stakerAddress The Staker address.
+     * @param staker The Staker struct.
+     */
+    event PendingRewardsCollected(bytes32 indexed subnetId, address stakerAddress, Staker staker);
+
+    /**
      * The function to set the FeeConfig contract address.
      * @param feeConfig_ The address of the new FeeConfig.
      */
@@ -191,16 +205,16 @@ interface IBuilderSubnets is IERC165 {
     function setRewardCalculationStartsAt(uint128 rewardCalculationStartsAt_) external;
 
     /**
-     * The function to set `maxStakedShareFromBuildersPool` variable
-     * @dev This variable is required for calculations, sets the percent for the
+     * The function to set `setMaxStakedShareForBuildersPool` variable
+     * @dev This variable is required for maxStakedShareForBuildersPool_, sets the percent for the
      * current smart contract to the total reward pool. Since the current contract
      * can be deployed on multiple networks and the reward pool is shared, we can
      * define the share of the reward pool for the current contract (e.g. 20% for
      * a contract on Arbitrum and 80% on Base). The amount of stakes into this contract
      * cannot exceed the share of the total reward pool for this contract.
-     * @param maxStakedShareFromBuildersPool_ The new value.
+     * @param maxStakedShareForBuildersPool_ The new value.
      */
-    function setMaxStakedShareFromBuildersPool(uint128 maxStakedShareFromBuildersPool_) external;
+    function setMaxStakedShareForBuildersPool(uint256 maxStakedShareForBuildersPool_) external;
 
     /**
      * The function to set `minWithdrawLockPeriodAfterStake` variable
@@ -284,6 +298,14 @@ interface IBuilderSubnets is IERC165 {
      * @param to_ Rewards calculates to this timestamp.
      */
     function collectPendingRewards(bytes32 subnetId_, address stakerAddress_, uint128 to_) external;
+
+    /**
+     * The function to receive the max total virtual stake for the current contract and network.
+     * Used when Staker stake or withdraw, total stake can't exceed this result.
+     * @param to_ To calculated timestamp
+     */
+    function getMaxTotalVirtualStaked(uint128 to_) external view returns (uint256);
+
     /**
      * The function to receive the Staker power factor.
      * @param subnetId_ The Subnet ID.

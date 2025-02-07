@@ -160,10 +160,30 @@ const pools = [
   //   name: 'Aigent Z',
   //   admin: '0x17E1B6c2BfBC721c1dc03d488746E0C6F7ef5242',
   // },
+  // {
+  //   name: 'PALcapital',
+  //   admin: '0x920d2b328F2058516496F932F6247d9347C594D2',
+  // },
+  // {
+  //   name: 'Panorama',
+  //   admin: '0x25b7a50429D89A6E13DfF47CcbE0e54E6cFC65B0',
+  // },
   {
-    name: 'PALcapital',
-    admin: '0x920d2b328F2058516496F932F6247d9347C594D2',
+    name: 'Tales & Conquests',
+    admin: '0x55D6c73306A7af0e68c004147f86A98f16130b3b',
   },
+  // {
+  //   name: 'Morpheus Asia',
+  //   admin: '0x6A462474F4F1DF3527DF76cDD4C1bc4d9FB60029',
+  // },
+  // {
+  //   name: 'Loky',
+  //   admin: '0xf15E95503d2014DE612D54DaD920D4aa00970F53',
+  // },
+  // {
+  //   name: 'MySuperAgent',
+  //   admin: '0x67760BaD63Cc00294764ef7d1F6570e864c196C1',
+  // },
 ];
 
 const defaultPoolParams = {
@@ -173,14 +193,19 @@ const defaultPoolParams = {
   // poolStart: 1737990000, // Monday, 27 January 2025 р., 15:00:00
   // poolStart: 1738062000, // Tuesday, 28 January 2025 р., 11:00:00
   // poolStart: 1738185300, // Wednesday, 29 January 2025 р., 21:15:00
-  poolStart: 1738260900, // Thursday, 30 January 2025 р., 18:15:00
+  // poolStart: 1738260900, // Thursday, 30 January 2025 р., 18:15:0
+  poolStart: 1738686600, // Tuesday, 4 February 2025 р., 16:30:00
   withdrawLockPeriodAfterDeposit: 2592000, // 30 days
   claimLockEnd: 1739577600, // Saturday, 15 February 2025 р., 00:00:00
   minimalDeposit: wei(0.001),
 };
 
 module.exports = async function (deployer: Deployer) {
+  // Base
   const builders = await deployer.deployed(Builders__factory, '0x42BB446eAE6dca7723a9eBdb81EA88aFe77eF4B9');
+
+  // Arbitrum
+  // const builders = await deployer.deployed(Builders__factory, '0xC0eD68f163d44B6e9985F0041fDf6f67c6BCFF3f');
 
   for (let i = 0; i < pools.length; i++) {
     await builders.createBuilderPool({ ...pools[i], ...defaultPoolParams });
@@ -189,3 +214,4 @@ module.exports = async function (deployer: Deployer) {
 
 // npx hardhat migrate --only 12
 // npx hardhat migrate --network base --only 12
+// npx hardhat migrate --network arbitrum --only 12

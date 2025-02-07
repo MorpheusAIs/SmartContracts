@@ -10,7 +10,7 @@ import {
   getDefaultSubnetMetadata,
   getRealBuildersPoolData,
 } from '../helpers/builders-helper';
-import { deployBuilderSubnets, deployFeeConfig, deployMOROFT } from '../helpers/deployers';
+import { deployBuilderSubnets, deployFeeConfig, deployInterfaceMock, deployMOROFT } from '../helpers/deployers';
 import { oneDay, oneHour } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
@@ -86,10 +86,12 @@ describe('BuilderSubnets', () => {
 
   describe('supportsInterface', () => {
     it('should support IBuilderSubnets', async () => {
-      expect(await builders.supportsInterface('0x99ddf593')).to.be.true;
+      const interfaceMock = await deployInterfaceMock();
+      expect(await builders.supportsInterface(await interfaceMock.getIBuilderSubnetsInterfaceId())).to.be.true;
     });
     it('should support IERC165', async () => {
-      expect(await builders.supportsInterface('0x01ffc9a7')).to.be.true;
+      const interfaceMock = await deployInterfaceMock();
+      expect(await builders.supportsInterface(await interfaceMock.getIERC165InterfaceId())).to.be.true;
     });
   });
 
@@ -155,20 +157,20 @@ describe('BuilderSubnets', () => {
     });
   });
 
-  describe('#setMaxStakedShareFromBuildersPool', () => {
+  describe('#setMaxStakedShareForBuildersPool', () => {
     it('should set new value', async () => {
-      await builders.setMaxStakedShareFromBuildersPool(wei(1, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
 
-      const data = await builders.maxStakedShareFromBuildersPool();
+      const data = await builders.maxStakedShareForBuildersPool();
       expect(data).to.equal(wei(1, 25));
     });
     it('should revert if called by non-owner', async () => {
-      await expect(builders.connect(BOB).setMaxStakedShareFromBuildersPool(wei(1, 25))).to.be.revertedWith(
+      await expect(builders.connect(BOB).setMaxStakedShareForBuildersPool(wei(1, 25))).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
     it('should revert if invalid percent', async () => {
-      await expect(builders.setMaxStakedShareFromBuildersPool(wei(1.0001, 25))).to.be.revertedWith(
+      await expect(builders.setMaxStakedShareForBuildersPool(wei(1.0001, 25))).to.be.revertedWith(
         'BS: invalid percent',
       );
     });
@@ -443,7 +445,7 @@ describe('BuilderSubnets', () => {
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(getDefaultBuildersPoolData().payoutStart);
       await builders.setBuildersPoolData(getDefaultBuildersPoolData());
-      await builders.setMaxStakedShareFromBuildersPool(wei(1, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
 
       subnetId = await builders.getSubnetId(subnet.name);
     });
@@ -655,7 +657,7 @@ describe('BuilderSubnets', () => {
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(getDefaultBuildersPoolData().payoutStart);
       await builders.setBuildersPoolData(getDefaultBuildersPoolData());
-      await builders.setMaxStakedShareFromBuildersPool(wei(1, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
 
       subnetId = await builders.getSubnetId(subnet.name);
 
@@ -806,7 +808,7 @@ describe('BuilderSubnets', () => {
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(99 * oneDay);
       await builders.setBuildersPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
-      await builders.setMaxStakedShareFromBuildersPool(wei(1, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
 
       subnetId = await builders.getSubnetId(subnet.name);
     });
@@ -909,7 +911,7 @@ describe('BuilderSubnets', () => {
       await token.connect(MINTER).mint(BOB, wei(10000));
       await token.connect(BOB).approve(builders, wei(10000));
 
-      await builders.setMaxStakedShareFromBuildersPool(wei(0.6, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(0.6, 25));
 
       const builderPool = getRealBuildersPoolData();
       await builders.setBuildersPoolData(builderPool);
@@ -951,7 +953,7 @@ describe('BuilderSubnets', () => {
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(99 * oneDay);
       await builders.setBuildersPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
-      await builders.setMaxStakedShareFromBuildersPool(wei(1, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
 
       subnetId = await builders.getSubnetId(subnet.name);
     });
@@ -996,7 +998,7 @@ describe('BuilderSubnets', () => {
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(99 * oneDay);
       await builders.setBuildersPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
-      await builders.setMaxStakedShareFromBuildersPool(wei(1, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
 
       subnetId = await builders.getSubnetId(subnet.name);
     });
@@ -1005,7 +1007,7 @@ describe('BuilderSubnets', () => {
       await token.connect(MINTER).mint(BOB, wei(10000));
       await token.connect(BOB).approve(builders, wei(10000));
 
-      await builders.setMaxStakedShareFromBuildersPool(wei(0.6, 25));
+      await builders.setMaxStakedShareForBuildersPool(wei(0.6, 25));
 
       const builderPool = getRealBuildersPoolData();
       await builders.setBuildersPoolData(builderPool);
@@ -1096,6 +1098,15 @@ describe('BuilderSubnets', () => {
       // 10 / (1379 + 193) * 193 + 10 / (1379 + 193 + 192 / 24 * 18) * (192 / 24 * 18) = 2.06689620811758
       res = await builders.getPeriodRewardForStake(wei(10), oneDay * 97, oneDay * 98 + oneHour * 18);
       expect(res).closeTo(wei(2.0668), wei(0.0001));
+    });
+    it('should return 0 when `from` larger or equal then `to`', async () => {
+      let res = wei(0);
+
+      res = await builders.getPeriodRewardForStake(wei(10), oneDay * 2, oneDay * 2);
+      expect(res).to.eq(wei(0));
+
+      res = await builders.getPeriodRewardForStake(wei(10), oneDay * 2 + 1, oneDay * 2);
+      expect(res).to.eq(wei(0));
     });
   });
 });

@@ -374,6 +374,8 @@ contract BuildersV2 is IBuildersV2, UUPSUpgradeable, OwnableUpgradeable {
 
     function setMigrationOwner(address value_) external onlyOwner {
         migrationOwner = value_;
+
+        emit MigrationOwnerSet(value_);
     }
 
     function setBuilderSubnets(address value_) external onlyMigrationOwner {
@@ -382,10 +384,14 @@ contract BuildersV2 is IBuildersV2, UUPSUpgradeable, OwnableUpgradeable {
         IERC20(depositToken).approve(value_, type(uint256).max);
 
         builderSubnets = value_;
+
+        emit BuilderSubnetsSet(value_);
     }
 
     function setIsPaused(bool value_) external onlyMigrationOwner {
         isPaused = value_;
+
+        emit IsPausedSet(value_);
     }
 
     function migrateUserStake(bytes32 builderPoolId_, address user_) external onlyMigrationOwner whenPaused {
