@@ -8,12 +8,13 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
-import {IBuilders, IERC165} from "../interfaces/builders/IBuilders.sol";
+import {IBuildersV2, IERC165} from "../interfaces/builders/IBuildersV2.sol";
 import {IBuildersTreasury} from "../interfaces/builders/IBuildersTreasury.sol";
+import {IBuilderSubnets} from "../interfaces/builder-subnets/IBuilderSubnets.sol";
 
 import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
 
-contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
+contract BuildersV2 is IBuildersV2, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     address public feeConfig;
@@ -32,6 +33,16 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
 
     bytes32 private constant FEE_WITHDRAW_OPERATION = "withdraw";
     bytes32 private constant FEE_CLAIM_OPERATION = "claim";
+
+    /**********************************************************************************************/
+    /*** V2 updates, storage                                                                    ***/
+    /**********************************************************************************************/
+
+    address public migrationOwner;
+    address public builderSubnets;
+    bool public isPaused;
+    uint256 public totalDepositsMigrated;
+    mapping(bytes32 builderPoolId => mapping(address user => bool)) public isBuilderPoolUserMigrate;
 
     modifier poolExists(bytes32 builderPoolId_) {
         require(_poolExists(builderPoolId_), "BU: pool doesn't exist");
@@ -60,7 +71,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
-        return interfaceId_ == type(IBuilders).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+        return interfaceId_ == type(IBuildersV2).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     }
 
     function setFeeConfig(address feeConfig_) public onlyOwner {
@@ -94,7 +105,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit MinimalWithdrawLockPeriodSet(minimalWithdrawLockPeriod_);
     }
 
-    function createBuilderPool(BuilderPool calldata builderPool_) public {
+    function createBuilderPool(BuilderPool calldata builderPool_) public whenNotPaused {
         bytes32 builderPoolId_ = getPoolId(builderPool_.name);
 
         require(!_poolExists(builderPoolId_), "BU: pool already exist");
@@ -106,7 +117,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit BuilderPoolCreated(builderPoolId_, builderPool_);
     }
 
-    function editBuilderPool(BuilderPool calldata builderPool_) external {
+    function editBuilderPool(BuilderPool calldata builderPool_) external whenNotPaused {
         bytes32 builderPoolId_ = getPoolId(builderPool_.name);
 
         require(_poolExists(builderPoolId_), "BU: pool doesn't exist");
@@ -126,7 +137,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit BuilderPoolEdited(builderPoolId_, builderPool_);
     }
 
-    function deposit(bytes32 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) {
+    function deposit(bytes32 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) whenNotPaused {
         require(amount_ > 0, "BU: nothing to deposit");
 
         address user_ = _msgSender();
@@ -147,7 +158,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit UserDeposited(builderPoolId_, user_, amount_);
     }
 
-    function withdraw(bytes32 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) {
+    function withdraw(bytes32 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) whenNotPaused {
         address user_ = _msgSender();
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
@@ -180,7 +191,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         emit FeePaid(user_, FEE_WITHDRAW_OPERATION, fee_, treasuryAddress_);
     }
 
-    function claim(bytes32 builderPoolId_, address receiver_) external poolExists(builderPoolId_) {
+    function claim(bytes32 builderPoolId_, address receiver_) external poolExists(builderPoolId_) whenNotPaused {
         address user_ = _msgSender();
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
@@ -337,4 +348,61 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}
+
+    /**********************************************************************************************/
+    /*** V2 updates, functionality                                                              ***/
+    /**********************************************************************************************/
+
+    function version() external pure returns (uint256) {
+        return 2;
+    }
+
+    modifier onlyMigrationOwner() {
+        require(migrationOwner == _msgSender(), "BU: caller is not the migration owner");
+        _;
+    }
+
+    modifier whenNotPaused() {
+        require(!isPaused, "BU: paused");
+        _;
+    }
+
+    modifier whenPaused() {
+        require(isPaused, "BU: not paused");
+        _;
+    }
+
+    function setMigrationOwner(address value_) external onlyOwner {
+        migrationOwner = value_;
+
+        emit MigrationOwnerSet(value_);
+    }
+
+    function setBuilderSubnets(address value_) external onlyMigrationOwner {
+        require(IERC165(value_).supportsInterface(type(IBuilderSubnets).interfaceId), "BU: invalid contract");
+
+        IERC20(depositToken).approve(value_, type(uint256).max);
+
+        builderSubnets = value_;
+
+        emit BuilderSubnetsSet(value_);
+    }
+
+    function setIsPaused(bool value_) external onlyMigrationOwner {
+        isPaused = value_;
+
+        emit IsPausedSet(value_);
+    }
+
+    function migrateUserStake(bytes32 builderPoolId_, address user_) external onlyMigrationOwner whenPaused {
+        require(!isBuilderPoolUserMigrate[builderPoolId_][user_], "BU: user already migrate");
+        UserData storage userData = usersData[user_][builderPoolId_];
+
+        IBuilderSubnets(builderSubnets).stake(builderPoolId_, user_, userData.deposited, 0);
+
+        isBuilderPoolUserMigrate[builderPoolId_][user_] = true;
+        totalDepositsMigrated += userData.deposited;
+
+        emit UserMigrated(builderPoolId_, user_);
+    }
 }
