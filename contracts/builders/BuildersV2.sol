@@ -394,7 +394,21 @@ contract BuildersV2 is IBuildersV2, UUPSUpgradeable, OwnableUpgradeable {
         emit IsPausedSet(value_);
     }
 
-    function migrateUserStake(bytes32 builderPoolId_, address user_) external onlyMigrationOwner whenPaused {
+    function migrateUsersStake(
+        bytes32[] calldata builderPoolIds_,
+        address[] calldata users_
+    ) external onlyMigrationOwner whenPaused {
+        require(builderPoolIds_.length == users_.length, "BU: invalid array length");
+        for (uint256 i = 0; i < users_.length; i++) {
+            _migrateUserStake(builderPoolIds_[i], users_[i]);
+        }
+    }
+
+    function migrateUserStake(bytes32 builderPoolId_, address user_) public onlyMigrationOwner whenPaused {
+        _migrateUserStake(builderPoolId_, user_);
+    }
+
+    function _migrateUserStake(bytes32 builderPoolId_, address user_) private {
         require(!isBuilderPoolUserMigrate[builderPoolId_][user_], "BU: user already migrate");
         UserData storage userData = usersData[user_][builderPoolId_];
 

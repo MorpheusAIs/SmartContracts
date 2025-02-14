@@ -31,6 +31,10 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /** @dev Staker tokens locked for this period (at least) after the stake */
     uint256 public minWithdrawLockPeriodAfterStake;
 
+    /** @dev `subnetCreationFeeAmount` is taken from the Staker when the Subnet is created and sent to the `subnetCreationFeeTreasury` */
+    uint256 public subnetCreationFeeAmount;
+    address public subnetCreationFeeTreasury;
+
     /** @dev This variable is required for calculations, it sets the time at which
      * the calculation of rewards will start. That is, before this time the rewards
      * will not be calculated.
@@ -147,6 +151,18 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit MinimalWithdrawLockPeriodSet(minWithdrawLockPeriodAfterStake_);
     }
 
+    function setSubnetCreationFee(
+        uint256 subnetCreationFeeAmount_,
+        address subnetCreationFeeTreasury_
+    ) public onlyOwner {
+        require(subnetCreationFeeTreasury_ != address(0), "BS: invalid creation fee treasury");
+
+        subnetCreationFeeAmount = subnetCreationFeeAmount_;
+        subnetCreationFeeTreasury = subnetCreationFeeTreasury_;
+
+        emit SubnetCreationFeeSet(subnetCreationFeeAmount_, subnetCreationFeeTreasury_);
+    }
+
     function setIsMigrationOver(bool value_) external onlyOwner {
         isMigrationOver = value_;
 
@@ -174,10 +190,15 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             require(subnet_.startsAt > block.timestamp, "BS: invalid starts at timestamp");
         }
 
+        if (subnetCreationFeeAmount > 0) {
+            IERC20(token).safeTransferFrom(_msgSender(), subnetCreationFeeTreasury, subnetCreationFeeAmount);
+        }
+
         buildersSubnets[subnetId_] = subnet_;
         buildersSubnetsMetadata[subnetId_] = metadata_;
 
         emit SubnetEdited(subnetId_, subnet_);
+        emit SubnetMetadataEdited(subnetId_, metadata_);
     }
 
     function editSubnetMetadata(

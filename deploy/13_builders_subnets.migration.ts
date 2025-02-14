@@ -1,4 +1,5 @@
 import { Deployer } from '@solarity/hardhat-migrate';
+import { readFileSync } from 'fs';
 import { ethers } from 'hardhat';
 
 import {
@@ -12,50 +13,31 @@ import {
 } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
-// BASE setup
-const buildersAddress = '0x42BB446eAE6dca7723a9eBdb81EA88aFe77eF4B9';
-const feeConfig = '0x845FBB4B3e2207BF03087b8B94D2430AB11088eE';
-const stakeToken = '0x7431aDa8a591C955a994a21710752EF9b882b8e3';
-const treasury = '0x19ec1E4b714990620edf41fE28e9a1552953a7F4'; // TODO: recheck
-const minWithdrawLockPeriodAfterStake = 604800; // TODO: recheck
-const maxShareForNetwork = wei(1, 25); // TODO: recheck
+// Global setup
 const builderPoolData = {
   initialAmount: wei(3456),
   decreaseAmount: wei(0.59255872824),
   payoutStart: 1707393600,
   interval: 86400,
 };
-const rewardCalculationStartsAt = 1739577600; // Saturday, 15 February 2025 р., 00:00:00,
 
-const subnetLayout = {
-  name: '',
-  owner: '',
-  minStake: '',
-  fee: wei(1, 25),
-  feeTreasury: '',
-  startsAt: 1736899200, // Wednesday, 15 January 2025 р., 00:00:00
-  withdrawLockPeriodAfterStake: '',
-  minClaimLockEnd: 1739577600, // Saturday, 15 February 2025 р., 00:00:00,
-};
-const subnets = [
-  {
-    name: 'Morpheus Node',
-    metadata: {
-      slug: 'Slug',
-      description: 'Description',
-      website: 'Website',
-      image: 'Image',
-    },
-    users: ['0x76405775eb54767f1f95a9fd1ea5492b0204d87a', '0xebe2a63d8c69b16e58f75b6f221b8ea16745383e'],
-  },
-];
+// BASE setup
+const buildersAddress = '0x42BB446eAE6dca7723a9eBdb81EA88aFe77eF4B9';
+const feeConfig = '0x845FBB4B3e2207BF03087b8B94D2430AB11088eE';
+const stakeToken = '0x7431aDa8a591C955a994a21710752EF9b882b8e3';
+
+// Setup from Morpheus
+const treasury = '0x19ec1E4b714990620edf41fE28e9a1552953a7F4';
+const minWithdrawLockPeriodAfterStake = 604800;
+const maxShareForNetwork = wei(1, 25);
+const rewardCalculationStartsAt = 1739577600;
 
 module.exports = async function (deployer: Deployer) {
   const builderSubnets = await deployBuildersSubnets(deployer);
   const buildersV2Impl = await deployBuildersV2(deployer);
   const builders = await deployer.deployed(Builders__factory, buildersAddress);
 
-  // MULTISIG EXECUTION ONLY
+  // MULTISIG EXECUTION ONLY, added for the tests
   const buildersOwner = await getBuildersOwner(builders);
   await builders.connect(buildersOwner).upgradeTo(buildersV2Impl);
   const buildersV2 = await deployer.deployed(BuildersV2__factory, buildersAddress);
@@ -67,25 +49,7 @@ module.exports = async function (deployer: Deployer) {
   await buildersV2.setIsPaused(true);
   // END
 
-  for (let i = 0; i < subnets.length; i++) {
-    const subnetId = await buildersV2.getPoolId(subnets[i].name);
-    const existedSubnet = await buildersV2.builderPools(subnetId);
-
-    const subnet = {
-      ...subnetLayout,
-      name: subnets[i].name,
-      owner: existedSubnet.admin,
-      minStake: existedSubnet.minimalDeposit,
-      feeTreasury: existedSubnet.admin,
-      withdrawLockPeriodAfterStake: existedSubnet.withdrawLockPeriodAfterDeposit,
-    };
-
-    await builderSubnets.createSubnet(subnet, subnets[i].metadata);
-
-    for (let k = 0; k < subnets[i].users.length; k++) {
-      await buildersV2.migrateUserStake(subnetId, subnets[i].users[k]);
-    }
-  }
+  await migrate(buildersV2, builderSubnets, 4, 5);
 };
 
 const deployBuildersSubnets = async (deployer: Deployer): Promise<BuilderSubnets> => {
@@ -95,7 +59,7 @@ const deployBuildersSubnets = async (deployer: Deployer): Promise<BuilderSubnets
   });
   const contract = await deployer.deployed(BuilderSubnets__factory, await proxy.getAddress());
   await contract.BuilderSubnets_init(stakeToken, feeConfig, treasury, minWithdrawLockPeriodAfterStake);
-  await contract.setMaxStakedShareFromBuildersPool(maxShareForNetwork);
+  await contract.setMaxStakedShareForBuildersPool(maxShareForNetwork);
   await contract.setBuildersPoolData(builderPoolData);
   await contract.setRewardCalculationStartsAt(rewardCalculationStartsAt);
 
@@ -113,6 +77,50 @@ const getBuildersOwner = async (builders: Builders) => {
   await ethers.provider.send('hardhat_setBalance', [buildersOwner.address, `0x${ethers.parseEther('1').toString(16)}`]);
 
   return buildersOwner;
+};
+
+const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, from = 0, to = 0) => {
+  const configPath = `deploy/data/subgraph-output.json`;
+
+  type Subnet = {
+    id: string;
+    name: string;
+    admin: string;
+    startsAt: number;
+    minimalDeposit: number;
+    withdrawLockPeriodAfterDeposit: number;
+    totalUsers: number;
+    users: string[];
+    description: string;
+    website: string;
+  };
+  const data = JSON.parse(readFileSync(configPath, 'utf-8')) as Subnet[];
+
+  for (let i = from; i < to; i++) {
+    const subnet = {
+      name: data[i].name,
+      owner: data[i].admin,
+      minStake: data[i].minimalDeposit,
+      fee: wei(1, 25),
+      feeTreasury: data[i].admin,
+      startsAt: data[i].startsAt,
+      withdrawLockPeriodAfterStake: data[i].withdrawLockPeriodAfterDeposit,
+      minClaimLockEnd: data[i].startsAt,
+    };
+    const metadata = {
+      slug: data[i].description,
+      description: '',
+      website: data[i].website,
+      image: '',
+    };
+
+    await builderSubnets.createSubnet(subnet, metadata);
+
+    const subnetIds = data[i].users.map(() => data[i].id);
+    await buildersV2.migrateUsersStake(subnetIds, data[i].users);
+
+    console.log(`Subnet ${data[i].name} migrated`);
+  }
 };
 
 // npx hardhat migrate --only 13

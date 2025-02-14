@@ -37,8 +37,8 @@ type PoolInitInfo = IDistribution.PoolStruct & {
   amounts: BigNumberish[];
 };
 
-export function parseConfig(): Config {
-  const configPath = `deploy/data/config.json`;
+export function parseConfig(file?: string): Config {
+  const configPath = `deploy/data/${file ?? 'config.json'}`;
 
   const config: Config = JSON.parse(readFileSync(configPath, 'utf-8')) as Config;
 

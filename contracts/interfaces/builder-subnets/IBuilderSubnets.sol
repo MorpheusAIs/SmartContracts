@@ -113,6 +113,12 @@ interface IBuilderSubnets is IERC165 {
     event MinimalWithdrawLockPeriodSet(uint256 minWithdrawLockPeriodAfterStake);
 
     /**
+     * The event that is emitted when the Subnet creation fee and treasury changed
+     * @param amount The token amount
+     * @param treasury The treasury address
+     */
+    event SubnetCreationFeeSet(uint256 amount, address treasury);
+    /**
      * The event that is emitted when the `isMigrationOver` is set.
      * @param isMigrationOver The new value.
      */

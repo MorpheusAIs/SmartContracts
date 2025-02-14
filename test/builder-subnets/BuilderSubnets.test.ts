@@ -190,6 +190,28 @@ describe('BuilderSubnets', () => {
     });
   });
 
+  describe('#setSubnetCreationFee', () => {
+    it('should set new value', async () => {
+      await builders.setSubnetCreationFee(wei(10), BOB);
+      expect(await builders.subnetCreationFeeAmount()).to.equal(wei(10));
+      expect(await builders.subnetCreationFeeTreasury()).to.equal(BOB);
+
+      await builders.setSubnetCreationFee(wei(11), OWNER);
+      expect(await builders.subnetCreationFeeAmount()).to.equal(wei(11));
+      expect(await builders.subnetCreationFeeTreasury()).to.equal(OWNER);
+    });
+    it('should revert if treasury is invalid', async () => {
+      await expect(builders.setSubnetCreationFee(wei(10), ZERO_ADDR)).to.be.revertedWith(
+        'BS: invalid creation fee treasury',
+      );
+    });
+    it('should revert if called by non-owner', async () => {
+      await expect(builders.connect(BOB).setSubnetCreationFee(1, BOB)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
+  });
+
   describe('#setIsMigrationOver', () => {
     it('should set new value', async () => {
       await builders.setIsMigrationOver(true);
@@ -233,6 +255,15 @@ describe('BuilderSubnets', () => {
       expect(subnetMetadata.description).to.eq(metadata.description);
       expect(subnetMetadata.image).to.eq(metadata.image);
       expect(subnetMetadata.website).to.eq(metadata.website);
+    });
+    it('should create Subnet and pay creation fee', async () => {
+      await builders.setSubnetCreationFee(wei(10), OWNER);
+      await builders.setIsMigrationOver(true);
+      await setNextTime(oneDay * 90);
+      await builders.connect(BOB).createSubnet({ ...subnet, owner: BOB }, metadata);
+
+      expect(await token.balanceOf(BOB)).to.eq(wei(990));
+      expect(await token.balanceOf(OWNER)).to.eq(wei(1010));
     });
     it('should create few Subnets', async () => {
       await builders.createSubnet(subnet, metadata);

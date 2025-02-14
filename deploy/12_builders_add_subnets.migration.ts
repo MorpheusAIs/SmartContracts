@@ -168,10 +168,10 @@ const pools = [
   //   name: 'Panorama',
   //   admin: '0x25b7a50429D89A6E13DfF47CcbE0e54E6cFC65B0',
   // },
-  {
-    name: 'Tales & Conquests',
-    admin: '0x55D6c73306A7af0e68c004147f86A98f16130b3b',
-  },
+  // {
+  //   name: 'Tales & Conquests',
+  //   admin: '0x55D6c73306A7af0e68c004147f86A98f16130b3b',
+  // },
   // {
   //   name: 'Morpheus Asia',
   //   admin: '0x6A462474F4F1DF3527DF76cDD4C1bc4d9FB60029',
@@ -184,6 +184,26 @@ const pools = [
   //   name: 'MySuperAgent',
   //   admin: '0x67760BaD63Cc00294764ef7d1F6570e864c196C1',
   // },
+  // {
+  //   name: 'NounspaceTom',
+  //   admin: '0x06AE622bF2029Db79Bdebd38F723f1f33f95F6C5',
+  // },
+  {
+    name: 'Tales & Conquest',
+    admin: '0x55D6c73306A7af0e68c004147f86A98f16130b3b',
+  },
+  // {
+  //   name: 'Katara',
+  //   admin: '0xCd8f007AAE316b15BAA10c650eDEB3fe08A75999',
+  // },
+  // {
+  //   name: 'MorpheusAI',
+  //   admin: '0x762BDda2cD7cA2760922694B034F10A73A5DE0D4',
+  // },
+  // {
+  //   name: 'DAIS',
+  //   admin: '0x28BFe7A0FC7d541aA8Ee1240f1551d65DCa19291',
+  // },
 ];
 
 const defaultPoolParams = {
@@ -194,7 +214,8 @@ const defaultPoolParams = {
   // poolStart: 1738062000, // Tuesday, 28 January 2025 р., 11:00:00
   // poolStart: 1738185300, // Wednesday, 29 January 2025 р., 21:15:00
   // poolStart: 1738260900, // Thursday, 30 January 2025 р., 18:15:0
-  poolStart: 1738686600, // Tuesday, 4 February 2025 р., 16:30:00
+  // poolStart: 1738686600, // Tuesday, 4 February 2025 р., 16:30:00
+  poolStart: 1739174400, // Monday, 10 February 2025 р., 08:00:00
   withdrawLockPeriodAfterDeposit: 2592000, // 30 days
   claimLockEnd: 1739577600, // Saturday, 15 February 2025 р., 00:00:00
   minimalDeposit: wei(0.001),
@@ -202,10 +223,10 @@ const defaultPoolParams = {
 
 module.exports = async function (deployer: Deployer) {
   // Base
-  const builders = await deployer.deployed(Builders__factory, '0x42BB446eAE6dca7723a9eBdb81EA88aFe77eF4B9');
+  // const builders = await deployer.deployed(Builders__factory, '0x42BB446eAE6dca7723a9eBdb81EA88aFe77eF4B9');
 
   // Arbitrum
-  // const builders = await deployer.deployed(Builders__factory, '0xC0eD68f163d44B6e9985F0041fDf6f67c6BCFF3f');
+  const builders = await deployer.deployed(Builders__factory, '0xC0eD68f163d44B6e9985F0041fDf6f67c6BCFF3f');
 
   for (let i = 0; i < pools.length; i++) {
     await builders.createBuilderPool({ ...pools[i], ...defaultPoolParams });
