@@ -28,7 +28,7 @@ export const getDefaultSubnet = (
     feeTreasury: feeTreasury,
     startsAt: 100 * oneDay,
     withdrawLockPeriodAfterStake: 2 * oneDay,
-    minClaimLockEnd: 101 * oneDay,
+    maxClaimLockEnd: 200 * oneDay,
   };
 };
 

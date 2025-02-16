@@ -183,7 +183,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             subnet_.withdrawLockPeriodAfterStake >= minWithdrawLockPeriodAfterStake,
             "BS: invalid withdraw lock period"
         );
-        require(subnet_.minClaimLockEnd >= subnet_.startsAt, "BS: invalid claim lock timestamp");
+        require(subnet_.maxClaimLockEnd >= subnet_.startsAt, "BS: invalid max claim lock end timestamp");
         require(subnet_.fee <= PRECISION, "BS: invalid fee percent");
         require(subnet_.feeTreasury != address(0), "BS: invalid fee treasury");
         if (isMigrationOver && _msgSender() != owner()) {
@@ -240,6 +240,18 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetFeeTreasurySet(subnetId_, oldValue_, newValue_);
     }
 
+    function setSubnetMaxClaimLockEnd(bytes32 subnetId_, uint128 newValue_) public onlySubnetOwner(subnetId_) {
+        BuildersSubnet storage subnet = buildersSubnets[subnetId_];
+        uint128 oldValue_ = subnet.maxClaimLockEnd;
+
+        require(block.timestamp > oldValue_, "BS: the previous value should expire");
+        require(newValue_ > oldValue_, "BS: claim lock end too low");
+
+        subnet.maxClaimLockEnd = newValue_;
+
+        emit SubnetMaxClaimLockEndSet(subnetId_, oldValue_, newValue_);
+    }
+
     function getSubnetId(string memory name_) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(name_));
     }
@@ -270,7 +282,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         IERC20(token).safeTransferFrom(_msgSender(), address(this), amount_);
 
         claimLockEnd_ = uint128(
-            claimLockEnd_.max(subnet.minClaimLockEnd).max(staker.claimLockEnd).max(block.timestamp)
+            (claimLockEnd_.max(staker.claimLockEnd).max(block.timestamp)).min(subnet.maxClaimLockEnd)
         );
 
         _updateStorage(subnetId_, stakerAddress_, staked_, claimLockEnd_, uint128(block.timestamp));
@@ -457,10 +469,10 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      * `reward` = Σ(`rewardForPeriod`)
      */
     function getPeriodRewardForStake(uint256 virtualStaked_, uint128 from_, uint128 to_) public view returns (uint256) {
-        uint128 period_ = 1 days;
         if (to_ <= from_) {
             return 0;
         }
+        uint128 period_ = 1 days;
         uint256 periods_ = (to_ - from_) / period_;
 
         uint256 rewards_ = 0;

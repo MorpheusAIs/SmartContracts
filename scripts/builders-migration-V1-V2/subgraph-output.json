@@ -6,6 +6,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "8",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -27,6 +28,7 @@
     "startsAt": "1738450800",
     "minimalDeposit": "10000000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1740816000",
     "totalUsers": "7",
     "users": [
       "0x1389adc820c6aeaa7568832137b6b25bbf004202",
@@ -47,6 +49,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "6",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -66,6 +69,7 @@
     "startsAt": "1739174400",
     "minimalDeposit": "1000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "604800",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -78,6 +82,7 @@
     "startsAt": "1737145300",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "0",
     "totalUsers": "37",
     "users": [
       "0x0bb67cd6b6049d8a63b03045a1e4ec02b6100483",
@@ -128,6 +133,7 @@
     "startsAt": "1738386000",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1767243600",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -140,6 +146,7 @@
     "startsAt": "1738033200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "1814400",
+    "claimLockEnd": "1739577600",
     "totalUsers": "5",
     "users": [
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
@@ -158,6 +165,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "4",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -175,6 +183,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -191,6 +200,7 @@
     "startsAt": "1738438140",
     "minimalDeposit": "10000000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1740816000",
     "totalUsers": "8",
     "users": [
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
@@ -212,6 +222,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "5",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -230,6 +241,7 @@
     "startsAt": "1738386000",
     "minimalDeposit": "100000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1740718800",
     "totalUsers": "2",
     "users": [
       "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
@@ -245,6 +257,7 @@
     "startsAt": "1738684800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "1",
     "users": ["0x0e4d5032c0b076cb132a10347d940bfbb8354869"],
     "description": "Panorama Block is an initiative being developed in collaboration between faculty and students from UCLA and other leading universities worldwide. We’re building an AI-powered data hub infrastructure designed to automate DeFi plays through the deployment, commercialization, and aggregation of AI agents.",
@@ -257,6 +270,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "4",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -274,6 +288,7 @@
     "startsAt": "1737748800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -289,6 +304,7 @@
     "startsAt": "1738051200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1738137600",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -301,6 +317,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -317,6 +334,7 @@
     "startsAt": "1738260900",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -329,6 +347,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -345,6 +364,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "4",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -362,6 +382,7 @@
     "startsAt": "1737072000",
     "minimalDeposit": "1000000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1738281600",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -374,6 +395,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -389,6 +411,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -405,6 +428,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "19",
     "users": [
       "0x04e8e5aa372d8e2233d2ef26079e23e3309003d5",
@@ -437,6 +461,7 @@
     "startsAt": "1739174400",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "0",
     "users": [],
     "description": "The First Smart Agent on Morpheus / Venice / Nounspace",
@@ -449,6 +474,7 @@
     "startsAt": "1738686600",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "9",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -471,6 +497,7 @@
     "startsAt": "1737748800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "21",
     "users": [
       "0x04e8e5aa372d8e2233d2ef26079e23e3309003d5",
@@ -505,6 +532,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "10",
     "users": [
       "0x04e8e5aa372d8e2233d2ef26079e23e3309003d5",
@@ -528,6 +556,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "5",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -546,6 +575,7 @@
     "startsAt": "1737356400",
     "minimalDeposit": "1000000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1739689200",
     "totalUsers": "1",
     "users": ["0x26827cce25992d47180aad75f3e69cb57d71602b"],
     "description": "",
@@ -558,6 +588,7 @@
     "startsAt": "1737936000",
     "minimalDeposit": "100000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1738368000",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -573,7 +604,8 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
-    "totalUsers": "50",
+    "claimLockEnd": "1739577600",
+    "totalUsers": "51",
     "users": [
       "0x05a1ff0a32bc24265bcb39499d0c5d9a6cb2011c",
       "0x0bb67cd6b6049d8a63b03045a1e4ec02b6100483",
@@ -620,6 +652,7 @@
       "0xd21e2f98305543a34dc82da2158808ecd00b2e65",
       "0xd982ef1a5b3e1d396f668d73a590255a7d90d488",
       "0xdfd887d2e42d6485bf678bd1b2327ceaf691a306",
+      "0xe62653b5328704c50b14e1ebb923a7cf5a033c3e",
       "0xe6560cb68a7460f19a97d8386eff04257a82869d",
       "0xe839c91e61b6747c027a571e94abf3c0ec7a3682",
       "0xe8405ac69c56634bcfeece6c89f1c7dc20c09958",
@@ -636,6 +669,7 @@
     "startsAt": "1738684800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "1",
     "users": ["0x0e4d5032c0b076cb132a10347d940bfbb8354869"],
     "description": "Loky is more than just an AI agent; he's the embodiment of mischief, wit, and razor-sharp market insights. Developed by the DappLooker team, Loky brings data from DappLooker to life through playful banter and keen market analysis.",
@@ -648,6 +682,7 @@
     "startsAt": "1738062000",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "17",
     "users": [
       "0x0bb67cd6b6049d8a63b03045a1e4ec02b6100483",
@@ -678,6 +713,7 @@
     "startsAt": "1738684800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -690,6 +726,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -706,6 +743,7 @@
     "startsAt": "1739399400",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1739399460",
     "totalUsers": "2",
     "users": [
       "0x3476ee81ba812d56b571bcc2e6122de698084e15",
@@ -721,6 +759,7 @@
     "startsAt": "1736967331",
     "minimalDeposit": "1",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "0",
     "totalUsers": "1",
     "users": ["0xe0a35b164f5c5e44e26d357e4ac88e1b8714090f"],
     "description": "",
@@ -733,6 +772,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "11",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -757,6 +797,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -772,6 +813,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -787,6 +829,7 @@
     "startsAt": "1738684800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -802,6 +845,7 @@
     "startsAt": "1737777600",
     "minimalDeposit": "0",
     "withdrawLockPeriodAfterDeposit": "1555200",
+    "claimLockEnd": "1738213200",
     "totalUsers": "1",
     "users": ["0x0e4d5032c0b076cb132a10347d940bfbb8354869"],
     "description": "Aigent Z",
@@ -814,6 +858,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -829,6 +874,7 @@
     "startsAt": "1739174400",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "1",
     "users": ["0xebe2a63d8c69b16e58f75b6f221b8ea16745383e"],
     "description": "An AI agent-driven roleplaying game powered by Morpheus' decentralized inference router.",
@@ -841,6 +887,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -856,6 +903,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -871,6 +919,7 @@
     "startsAt": "1738342800",
     "minimalDeposit": "10000000000000000000",
     "withdrawLockPeriodAfterDeposit": "1209600",
+    "claimLockEnd": "1739509200",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -883,6 +932,7 @@
     "startsAt": "1737748800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -899,6 +949,7 @@
     "startsAt": "1737712800",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -914,6 +965,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "4",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -931,6 +983,7 @@
     "startsAt": "1738796400",
     "minimalDeposit": "1000000000000000000",
     "withdrawLockPeriodAfterDeposit": "1209600",
+    "claimLockEnd": "1741561200",
     "totalUsers": "3",
     "users": [
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
@@ -947,6 +1000,7 @@
     "startsAt": "1737990000",
     "minimalDeposit": "20000000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "24",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -984,6 +1038,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1000,6 +1055,7 @@
     "startsAt": "1738260900",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "11",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1024,6 +1080,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "5",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1042,6 +1099,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "5",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1060,6 +1118,7 @@
     "startsAt": "1739401200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1739401200",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -1072,6 +1131,7 @@
     "startsAt": "1739340000",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1740808800",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -1084,6 +1144,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "5",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1102,6 +1163,7 @@
     "startsAt": "1738195200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1740787200",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1118,6 +1180,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1133,6 +1196,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1149,6 +1213,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1165,6 +1230,7 @@
     "startsAt": "1736967591",
     "minimalDeposit": "0",
     "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "0",
     "totalUsers": "1",
     "users": ["0x4033cf3fc79c1356f62f16899810bdb5a756edb0"],
     "description": "",
@@ -1177,7 +1243,8 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
-    "totalUsers": "79",
+    "claimLockEnd": "1739577600",
+    "totalUsers": "80",
     "users": [
       "0x0819f0d0230c5a0fbf9acfe5d1655aca21108b24",
       "0x0bf0702824980f46ce9be099c91919c5eaf11dd1",
@@ -1248,6 +1315,7 @@
       "0xd8eebd81d63de8170316975128e02b4592e3e70c",
       "0xd982ef1a5b3e1d396f668d73a590255a7d90d488",
       "0xdfd887d2e42d6485bf678bd1b2327ceaf691a306",
+      "0xe62653b5328704c50b14e1ebb923a7cf5a033c3e",
       "0xe6560cb68a7460f19a97d8386eff04257a82869d",
       "0xe6d02beb6854d1a1da0438d7debf72d7f3070fa9",
       "0xe839c91e61b6747c027a571e94abf3c0ec7a3682",
@@ -1269,6 +1337,7 @@
     "startsAt": "1737124200",
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739577600",
     "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",

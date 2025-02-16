@@ -88,6 +88,7 @@ const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, f
     admin: string;
     startsAt: number;
     minimalDeposit: number;
+    claimLockEnd: number;
     withdrawLockPeriodAfterDeposit: number;
     totalUsers: number;
     users: string[];
@@ -105,7 +106,7 @@ const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, f
       feeTreasury: data[i].admin,
       startsAt: data[i].startsAt,
       withdrawLockPeriodAfterStake: data[i].withdrawLockPeriodAfterDeposit,
-      minClaimLockEnd: data[i].startsAt,
+      maxClaimLockEnd: 1740253394, // TODO: fix it to valid timestamp
     };
     const metadata = {
       slug: data[i].description,
@@ -125,6 +126,3 @@ const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, f
 
 // npx hardhat migrate --only 13
 // npx hardhat migrate --network base --only 13
-
-// npx hardhat node --fork https://base-mainnet.infura.io/v3/875e92049d46477ba5fd3a0d22f7b7c3
-// npx hardhat node --fork https://base-mainnet.g.alchemy.com/v2/Q2JhLCkEJ7ucKemN2ofdr25AP8QU48dG

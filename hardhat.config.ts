@@ -31,7 +31,7 @@ function forceTypechain() {
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      initialDate: '1970-01-01T00:00:00Z',
+      // initialDate: '1970-01-01T00:00:00Z',
       gas: 'auto',
       // forking: {
       //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
@@ -54,9 +54,9 @@ const config: HardhatUserConfig = {
       // forking: {
       //   url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
       // },
-      // forking: {
-      //   url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      // },
+      forking: {
+        url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+      },
       // forking: {
       //   url: `https://base-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       //   // blockNumber: 25936700,

@@ -13,6 +13,7 @@ const BUILDERS_QUERY = `
       startsAt
       minimalDeposit
       withdrawLockPeriodAfterDeposit
+      claimLockEnd
       totalUsers
     }
   }
@@ -25,6 +26,7 @@ type BuilderProject = {
   startsAt: number;
   minimalDeposit: number;
   withdrawLockPeriodAfterDeposit: number;
+  claimLockEnd: number;
   totalUsers: number;
 };
 
