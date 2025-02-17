@@ -490,11 +490,6 @@ describe('BuilderSubnets', () => {
         'BS: not a Subnet owner',
       );
     });
-    it('should revert when edit max claim lock end before previous end', async () => {
-      await expect(builders.connect(BOB).setSubnetMaxClaimLockEnd(subnetId, 300 * oneDay)).to.be.revertedWith(
-        'BS: the previous value should expire',
-      );
-    });
     it('should revert when new max claim lock less then previous', async () => {
       await setNextTime(300 * oneDay);
       await expect(builders.connect(BOB).setSubnetMaxClaimLockEnd(subnetId, oneDay)).to.be.revertedWith(

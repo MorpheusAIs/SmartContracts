@@ -31,7 +31,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /** @dev Staker tokens locked for this period (at least) after the stake */
     uint256 public minWithdrawLockPeriodAfterStake;
 
-    /** @dev `subnetCreationFeeAmount` is taken from the Staker when the Subnet is created and sent to the `subnetCreationFeeTreasury` */
+    /** @dev `subnetCreationFeeAmount` is taken from the Builder when the Subnet is created and sent to the `subnetCreationFeeTreasury` */
     uint256 public subnetCreationFeeAmount;
     address public subnetCreationFeeTreasury;
 
@@ -244,7 +244,6 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         BuildersSubnet storage subnet = buildersSubnets[subnetId_];
         uint128 oldValue_ = subnet.maxClaimLockEnd;
 
-        require(block.timestamp > oldValue_, "BS: the previous value should expire");
         require(newValue_ > oldValue_, "BS: claim lock end too low");
 
         subnet.maxClaimLockEnd = newValue_;
