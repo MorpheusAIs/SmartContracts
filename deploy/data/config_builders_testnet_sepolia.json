@@ -1,0 +1,19 @@
+{
+  "feeConfig": {
+    "feeTreasury": "0x19ec1E4b714990620edf41fE28e9a1552953a7F4",
+    "baseFee": 3.25
+  },
+  "mor": "0x34a285a1b1c166420df5b6630132542923b5b27e",
+  "builders": {
+    "treasury": "0x19ec1E4b714990620edf41fE28e9a1552953a7F4",
+    "minWithdrawLockPeriodAfterStake": 300,
+    "maxShareForNetwork": 80,
+    "builderPoolData": {
+      "initialAmount": 3456,
+      "decreaseAmount": 0.59255872824,
+      "payoutStart": 1707393600,
+      "interval": 86400
+    },
+    "feeClaimOperation": 11.75
+  }
+}

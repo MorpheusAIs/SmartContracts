@@ -15,7 +15,7 @@ interface IBuilderSubnets is IERC165 {
         address feeTreasury;
         uint128 startsAt;
         uint128 withdrawLockPeriodAfterStake;
-        uint128 minClaimLockEnd;
+        uint128 maxClaimLockEnd;
     }
 
     struct BuildersSubnetMetadata {
@@ -76,6 +76,15 @@ interface IBuilderSubnets is IERC165 {
      * @param newValue The new Subnet fee treasury.
      */
     event SubnetFeeTreasurySet(bytes32 subnetId, address oldValue, address newValue);
+
+    /**
+     * The event that is emitted when the Subnet max claim lock end changed.
+     * @param subnetId The Subnet ID.
+     * @param oldValue The old Subnet max claim lock end value.
+     * @param newValue The new Subnet max claim lock end value.
+     */
+    event SubnetMaxClaimLockEndSet(bytes32 subnetId, uint128 oldValue, uint128 newValue);
+
     /**
      * The event that is emitted when the FeeConfig contract address is set.
      * @param feeConfig The address of the new FeeConfig contract.
@@ -112,6 +121,12 @@ interface IBuilderSubnets is IERC165 {
      */
     event MinimalWithdrawLockPeriodSet(uint256 minWithdrawLockPeriodAfterStake);
 
+    /**
+     * The event that is emitted when the Subnet creation fee and treasury changed
+     * @param amount The token amount
+     * @param treasury The treasury address
+     */
+    event SubnetCreationFeeSet(uint256 amount, address treasury);
     /**
      * The event that is emitted when the `isMigrationOver` is set.
      * @param isMigrationOver The new value.

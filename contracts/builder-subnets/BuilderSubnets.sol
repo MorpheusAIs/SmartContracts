@@ -31,6 +31,10 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /** @dev Staker tokens locked for this period (at least) after the stake */
     uint256 public minWithdrawLockPeriodAfterStake;
 
+    /** @dev `subnetCreationFeeAmount` is taken from the Builder when the Subnet is created and sent to the `subnetCreationFeeTreasury` */
+    uint256 public subnetCreationFeeAmount;
+    address public subnetCreationFeeTreasury;
+
     /** @dev This variable is required for calculations, it sets the time at which
      * the calculation of rewards will start. That is, before this time the rewards
      * will not be calculated.
@@ -147,6 +151,18 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit MinimalWithdrawLockPeriodSet(minWithdrawLockPeriodAfterStake_);
     }
 
+    function setSubnetCreationFee(
+        uint256 subnetCreationFeeAmount_,
+        address subnetCreationFeeTreasury_
+    ) public onlyOwner {
+        require(subnetCreationFeeTreasury_ != address(0), "BS: invalid creation fee treasury");
+
+        subnetCreationFeeAmount = subnetCreationFeeAmount_;
+        subnetCreationFeeTreasury = subnetCreationFeeTreasury_;
+
+        emit SubnetCreationFeeSet(subnetCreationFeeAmount_, subnetCreationFeeTreasury_);
+    }
+
     function setIsMigrationOver(bool value_) external onlyOwner {
         isMigrationOver = value_;
 
@@ -167,17 +183,22 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             subnet_.withdrawLockPeriodAfterStake >= minWithdrawLockPeriodAfterStake,
             "BS: invalid withdraw lock period"
         );
-        require(subnet_.minClaimLockEnd >= subnet_.startsAt, "BS: invalid claim lock timestamp");
+        require(subnet_.maxClaimLockEnd >= subnet_.startsAt, "BS: invalid max claim lock end timestamp");
         require(subnet_.fee <= PRECISION, "BS: invalid fee percent");
         require(subnet_.feeTreasury != address(0), "BS: invalid fee treasury");
         if (isMigrationOver && _msgSender() != owner()) {
             require(subnet_.startsAt > block.timestamp, "BS: invalid starts at timestamp");
         }
 
+        if (subnetCreationFeeAmount > 0) {
+            IERC20(token).safeTransferFrom(_msgSender(), subnetCreationFeeTreasury, subnetCreationFeeAmount);
+        }
+
         buildersSubnets[subnetId_] = subnet_;
         buildersSubnetsMetadata[subnetId_] = metadata_;
 
         emit SubnetEdited(subnetId_, subnet_);
+        emit SubnetMetadataEdited(subnetId_, metadata_);
     }
 
     function editSubnetMetadata(
@@ -219,6 +240,17 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetFeeTreasurySet(subnetId_, oldValue_, newValue_);
     }
 
+    function setSubnetMaxClaimLockEnd(bytes32 subnetId_, uint128 newValue_) public onlySubnetOwner(subnetId_) {
+        BuildersSubnet storage subnet = buildersSubnets[subnetId_];
+        uint128 oldValue_ = subnet.maxClaimLockEnd;
+
+        require(newValue_ > oldValue_, "BS: claim lock end too low");
+
+        subnet.maxClaimLockEnd = newValue_;
+
+        emit SubnetMaxClaimLockEndSet(subnetId_, oldValue_, newValue_);
+    }
+
     function getSubnetId(string memory name_) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(name_));
     }
@@ -249,7 +281,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         IERC20(token).safeTransferFrom(_msgSender(), address(this), amount_);
 
         claimLockEnd_ = uint128(
-            claimLockEnd_.max(subnet.minClaimLockEnd).max(staker.claimLockEnd).max(block.timestamp)
+            (claimLockEnd_.max(staker.claimLockEnd).max(block.timestamp)).min(subnet.maxClaimLockEnd)
         );
 
         _updateStorage(subnetId_, stakerAddress_, staked_, claimLockEnd_, uint128(block.timestamp));
@@ -436,10 +468,10 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      * `reward` = Σ(`rewardForPeriod`)
      */
     function getPeriodRewardForStake(uint256 virtualStaked_, uint128 from_, uint128 to_) public view returns (uint256) {
-        uint128 period_ = 1 days;
         if (to_ <= from_) {
             return 0;
         }
+        uint128 period_ = 1 days;
         uint256 periods_ = (to_ - from_) / period_;
 
         uint256 rewards_ = 0;
