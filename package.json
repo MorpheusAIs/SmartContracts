@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@arbitrum/token-bridge-contracts": "^1.1.2",
+    "@chainlink/contracts": "^1.3.0",
     "@layerzerolabs/lz-evm-protocol-v2": "^2.1.23",
     "@layerzerolabs/lz-evm-sdk-v1-0.7": "^1.5.16",
     "@layerzerolabs/solidity-examples": "^1.0.0",

@@ -1,6 +1,7 @@
+import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { Deployer, Reporter } from '@solarity/hardhat-migrate';
+import { Signer } from 'ethers';
 import { readFileSync } from 'fs';
-import { ethers } from 'hardhat';
 
 import {
   BuilderSubnets,
@@ -22,6 +23,10 @@ type BuildersTestnetSepoliaConfig = {
     treasury: string;
     minWithdrawLockPeriodAfterStake: number;
     maxShareForNetwork: number;
+    subnetCreationFee: {
+      amount: number;
+      treasury: string;
+    };
     builderPoolData: {
       initialAmount: number;
       decreaseAmount: number;
@@ -33,58 +38,57 @@ type BuildersTestnetSepoliaConfig = {
 };
 
 module.exports = async function (deployer: Deployer) {
-  const impl = await deployer.deployed(BuilderSubnets__factory, '0xCB27aC872bfF99b643c9276041FA4b3CCC713759');
-  const buildersOwner = await ethers.getImpersonatedSigner('0x19ec1E4b714990620edf41fE28e9a1552953a7F4');
-  await impl
-    .connect(buildersOwner)
-    .stake(
-      '0xf3d24210a53e1859e496dd5650f88bc2f9350365c36cd1134da30bd613f6d873',
-      '0x19ec1E4b714990620edf41fE28e9a1552953a7F4',
-      '2345678000000000000',
-      '1739217600',
-    );
+  const signer = await deployer.getSigner();
 
-  // const config = JSON.parse(
-  //   readFileSync('deploy/data/config_builders_testnet_sepolia.json', 'utf-8'),
-  // ) as BuildersTestnetSepoliaConfig;
+  const config = JSON.parse(
+    readFileSync('deploy/data/config_builders_testnet_arbitrum_sepolia.json', 'utf-8'),
+  ) as BuildersTestnetSepoliaConfig;
 
-  // const feeConfig = await deployFeeConfig(deployer, config);
-  // const builderSubnets = await deployBuildersSubnets(deployer, config, await feeConfig.getAddress());
+  const feeConfig = await deployFeeConfig(deployer, config);
+  const builderSubnets = await deployBuildersSubnets(deployer, config, await feeConfig.getAddress());
 
-  // const mor = await deployer.deployed(MOROFT__factory, config.mor);
-  // await mor.approve(await builderSubnets.getAddress(), wei(99999));
+  const mor = await deployer.deployed(MOROFT__factory, config.mor);
+  await mor.approve(await builderSubnets.getAddress(), wei(99999));
 
-  // await feeConfig.setFeeForOperation(
-  //   await builderSubnets.getAddress(),
-  //   await builderSubnets.FEE_CLAIM_OPERATION(),
-  //   wei(config.builders.feeClaimOperation / 100, 25),
-  // );
+  await feeConfig.setFeeForOperation(
+    await builderSubnets.getAddress(),
+    await builderSubnets.FEE_CLAIM_OPERATION(),
+    wei(config.builders.feeClaimOperation / 100, 25),
+  );
 
-  // await builderSubnets.createSubnet(
-  //   {
-  //     name: 'OF Builder #1',
-  //     owner: (await deployer.getSigner()).getAddress(),
-  //     minStake: wei(0.2345678),
-  //     fee: wei(0.0875, 25),
-  //     feeTreasury: (await deployer.getSigner()).getAddress(),
-  //     startsAt: Math.floor(Date.now() / 1000) + 300,
-  //     withdrawLockPeriodAfterStake: config.builders.minWithdrawLockPeriodAfterStake,
-  //     minClaimLockEnd: Math.floor(Date.now() / 1000) + 3000,
-  //   },
-  //   {
-  //     slug: 'Initiative being developed in collaboration between faculty and students from UCLA and other leading universities worldwide.',
-  //     description:
-  //       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi sodales metus et ipsum gravida malesuada. Donec maximus mattis pellentesque. Etiam vitae pulvinar felis, id auctor risus. Duis condimentum dolor quis bibendum consequat. Nunc dolor lacus, bibendum a varius in, faucibus eget justo. Suspendisse lobortis nunc et nibh faucibus iaculis. In finibus fringilla consequat. Fusce quis sagittis mi. Suspendisse in laoreet eros.',
-  //     website: 'https://www.lipsum.com/feed/html',
-  //     image:
-  //       'https://media.istockphoto.com/id/814423752/photo/eye-of-model-with-colorful-art-make-up-close-up.jpg?s=612x612&w=0&k=20&c=l15OdMWjgCKycMMShP8UK94ELVlEGvt7GmB_esHWPYE=',
-  //   },
-  // );
+  await builderSubnets.createSubnet(
+    {
+      name: 'OF Builder #1',
+      owner: await signer.getAddress(),
+      minStake: wei(0.2345678),
+      fee: wei(0.0875, 25),
+      feeTreasury: await signer.getAddress(),
+      startsAt: Math.floor(Date.now() / 1000) - 100,
+      withdrawLockPeriodAfterStake: config.builders.minWithdrawLockPeriodAfterStake,
+      maxClaimLockEnd: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 200,
+    },
+    {
+      slug: 'Initiative being developed in collaboration between faculty and students from UCLA and other leading universities worldwide.',
+      description:
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi sodales metus et ipsum gravida malesuada. Donec maximus mattis pellentesque. Etiam vitae pulvinar felis, id auctor risus. Duis condimentum dolor quis bibendum consequat. Nunc dolor lacus, bibendum a varius in, faucibus eget justo. Suspendisse lobortis nunc et nibh faucibus iaculis. In finibus fringilla consequat. Fusce quis sagittis mi. Suspendisse in laoreet eros.',
+      website: 'https://www.lipsum.com/feed/html',
+      image:
+        'https://media.istockphoto.com/id/814423752/photo/eye-of-model-with-colorful-art-make-up-close-up.jpg?s=612x612&w=0&k=20&c=l15OdMWjgCKycMMShP8UK94ELVlEGvt7GmB_esHWPYE=',
+    },
+  );
+  await builderSubnets.setIsMigrationOver(true);
 
-  // Reporter.reportContracts(
-  //   ['FeeConfig', await feeConfig.getAddress()],
-  //   ['BuilderSubnets', await builderSubnets.getAddress()],
-  // );
+  await builderSubnets.stake(
+    await builderSubnets.getSubnetId('OF Builder #1'),
+    await signer.getAddress(),
+    wei(0.2345678),
+    Math.floor(Date.now() / 1000) + 300,
+  );
+
+  Reporter.reportContracts(
+    ['FeeConfig', await feeConfig.getAddress()],
+    ['BuilderSubnets', await builderSubnets.getAddress()],
+  );
 };
 
 const deployBuildersSubnets = async (
@@ -103,7 +107,6 @@ const deployBuildersSubnets = async (
     config.builders.treasury,
     config.builders.minWithdrawLockPeriodAfterStake,
   );
-  await contract.setMaxStakedShareForBuildersPool(wei(config.builders.maxShareForNetwork / 100, 25));
   const builderPoolData = {
     initialAmount: wei(config.builders.builderPoolData.initialAmount),
     decreaseAmount: wei(config.builders.builderPoolData.decreaseAmount),
@@ -111,9 +114,14 @@ const deployBuildersSubnets = async (
     payoutStart: config.builders.builderPoolData.payoutStart,
   };
   await contract.setBuildersPoolData(builderPoolData);
+
   const rewardCalculationStartsAt = Math.floor(Date.now() / 1000) + 300;
   await contract.setRewardCalculationStartsAt(rewardCalculationStartsAt);
-  await contract.setIsMigrationOver(true);
+  await contract.setSubnetCreationFee(
+    wei(config.builders.subnetCreationFee.amount),
+    config.builders.subnetCreationFee.treasury,
+  );
+  await contract.setMaxStakedShareForBuildersPool(wei(config.builders.maxShareForNetwork / 100, 25));
 
   return contract;
 };

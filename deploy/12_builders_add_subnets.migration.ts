@@ -4,14 +4,14 @@ import { Builders__factory } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
 const pools = [
-  // {
-  //   name: 'Unocoin',
-  //   admin: '0xb941b0e3102136fb7420a55a93fbf940fb28a591c3d3790222b11a790b87f7ed',
-  // },
   {
-    name: 'Morphues Node',
-    admin: '0xF9B58539edFA57B4013E658666B1c61D165bcf3a',
+    name: 'Unocoin',
+    admin: '0x2e056a68c7eF30d0a5487703696184E6dCAe4668',
   },
+  // {
+  //   name: 'Morphues Node',
+  //   admin: '0xF9B58539edFA57B4013E658666B1c61D165bcf3a',
+  // },
   // {
   //   name: 'Frostbyte',
   //   admin: '0x4375a9cda86FF20ab963fdEbd89610D4311d5b28',
@@ -19,10 +19,10 @@ const pools = [
 ];
 
 const defaultPoolParams = {
-  poolStart: 1739736000, // Sunday, 16 February 2025 р., 20:00:00
+  poolStart: 1739979000,
   withdrawLockPeriodAfterDeposit: 2592000, // 30 days
-  claimLockEnd: 1739750400, // Monday, 17 February 2025 р., 00:00:00
-  minimalDeposit: wei(10),
+  claimLockEnd: 1740065400, // Monday, 17 February 2025 р., 00:00:00
+  minimalDeposit: wei(0.001),
 };
 
 module.exports = async function (deployer: Deployer) {
