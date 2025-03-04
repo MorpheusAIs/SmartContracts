@@ -112,7 +112,7 @@ async function fetchData() {
       }
     }
 
-    const filename = 'subgraph-output.json';
+    const filename = 'subnets.json';
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 
     console.log(`Data saved to ${filename}`);
