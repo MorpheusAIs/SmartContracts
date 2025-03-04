@@ -5,7 +5,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IDistributionV5} from "../interfaces/IDistributionV5.sol";
+import {IReferrer} from "../interfaces/capital-protocol/IReferrer.sol";
 
 library ReferrerLib {
     uint256 constant REFERRAL_MULTIPLIER = (PRECISION * 101) / 100; // 1% referral bonus
@@ -19,7 +19,7 @@ library ReferrerLib {
     }
 
     function getCurrentReferrerReward(
-        IDistributionV5.ReferrerData storage referrerData,
+        IReferrer.ReferrerData storage referrerData,
         uint256 currentPoolRate_
     ) public view returns (uint256) {
         uint256 newRewards_ = ((currentPoolRate_ - referrerData.rate) * referrerData.virtualAmountStaked) / PRECISION;
@@ -28,8 +28,8 @@ library ReferrerLib {
     }
 
     function applyReferrerTier(
-        IDistributionV5.ReferrerData storage referrerData,
-        IDistributionV5.ReferrerTier[] storage referrerTiers,
+        IReferrer.ReferrerData storage referrerData,
+        IReferrer.ReferrerTier[] storage referrerTiers,
         uint256 oldAmount_,
         uint256 newAmount_,
         uint256 currentPoolRate_
@@ -45,7 +45,7 @@ library ReferrerLib {
     }
 
     function claimReferrerTier(
-        IDistributionV5.ReferrerData storage referrerData,
+        IReferrer.ReferrerData storage referrerData,
         uint256 currentPoolRate_
     ) external returns (uint256) {
         uint256 pendingRewards_ = getCurrentReferrerReward(referrerData, currentPoolRate_);
@@ -59,7 +59,7 @@ library ReferrerLib {
     }
 
     function _getReferrerMultiplier(
-        IDistributionV5.ReferrerTier[] storage referrerTiers,
+        IReferrer.ReferrerTier[] storage referrerTiers,
         uint256 amount_
     ) private view returns (uint256) {
         for (uint256 i = referrerTiers.length; i > 0; i--) {

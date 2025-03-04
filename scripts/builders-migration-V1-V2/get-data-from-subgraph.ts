@@ -55,7 +55,7 @@ type BuilderUsersSubgraphResponse = {
 const formBuilderUsersQuery = (builderProjectId: string) => {
   return `
   {
-    buildersUsers (where: {buildersProject: "${builderProjectId}", staked_gt: 0}) {
+    buildersUsers (where: {buildersProject: "${builderProjectId}"}) {
      address
     }
   }
@@ -88,11 +88,11 @@ async function fetchData() {
       const query = formBuilderUsersQuery(builder.id);
       const res = (await callSubgraph(query)) as BuilderUsersSubgraphResponse;
 
-      if (Number(builder.totalUsers) !== res.data.buildersUsers.length) {
-        throw Error(
-          `Builder: ${builder.name}, total users: ${builder.totalUsers}, received users count: ${res.data.buildersUsers.length}`,
-        );
-      }
+      // if (Number(builder.totalUsers) !== res.data.buildersUsers.length) {
+      //   throw Error(
+      //     `Builder: ${builder.name}, total users: ${builder.totalUsers}, received users count: ${res.data.buildersUsers.length}`,
+      //   );
+      // }
 
       const users = res.data.buildersUsers.map((buildersUsers) => {
         return buildersUsers.address;

@@ -7,7 +7,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "8",
+    "totalUsers": "6",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
@@ -29,13 +29,16 @@
     "minimalDeposit": "10000000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1740816000",
-    "totalUsers": "7",
+    "totalUsers": "10",
     "users": [
+      "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x1389adc820c6aeaa7568832137b6b25bbf004202",
       "0x573ea2bd38643e26ce67ebbbd4b7656f39fee7e2",
       "0x76405775eb54767f1f95a9fd1ea5492b0204d87a",
       "0xa995b0992aa74eb353bb96e90599d6ec11d76773",
       "0xb2a9c55fac7ef4c0c697fd0d4ffda0534d5fb371",
+      "0xc69fd6d287bfe87956f5bd9cd62f51144a00b9f1",
+      "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4",
       "0xebe2a63d8c69b16e58f75b6f221b8ea16745383e"
     ],
@@ -50,7 +53,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "6",
+    "totalUsers": "4",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x2523008f1efd00551ab288f342efc481286132db",
@@ -61,6 +64,19 @@
     ],
     "description": "Stats and tools for the Morpheus Community",
     "website": "https://morlord.com/"
+  },
+  {
+    "id": "0x0a5ade57dfa9217dd1e955ca68468dfb249430c89c5f41b0c729e04db87a0563",
+    "name": "DecentraNet",
+    "admin": "0x36af03d425688183b502cc83dee92d0a8f27fdda",
+    "startsAt": "1740196800",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1740801600",
+    "totalUsers": "0",
+    "users": [],
+    "description": "",
+    "website": ""
   },
   {
     "id": "0x0b4e662f0a3480ee9117e3c2f0559d3f3295eac04ea52f84c1c5893281f22bb4",
@@ -83,32 +99,45 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "0",
-    "totalUsers": "37",
+    "totalUsers": "49",
     "users": [
+      "0x004c6672a94923db562c22e783a6d49b125e8976",
       "0x0bb67cd6b6049d8a63b03045a1e4ec02b6100483",
       "0x0c7d272a93ab733fd2bf6dddeab5a1b50e5339d8",
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
+      "0x109b32c12f4e8da06aa71492bcdf6c54626617f9",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x2187ec51e6915aa7fde7c275ed9f8a8d5258c2d1",
+      "0x2523008f1efd00551ab288f342efc481286132db",
       "0x2916e2cd96d1c522930a07e55aaad0a634656171",
       "0x298a247d7a265bf9e904545209254e4777e531c3",
       "0x2c1e54f815529467be8f3b78e46c14168852322a",
+      "0x30f15de9dfa8acc9971d433aa3844d6e5daf0540",
       "0x35f1bae79c4e74ee25354d326b42f809744f7e18",
       "0x3ae05e268f495b49ca495d7b779cdeb55cc37ba0",
+      "0x3fe0f75e7cfc652d305fdf904644313e9091bf34",
       "0x4a6f6557909906e0446347293fc2d19927abd9f0",
       "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
+      "0x606f26dcd69745ca645e709accaf54ede92eb38b",
+      "0x62279ff21053c9b1e0f16e2a6aa2c93da28ad4dd",
       "0x69357171d8794841df9985947a3c20c807b56d43",
       "0x69f41a9e51fa997ef4138c73dc1aae6beb3ddd0a",
       "0x714e96d76ebf67ce963df0d6249731759029e217",
       "0x7f18b5907410e8759321383094cd84e1d304ec79",
+      "0x815612815d7fb01b1e8a97fe4a0996e77245a3aa",
+      "0x858c1d7a1129911d07aee228a60e94a618f2cbc3",
       "0x8951368489a788ea9ba932782e2e6639b178fd4a",
       "0x8a65ac0e23f31979db06ec62af62b132a6df4741",
       "0x8c3cca433f198d8a0c72d549cad79a55da2b3ac5",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
+      "0xa69acc6667779f2e9bd7806368f580f5216f577c",
       "0xb9727d621724264a77f68855b34ea677f9ada92e",
+      "0xba26035b9cd76cda5b767a966b8a3392e476fc0f",
+      "0xbeb08de7778139fa4e0f1f2b8b0da88d997a1636",
       "0xc091d226be31ce9e18f33dbddf08d0c4ad79de21",
+      "0xc69fd6d287bfe87956f5bd9cd62f51144a00b9f1",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4",
       "0xcc12a8ecbefcebdf71ef2105e5b87dc9b5a0caa8",
@@ -121,10 +150,24 @@
       "0xdfd887d2e42d6485bf678bd1b2327ceaf691a306",
       "0xe6560cb68a7460f19a97d8386eff04257a82869d",
       "0xe839c91e61b6747c027a571e94abf3c0ec7a3682",
-      "0xe8405ac69c56634bcfeece6c89f1c7dc20c09958"
+      "0xe8405ac69c56634bcfeece6c89f1c7dc20c09958",
+      "0xe90e5d83ebc839bdff3ab7531b5399abf1343725"
     ],
     "description": "Reliable cryptocurrency prices and market capitalizations",
     "website": "https://coincap.io/"
+  },
+  {
+    "id": "0x1df41cd916959d1163dc8f0671a666ea8a3e434c13e40faef527133b5d167034",
+    "name": "Staking",
+    "admin": "0xa33be2c010fcef6650973587fb4bf12c2ef37032",
+    "startsAt": "1740672000",
+    "minimalDeposit": "0",
+    "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1814418000",
+    "totalUsers": "1",
+    "users": ["0xa33be2c010fcef6650973587fb4bf12c2ef37032"],
+    "description": "",
+    "website": ""
   },
   {
     "id": "0x1fa03df9ba7caac7b490ee9df117fa2b17408d3a6a84037f806b7b89c3f9d938",
@@ -147,13 +190,16 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "1814400",
     "claimLockEnd": "1739577600",
-    "totalUsers": "5",
+    "totalUsers": "7",
     "users": [
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x2523008f1efd00551ab288f342efc481286132db",
+      "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
+      "0x896c20da40c2a4df9b7c98b16a8d5a95129161a5",
       "0xb9075632ce259e5ffe6cb693845f66cb1826a527",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
-      "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4"
+      "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4",
+      "0xeada699f119ec274dd2c58e286664c231602bb44"
     ],
     "description": "Brainpower Podcast",
     "website": "https://open.spotify.com/show/56eTDgUARPiaUntXLnxIGg"
@@ -166,7 +212,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "4",
+    "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -177,6 +223,19 @@
     "website": "https://near.org/"
   },
   {
+    "id": "0x26d54d3de64a94b1ecef7c0e1437858999634e53331a9ceaccfe29f034d65386",
+    "name": "MOR LISTINGS",
+    "admin": "0x95a83fb7e87e210c1b32a14b0fd9c84100d6a69d",
+    "startsAt": "1739606400",
+    "minimalDeposit": "2000000000000000",
+    "withdrawLockPeriodAfterDeposit": "604850",
+    "claimLockEnd": "1742022000",
+    "totalUsers": "0",
+    "users": [],
+    "description": "",
+    "website": ""
+  },
+  {
     "id": "0x2cef520db0d87be977cc612c0c57e2ef1788fcd8e7032418be1cccea82a603f4",
     "name": "ZO.ME",
     "admin": "0xbbdea6172be7798f7fa37e7e5432d9426954c1de",
@@ -184,7 +243,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -201,12 +260,14 @@
     "minimalDeposit": "10000000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1740816000",
-    "totalUsers": "8",
+    "totalUsers": "10",
     "users": [
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x2835e92c3d195d6c2480027cd6bbbe9419a58977",
       "0x62279ff21053c9b1e0f16e2a6aa2c93da28ad4dd",
       "0x76405775eb54767f1f95a9fd1ea5492b0204d87a",
+      "0xc69fd6d287bfe87956f5bd9cd62f51144a00b9f1",
+      "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4",
       "0xebe2a63d8c69b16e58f75b6f221b8ea16745383e",
       "0xf89fd2e2180d7f7de89a499cbef8e3ee49429502",
@@ -229,6 +290,7 @@
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x69357171d8794841df9985947a3c20c807b56d43",
       "0x73e5a34c05cf3c61dab62f7f2a4e2d995a095d22",
+      "0x896c20da40c2a4df9b7c98b16a8d5a95129161a5",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c"
     ],
     "description": "Federated Machine Learning On the Blockchain",
@@ -242,10 +304,13 @@
     "minimalDeposit": "100000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "1740718800",
-    "totalUsers": "2",
+    "totalUsers": "5",
     "users": [
+      "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
-      "0xa995b0992aa74eb353bb96e90599d6ec11d76773"
+      "0x62279ff21053c9b1e0f16e2a6aa2c93da28ad4dd",
+      "0xa995b0992aa74eb353bb96e90599d6ec11d76773",
+      "0xffc0856eef7b73d0613bdd0f20fafa8b82f8dde7"
     ],
     "description": "Morpheus AI is the first agent powered by the Z10N framework that makes gamifying agents simple. Z10N will make creating an agentic economy a few clicks and prompts while creating an entire ecosystem for their communities to engage.",
     "website": "https://www.z10n.ai"
@@ -271,7 +336,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "4",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x2523008f1efd00551ab288f342efc481286132db",
@@ -292,7 +357,8 @@
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
-      "0x26827cce25992d47180aad75f3e69cb57d71602b"
+      "0x26827cce25992d47180aad75f3e69cb57d71602b",
+      "0xafebb65d3edebcd485c5fa91f5c635468e6b8267"
     ],
     "description": "I am AI Core",
     "website": "https://github.com/iamai-core"
@@ -318,7 +384,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -348,12 +414,25 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x69357171d8794841df9985947a3c20c807b56d43"
     ],
+    "description": "",
+    "website": ""
+  },
+  {
+    "id": "0x50a52d70c4c3b4b77d8fefaa24faf038450a656b9db6bc2e9d897f55ff72e974",
+    "name": "Morphues Node",
+    "admin": "0xf9b58539edfa57b4013e658666b1c61d165bcf3a",
+    "startsAt": "1739736000",
+    "minimalDeposit": "10000000000000000000",
+    "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739750400",
+    "totalUsers": "0",
+    "users": [],
     "description": "",
     "website": ""
   },
@@ -370,6 +449,7 @@
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
+      "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c"
     ],
     "description": "Own a share of AI, specifically autonomous agent economies",
@@ -396,7 +476,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
@@ -412,7 +492,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -429,7 +509,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "19",
+    "totalUsers": "23",
     "users": [
       "0x04e8e5aa372d8e2233d2ef26079e23e3309003d5",
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -437,19 +517,24 @@
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x1f16a0fc4a130c3436fe210cfb46e12f59f411dc",
       "0x210d9386c1249391025e05239a09f5bb8f3fd940",
+      "0x2935214a369e2bccbaf253432d028b1bc5164e3c",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
+      "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x64174450c49242535b4184e3988cc4145b80526c",
       "0x6820250308b5ea5044672a297b2529e627787f5f",
       "0x69357171d8794841df9985947a3c20c807b56d43",
+      "0x6d76e8169c89238a77f461a60a807dd52e2082d6",
       "0x7412bc256355abd22dd53de3a38e8995b5d4c1d1",
       "0x98eff980c57c9d333340b3856481bf7b8698987c",
       "0x9cc6b421bec55e255ff5f62d3411a1421ea188f7",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xa2fdc2ddf5e652af96dae3c9d16e34c9824e99ad",
+      "0xbeb08de7778139fa4e0f1f2b8b0da88d997a1636",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xdf17d00baba73402ab804a29ac7689ad5e30102d",
-      "0xf54e3eec141204b90c1d520334c26d5d1e3c4b39"
+      "0xf54e3eec141204b90c1d520334c26d5d1e3c4b39",
+      "0xf8fecf84b7dba0dca2bcaaddc205bf508edcb95c"
     ],
     "description": "The Blockchain for the AI Economy",
     "website": "https://www.wire.network/"
@@ -462,8 +547,8 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "0",
-    "users": [],
+    "totalUsers": "1",
+    "users": ["0x896c20da40c2a4df9b7c98b16a8d5a95129161a5"],
     "description": "The First Smart Agent on Morpheus / Venice / Nounspace",
     "website": "https://x.com/nounspacetom"
   },
@@ -491,6 +576,35 @@
     "website": ""
   },
   {
+    "id": "0x6d4a00233c2192694cf0dc52e0bdfd73e136bd1338fcfced149989e7fa6bbdab",
+    "name": "Satori",
+    "admin": "0x370feb9dad2062917b4ee99ebb6af3c1f0ccbecd",
+    "startsAt": "1740726000",
+    "minimalDeposit": "1000000000000000000",
+    "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1740985200",
+    "totalUsers": "2",
+    "users": [
+      "0x370feb9dad2062917b4ee99ebb6af3c1f0ccbecd",
+      "0xbeb08de7778139fa4e0f1f2b8b0da88d997a1636"
+    ],
+    "description": "",
+    "website": ""
+  },
+  {
+    "id": "0x70a8b9982ce25814a05d0cbc53e14d6e2ebc073620790482401e19b84f2bad64",
+    "name": "Supercycle",
+    "admin": "0xeada699f119ec274dd2c58e286664c231602bb44",
+    "startsAt": "1740805200",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1741323600",
+    "totalUsers": "0",
+    "users": [],
+    "description": "",
+    "website": ""
+  },
+  {
     "id": "0x7169601aa382123b982cb9055874ed5ccb7223a5500a2b41aedf013653d3f167",
     "name": "Morlord MOR Staking",
     "admin": "0x72f457d6237f66f68b6ea4408a3219ab7ae13be8",
@@ -498,7 +612,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "21",
+    "totalUsers": "26",
     "users": [
       "0x04e8e5aa372d8e2233d2ef26079e23e3309003d5",
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -506,12 +620,16 @@
       "0x2187ec51e6915aa7fde7c275ed9f8a8d5258c2d1",
       "0x2523008f1efd00551ab288f342efc481286132db",
       "0x298a247d7a265bf9e904545209254e4777e531c3",
+      "0x2c1e54f815529467be8f3b78e46c14168852322a",
       "0x35f1bae79c4e74ee25354d326b42f809744f7e18",
       "0x3ae05e268f495b49ca495d7b779cdeb55cc37ba0",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
       "0x573ea2bd38643e26ce67ebbbd4b7656f39fee7e2",
+      "0x606f26dcd69745ca645e709accaf54ede92eb38b",
       "0x6f961561ff1f10193f2a2397d97f6eee32ab6a0f",
+      "0x72f457d6237f66f68b6ea4408a3219ab7ae13be8",
       "0x815612815d7fb01b1e8a97fe4a0996e77245a3aa",
+      "0x9b6e01454fa30d52467a55f0d31c06a9d77ff776",
       "0xa7e62659c8c130786e4c29f583f378a3fc5999d2",
       "0xa995b0992aa74eb353bb96e90599d6ec11d76773",
       "0xb0032e86487ec45e200b84cc41d81f7293a95452",
@@ -520,7 +638,9 @@
       "0xc05326281076a0f55ea07aa4a6e689b8cee28899",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4",
-      "0xcfd51ed5af62f6921398a92e056bcbb2e216bedb"
+      "0xcfd51ed5af62f6921398a92e056bcbb2e216bedb",
+      "0xf9bf2f503596f1bf362843ce4c073af0a8e76c42",
+      "0xffc0856eef7b73d0613bdd0f20fafa8b82f8dde7"
     ],
     "description": "Stats and tools for the Morpheus Community",
     "website": "https://morlord.com/"
@@ -533,7 +653,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "10",
+    "totalUsers": "11",
     "users": [
       "0x04e8e5aa372d8e2233d2ef26079e23e3309003d5",
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -542,8 +662,10 @@
       "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x69357171d8794841df9985947a3c20c807b56d43",
+      "0x896c20da40c2a4df9b7c98b16a8d5a95129161a5",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
+      "0xbeb08de7778139fa4e0f1f2b8b0da88d997a1636",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b"
     ],
     "description": "Movement to ensure AI respects individual and knowledge freedom.",
@@ -563,6 +685,7 @@
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x69357171d8794841df9985947a3c20c807b56d43",
+      "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c"
     ],
     "description": "Multichain Crypto Exchange",
@@ -576,7 +699,7 @@
     "minimalDeposit": "1000000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "1739689200",
-    "totalUsers": "1",
+    "totalUsers": "0",
     "users": ["0x26827cce25992d47180aad75f3e69cb57d71602b"],
     "description": "",
     "website": ""
@@ -589,7 +712,7 @@
     "minimalDeposit": "100000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "1738368000",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x96706eb471f875a9a41442f358d3b34ba02f868b"
@@ -605,8 +728,9 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "51",
+    "totalUsers": "53",
     "users": [
+      "0x004c6672a94923db562c22e783a6d49b125e8976",
       "0x05a1ff0a32bc24265bcb39499d0c5d9a6cb2011c",
       "0x0bb67cd6b6049d8a63b03045a1e4ec02b6100483",
       "0x0c7d272a93ab733fd2bf6dddeab5a1b50e5339d8",
@@ -625,15 +749,18 @@
       "0x573ea2bd38643e26ce67ebbbd4b7656f39fee7e2",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x5d9729eff5695baac472658d29e6980871939464",
+      "0x606f26dcd69745ca645e709accaf54ede92eb38b",
       "0x62279ff21053c9b1e0f16e2a6aa2c93da28ad4dd",
       "0x64174450c49242535b4184e3988cc4145b80526c",
       "0x6f961561ff1f10193f2a2397d97f6eee32ab6a0f",
       "0x714e96d76ebf67ce963df0d6249731759029e217",
+      "0x7b5ab1a2473f4c94db420d6a355102cf65a1041c",
       "0x7f18b5907410e8759321383094cd84e1d304ec79",
       "0x815612815d7fb01b1e8a97fe4a0996e77245a3aa",
       "0x858c1d7a1129911d07aee228a60e94a618f2cbc3",
       "0x8951368489a788ea9ba932782e2e6639b178fd4a",
       "0x8c3cca433f198d8a0c72d549cad79a55da2b3ac5",
+      "0x9b6e01454fa30d52467a55f0d31c06a9d77ff776",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
       "0xa75eb7cbe546de14d731292cf564bc046e2efa76",
@@ -657,7 +784,8 @@
       "0xe839c91e61b6747c027a571e94abf3c0ec7a3682",
       "0xe8405ac69c56634bcfeece6c89f1c7dc20c09958",
       "0xec9afd724136863968cb9876a9592253888399c6",
-      "0xf9bf2f503596f1bf362843ce4c073af0a8e76c42"
+      "0xf9bf2f503596f1bf362843ce4c073af0a8e76c42",
+      "0xffc0856eef7b73d0613bdd0f20fafa8b82f8dde7"
     ],
     "description": "Decentralized, Customizable Social Network",
     "website": "https://nounspace.com/"
@@ -683,17 +811,21 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "17",
+    "totalUsers": "21",
     "users": [
       "0x0bb67cd6b6049d8a63b03045a1e4ec02b6100483",
       "0x0c7d272a93ab733fd2bf6dddeab5a1b50e5339d8",
       "0x11cf7b9623cca5f6556b8c699071e1d7fe60444c",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x2833e871b3cbce4b437500f1dbd6395b62cac617",
+      "0x2c1e54f815529467be8f3b78e46c14168852322a",
       "0x2c29e4e0305926b64dfd083d665b6cb2fd759581",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
+      "0x528a3d9aba48121dc7f911767b3cf38134314234",
       "0x573ea2bd38643e26ce67ebbbd4b7656f39fee7e2",
+      "0x606f26dcd69745ca645e709accaf54ede92eb38b",
       "0x62279ff21053c9b1e0f16e2a6aa2c93da28ad4dd",
+      "0x64174450c49242535b4184e3988cc4145b80526c",
       "0x8c3cca433f198d8a0c72d549cad79a55da2b3ac5",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
@@ -727,7 +859,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x2523008f1efd00551ab288f342efc481286132db",
@@ -744,9 +876,11 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "1739399460",
-    "totalUsers": "2",
+    "totalUsers": "4",
     "users": [
+      "0x315449e6516e86726accef7222af8cbb2f9cf46a",
       "0x3476ee81ba812d56b571bcc2e6122de698084e15",
+      "0x4938f6a77548907aa942f959c8b7ce1caef6b483",
       "0xa33be2c010fcef6650973587fb4bf12c2ef37032"
     ],
     "description": "",
@@ -760,8 +894,11 @@
     "minimalDeposit": "1",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "0",
-    "totalUsers": "1",
-    "users": ["0xe0a35b164f5c5e44e26d357e4ac88e1b8714090f"],
+    "totalUsers": "2",
+    "users": [
+      "0x62af7c48cf412162465a8cafde44dfb17ba96038",
+      "0xe0a35b164f5c5e44e26d357e4ac88e1b8714090f"
+    ],
     "description": "",
     "website": ""
   },
@@ -773,17 +910,19 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "11",
+    "totalUsers": "12",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x2523008f1efd00551ab288f342efc481286132db",
+      "0x31edd4f7c9160abdcd7ac3a56a2f7b92c5cbdf39",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
       "0x573ea2bd38643e26ce67ebbbd4b7656f39fee7e2",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
       "0xba26035b9cd76cda5b767a966b8a3392e476fc0f",
       "0xbf1789745b7a570e8f9bc89403cc510bf0ec91c6",
+      "0xc69fd6d287bfe87956f5bd9cd62f51144a00b9f1",
       "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xc7cd58102f2827817ef471aaf8e4bdc56da89eb4"
     ],
@@ -798,7 +937,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
@@ -814,7 +953,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
@@ -830,10 +969,17 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "9",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
-      "0xa69acc6667779f2e9bd7806368f580f5216f577c"
+      "0x64174450c49242535b4184e3988cc4145b80526c",
+      "0x6f961561ff1f10193f2a2397d97f6eee32ab6a0f",
+      "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
+      "0xa69acc6667779f2e9bd7806368f580f5216f577c",
+      "0xbe97d54cfd1ff86e21f2aeb02aa5219bc00486e0",
+      "0xc091d226be31ce9e18f33dbddf08d0c4ad79de21",
+      "0xe90e5d83ebc839bdff3ab7531b5399abf1343725",
+      "0xf9bf2f503596f1bf362843ce4c073af0a8e76c42"
     ],
     "description": "Super Agent for everyone",
     "website": "https://github.com/DavidAJohnston/MySuperAgent"
@@ -846,7 +992,7 @@
     "minimalDeposit": "0",
     "withdrawLockPeriodAfterDeposit": "1555200",
     "claimLockEnd": "1738213200",
-    "totalUsers": "1",
+    "totalUsers": "0",
     "users": ["0x0e4d5032c0b076cb132a10347d940bfbb8354869"],
     "description": "Aigent Z",
     "website": ""
@@ -859,13 +1005,28 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
-      "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
+      "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
+      "0x6d76e8169c89238a77f461a60a807dd52e2082d6",
+      "0xf8fecf84b7dba0dca2bcaaddc205bf508edcb95c"
     ],
     "description": "The Hemi Network is a modular Layer-2 protocol for Bitcoin and Ethereum",
     "website": "https://docs.hemi.xyz/"
+  },
+  {
+    "id": "0xa7fafe0dddaeea5789018c11d0c420b718734b6c36a454c4613befb9b0e0f69d",
+    "name": "Frostbyte",
+    "admin": "0x4375a9cda86ff20ab963fdebd89610d4311d5b28",
+    "startsAt": "1739736000",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739750400",
+    "totalUsers": "1",
+    "users": ["0x9e9cba2844bd75dcf0d07fa273050d8952f40888"],
+    "description": "",
+    "website": ""
   },
   {
     "id": "0xaabc7043f8d1616d55ecae080430fb180ece49b4c269377d6f9c830854acabfc",
@@ -875,8 +1036,14 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "1",
-    "users": ["0xebe2a63d8c69b16e58f75b6f221b8ea16745383e"],
+    "totalUsers": "5",
+    "users": [
+      "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
+      "0x69357171d8794841df9985947a3c20c807b56d43",
+      "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
+      "0xebe2a63d8c69b16e58f75b6f221b8ea16745383e",
+      "0xf9bf2f503596f1bf362843ce4c073af0a8e76c42"
+    ],
     "description": "An AI agent-driven roleplaying game powered by Morpheus' decentralized inference router.",
     "website": "https://talesgame.com "
   },
@@ -891,7 +1058,8 @@
     "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
-      "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
+      "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
+      "0xf8fecf84b7dba0dca2bcaaddc205bf508edcb95c"
     ],
     "description": "The AI compute base layer",
     "website": "https://www.exabits.ai/"
@@ -904,13 +1072,29 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
     ],
     "description": "Decentralized Permanent information storage",
     "website": "https://ao.arweave.dev/"
+  },
+  {
+    "id": "0xb46506c4174fa5ec7a36fdb4d7a3cd237dd6c60d6b2bcc9e4c1731f9f0e49c6f",
+    "name": "MORLORD",
+    "admin": "0x72f457d6237f66f68b6ea4408a3219ab7ae13be8",
+    "startsAt": "1739548913",
+    "minimalDeposit": "1000000000000",
+    "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "0",
+    "totalUsers": "2",
+    "users": [
+      "0x72f457d6237f66f68b6ea4408a3219ab7ae13be8",
+      "0xb0032e86487ec45e200b84cc41d81f7293a95452"
+    ],
+    "description": "",
+    "website": ""
   },
   {
     "id": "0xb5040e011d35dd944d284d4692baf05ec66163d07c023a71eaabd0a930511ad7",
@@ -933,7 +1117,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x298a247d7a265bf9e904545209254e4777e531c3",
@@ -950,7 +1134,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1"
@@ -966,7 +1150,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "4",
+    "totalUsers": "3",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -984,9 +1168,12 @@
     "minimalDeposit": "1000000000000000000",
     "withdrawLockPeriodAfterDeposit": "1209600",
     "claimLockEnd": "1741561200",
-    "totalUsers": "3",
+    "totalUsers": "6",
     "users": [
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
+      "0x325409632bccffac706d378a2eca57cafa21ab11",
+      "0x573ea2bd38643e26ce67ebbbd4b7656f39fee7e2",
+      "0xc71f8aca00df0d2e0a519cf94f04ae1de080a94b",
       "0xceebaf584e8b9eaf6f9da7cec4b4fbf1767946fa",
       "0xebe2a63d8c69b16e58f75b6f221b8ea16745383e"
     ],
@@ -1008,6 +1195,7 @@
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x2523008f1efd00551ab288f342efc481286132db",
       "0x298a247d7a265bf9e904545209254e4777e531c3",
+      "0x3c55bab838b2ab826382e32cc0343d1451ea9ffa",
       "0x4996de5a4e624fce5a718b2a2547901fb050c2b4",
       "0x49d3b2e263c165e0897e7033d8b8a710f1e8b1e1",
       "0x51c58d73d219ed56a7b0014db1d48f6958d26170",
@@ -1039,7 +1227,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -1056,8 +1244,9 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "11",
+    "totalUsers": "12",
     "users": [
+      "0x0458359770e2031933e0bee8cfa2b3000f70f946",
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x21dd80edd41243d2600172f574cfdf26b2abfc5e",
@@ -1087,6 +1276,7 @@
       "0x298a247d7a265bf9e904545209254e4777e531c3",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
+      "0x6d76e8169c89238a77f461a60a807dd52e2082d6",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c"
     ],
     "description": "Decentralized AI-powered smart contracts with access to the the Internet",
@@ -1105,8 +1295,10 @@
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
+      "0x6d76e8169c89238a77f461a60a807dd52e2082d6",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
-      "0xa4b427af1952374b3527cebcfdcc9d063dfe802c"
+      "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
+      "0xf8fecf84b7dba0dca2bcaaddc205bf508edcb95c"
     ],
     "description": "The Future of Agentic Finance Powered by Swarms",
     "website": "https://www.theoriq.ai/"
@@ -1119,6 +1311,19 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "604800",
     "claimLockEnd": "1739401200",
+    "totalUsers": "1",
+    "users": ["0xf8a9f05c149a73e80b35f9f929670d10cdd91fde"],
+    "description": "",
+    "website": ""
+  },
+  {
+    "id": "0xd6afb3447b6d684ed910bf2f3d6bc00277032db092cfb211ac4bb66c1f4d077d",
+    "name": "FrostByte",
+    "admin": "0x4375a9cda86ff20ab963fdebd89610d4311d5b28",
+    "startsAt": "1739775600",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1742191200",
     "totalUsers": "0",
     "users": [],
     "description": "",
@@ -1138,6 +1343,19 @@
     "website": ""
   },
   {
+    "id": "0xda50f9aa1710272d6c17f84d713b6c8f30b2870c376039e5323852b027a440fa",
+    "name": "SUPERCYCLE",
+    "admin": "0xeada699f119ec274dd2c58e286664c231602bb44",
+    "startsAt": "1740718800",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "604800",
+    "claimLockEnd": "1740805200",
+    "totalUsers": "1",
+    "users": ["0xeada699f119ec274dd2c58e286664c231602bb44"],
+    "description": "",
+    "website": ""
+  },
+  {
     "id": "0xda589917a3e3836aab6bc61103b436b5a3ab440e9b69715a1618f74f9dda5a7b",
     "name": "DAIS",
     "admin": "0x28bfe7a0fc7d541aa8ee1240f1551d65dca19291",
@@ -1145,7 +1363,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "5",
+    "totalUsers": "4",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x14c466480ee6d3388885ffaa850262b3984f76e1",
@@ -1181,7 +1399,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
@@ -1197,7 +1415,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
@@ -1214,7 +1432,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x2523008f1efd00551ab288f342efc481286132db",
@@ -1244,8 +1462,9 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "80",
+    "totalUsers": "83",
     "users": [
+      "0x05f200ad90e70750110e02e73e17caa81383ebc8",
       "0x0819f0d0230c5a0fbf9acfe5d1655aca21108b24",
       "0x0bf0702824980f46ce9be099c91919c5eaf11dd1",
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
@@ -1256,12 +1475,17 @@
       "0x1899f731e6de634799d167744cf9620e55a6d41e",
       "0x2187ec51e6915aa7fde7c275ed9f8a8d5258c2d1",
       "0x2523008f1efd00551ab288f342efc481286132db",
+      "0x28710405c14e9c1b3b54d6cb4bb75cd7d3918349",
       "0x298a247d7a265bf9e904545209254e4777e531c3",
       "0x2c1e54f815529467be8f3b78e46c14168852322a",
       "0x2d0117e8c5d5670f36b8693658ba4feed8308d9e",
       "0x2e0973dc46eeeff6866cf7326859a0778c165aee",
+      "0x31edd4f7c9160abdcd7ac3a56a2f7b92c5cbdf39",
       "0x343812f5bc9840c05343537ba8a5f9fe4d71f7dd",
+      "0x35f1bae79c4e74ee25354d326b42f809744f7e18",
+      "0x36af03d425688183b502cc83dee92d0a8f27fdda",
       "0x3ae05e268f495b49ca495d7b779cdeb55cc37ba0",
+      "0x3c55bab838b2ab826382e32cc0343d1451ea9ffa",
       "0x4033cf3fc79c1356f62f16899810bdb5a756edb0",
       "0x41eccd0d974e2452efd92fae2479253bab5d7bfa",
       "0x46365f770baed1dae01fdcb4fc614f3bfbdd78ed",
@@ -1274,6 +1498,7 @@
       "0x59708a095fb44a9054f9ba3b2fb82fce07b182c1",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x5d9729eff5695baac472658d29e6980871939464",
+      "0x606f26dcd69745ca645e709accaf54ede92eb38b",
       "0x60973b16e7b9138f76c4e55bab64dfebbdf507bf",
       "0x62279ff21053c9b1e0f16e2a6aa2c93da28ad4dd",
       "0x64174450c49242535b4184e3988cc4145b80526c",
@@ -1286,10 +1511,14 @@
       "0x76405775eb54767f1f95a9fd1ea5492b0204d87a",
       "0x776cda090681a0157ee3a559487695809eef0259",
       "0x7ab874eeef0169ada0d225e9801a3ffffa26aac3",
+      "0x7b5ab1a2473f4c94db420d6a355102cf65a1041c",
       "0x7f18b5907410e8759321383094cd84e1d304ec79",
       "0x858c1d7a1129911d07aee228a60e94a618f2cbc3",
+      "0x896c20da40c2a4df9b7c98b16a8d5a95129161a5",
       "0x8c3cca433f198d8a0c72d549cad79a55da2b3ac5",
       "0x92a2d80d6abff093a303a288aecd5ea815b5e90c",
+      "0x96a54bccd4ff9db5df6be649a8edbd0ca4cd3903",
+      "0x9b6e01454fa30d52467a55f0d31c06a9d77ff776",
       "0x9b76b669b17420e665a36eb6519ac4e8d6d8bebf",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
       "0xa75eb7cbe546de14d731292cf564bc046e2efa76",
@@ -1298,6 +1527,7 @@
       "0xacd05f788accaa2ba0b848b6781932493a0894a6",
       "0xba26035b9cd76cda5b767a966b8a3392e476fc0f",
       "0xba52645d970e1663dc31d4bb5f5e9b8c614dbe32",
+      "0xbeb08de7778139fa4e0f1f2b8b0da88d997a1636",
       "0xbf1789745b7a570e8f9bc89403cc510bf0ec91c6",
       "0xc05326281076a0f55ea07aa4a6e689b8cee28899",
       "0xc091d226be31ce9e18f33dbddf08d0c4ad79de21",
@@ -1311,6 +1541,7 @@
       "0xd21e2f98305543a34dc82da2158808ecd00b2e65",
       "0xd35fc346e15ba5b446917c9fd23a9471d6144701",
       "0xd455712e43582134f101a0c686d26548b5438a3b",
+      "0xd53fe2ff2c9555cba9b8e8ae0719029f1971bf41",
       "0xd6fe3774634e786412e204c5eb29b73043c407ce",
       "0xd8eebd81d63de8170316975128e02b4592e3e70c",
       "0xd982ef1a5b3e1d396f668d73a590255a7d90d488",
@@ -1320,15 +1551,31 @@
       "0xe6d02beb6854d1a1da0438d7debf72d7f3070fa9",
       "0xe839c91e61b6747c027a571e94abf3c0ec7a3682",
       "0xe8405ac69c56634bcfeece6c89f1c7dc20c09958",
+      "0xe90e5d83ebc839bdff3ab7531b5399abf1343725",
       "0xeb8fb1a66cd41c0d0a2ae46130b08ad782d37435",
+      "0xebe2a63d8c69b16e58f75b6f221b8ea16745383e",
       "0xec9afd724136863968cb9876a9592253888399c6",
       "0xf75de5f0f347b9e8abb95d547a5f93c4972877e1",
       "0xf8fecf84b7dba0dca2bcaaddc205bf508edcb95c",
       "0xf9bf2f503596f1bf362843ce4c073af0a8e76c42",
-      "0xfece56f4deab3d25ce560e97bbb5b5aeeb64127f"
+      "0xfece56f4deab3d25ce560e97bbb5b5aeeb64127f",
+      "0xffc0856eef7b73d0613bdd0f20fafa8b82f8dde7"
     ],
     "description": "Venice.AI is a private, uncensored AI platform prioritizing user data privacy.",
     "website": "https://venice.ai/chat"
+  },
+  {
+    "id": "0xfd1572a2a5e1bc5b350e34b0789326b6a02c14b357c67405d537eb4159df029d",
+    "name": "Unocoin",
+    "admin": "0x2e056a68c7ef30d0a5487703696184e6dcae4668",
+    "startsAt": "1739979000",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1740065400",
+    "totalUsers": "0",
+    "users": [],
+    "description": "",
+    "website": ""
   },
   {
     "id": "0xff2a83dce744d5c9b6dfe11813d09104cf0d01b7ef1b3ab4bc228b50c0f692d4",
@@ -1338,7 +1585,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x0e4d5032c0b076cb132a10347d940bfbb8354869",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",

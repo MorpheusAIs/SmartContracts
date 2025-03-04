@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IReferrer} from "./capital-protocol/IReferrer.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
-/**
- * This is the Distribution contract that stores all the pools and users data.
- * It is used to calculate the user's rewards and operate with overpluses.
- */
-interface IDistributionV5 is IReferrer {
+import {IReferrer} from "./IReferrer.sol";
+
+interface IDepositPool is IERC165, IReferrer {
     /**
      * The structure that stores the core pool's data.
      * @param payoutStart The timestamp when the pool starts to pay out rewards.
@@ -164,143 +162,5 @@ interface IDistributionV5 is IReferrer {
      */
     event UserReferred(uint256 indexed poolId, address indexed user, address indexed referrer, uint256 amount);
 
-    /**
-     * The function to initialize the contract.
-     * @param depositToken_ The address of the deposit token.
-     * @param l1Sender_ The address of the bridge contract.
-     * @param poolsInfo_ The array of initial pools.
-     */
-    function Distribution_init(address depositToken_, address l1Sender_, Pool[] calldata poolsInfo_) external;
-
-    /**
-     * The function to create a new pool.
-     * @param pool_ The pool's data.
-     */
-    function createPool(Pool calldata pool_) external;
-
-    /**
-     * The function to edit the pool data.
-     * @param poolId The pool's id.
-     * @param pool_ The new pool's data.
-     */
-    function editPool(uint256 poolId, Pool calldata pool_) external;
-
-    /**
-     * The function to edit the pool limits.
-     * @param poolId_ The pool id.
-     * @param poolLimits_ The pool's limit data.
-     */
-    function editPoolLimits(uint256 poolId_, PoolLimits calldata poolLimits_) external;
-
-    /**
-     * The function to calculate the total pool's reward for the specified period.
-     * @param poolId_ The pool's id.
-     * @param startTime_ The start timestamp.
-     * @param endTime_ The end timestamp.
-     * @return The total reward amount.
-     */
-    function getPeriodReward(uint256 poolId_, uint128 startTime_, uint128 endTime_) external view returns (uint256);
-
-    /**
-     * The function to manage users and their rate in the private pool.
-     * @param poolId_ The pool's id.
-     * @param users_ The array of users.
-     * @param amounts_ The array of amounts.
-     * @param claimLockEnds_ The array of lock ends.
-     * @param referrers_ The array of referrers.
-     */
-    function manageUsersInPrivatePool(
-        uint256 poolId_,
-        address[] calldata users_,
-        uint256[] calldata amounts_,
-        uint128[] calldata claimLockEnds_,
-        address[] calldata referrers_
-    ) external;
-
-    /**
-     * The function to stake tokens in the public pool.
-     * @param poolId_ The pool's id.
-     * @param amount_ The amount of tokens to stake.
-     * @param claimLockEnd_ The timestamp when the user can claim his rewards.
-     * @param referrer_ The referrer address.
-     */
-    function stake(uint256 poolId_, uint256 amount_, uint128 claimLockEnd_, address referrer_) external;
-
-    /**
-     * The function to claim rewards from the pool.
-     * @param poolId_ The pool's id.
-     * @param receiver_ The receiver's address.
-     */
-    function claim(uint256 poolId_, address receiver_) external payable;
-
-    /**
-     * The function to withdraw tokens from the pool.
-     * @param poolId_ The pool's id.
-     * @param amount_ The amount of tokens to withdraw.
-     */
-    function withdraw(uint256 poolId_, uint256 amount_) external;
-
-    /**
-     * The function to lock rewards.
-     * @param poolId_ The pool's id.
-     * @param claimLockEnd_ The timestamp when the user can claim his rewards.
-     */
-    function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external;
-
-    /**
-     * The function to get the user's reward for the specified pool.
-     * @param poolId_ The pool's id.
-     * @param user_ The user's address.
-     * @return The user's reward amount.
-     */
-    function getCurrentUserReward(uint256 poolId_, address user_) external view returns (uint256);
-
-    /**
-     * The function to calculate the total overplus of the staked deposit tokens.
-     * @return The total overplus amount.
-     */
-    function overplus() external view returns (uint256);
-
-    /**
-     * The function to bridge the overplus of the staked deposit tokens.
-     * @param gasLimit_ The gas limit.
-     * @param maxFeePerGas_ The max fee per gas.
-     * @param maxSubmissionCost_ The max submission cost.
-     * @return The unique identifier for the withdrawal.
-     */
-    function bridgeOverplus(
-        uint256 gasLimit_,
-        uint256 maxFeePerGas_,
-        uint256 maxSubmissionCost_
-    ) external payable returns (bytes memory);
-
-    /**
-     * The function to remove the upgradeability.
-     */
-    function removeUpgradeability() external;
-
-    /**
-     * The function to check whether the contract is upgradeable.
-     * @return The flag that indicates whether the contract is upgradeable.
-     */
-    function isNotUpgradeable() external view returns (bool);
-
-    /**
-     * The function to get the address of the deposit token.
-     * @return The address of the deposit token.
-     */
     function depositToken() external view returns (address);
-
-    /**
-     * The function to get the address of a bridge contract.
-     * @return The address of a bridge contract.
-     */
-    function l1Sender() external view returns (address);
-
-    /**
-     * The function to get the amount of deposit tokens that are staked in all the public pools.
-     * @dev The value accumulates the amount despite the rate differences.
-     * @return The amount of deposit tokens.
-     */
-    function totalDepositedInPublicPools() external view returns (uint256);
 }
