@@ -523,7 +523,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             operation_
         );
 
-        uint256 fee_ = (amount_ * feePart_) / PRECISION;
+        uint256 fee_ = amount_.mulDiv(feePart_, PRECISION, Math.Rounding.Up);
 
         return (fee_, treasuryAddress_);
     }
@@ -531,7 +531,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     function _getSubnetFee(uint256 amount_, bytes32 subnetId_) private view returns (uint256, address) {
         Subnet storage subnet = subnets[subnetId_];
 
-        uint256 fee_ = (amount_ * subnet.fee) / PRECISION;
+        uint256 fee_ = amount_.mulDiv(subnet.fee, PRECISION, Math.Rounding.Up);
 
         return (fee_, subnet.feeTreasury);
     }
