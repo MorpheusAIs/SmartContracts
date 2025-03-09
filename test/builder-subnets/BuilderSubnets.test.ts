@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { encodeBytes32String } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { setNextTime } from '../helpers/block-helper';
+import { setNextTime, setTime } from '../helpers/block-helper';
 import {
   getDefaultBuildersPoolData,
   getDefaultSubnet,
@@ -65,7 +65,31 @@ describe('BuilderSubnets', () => {
       it('should revert if try to call init function twice', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        await expect(builders.BuilderSubnets_init(token, feeConfig, TREASURY, 1)).to.be.rejectedWith(reason);
+        await expect(builders.BuilderSubnets_init(token, feeConfig, TREASURY, 1, ZERO_ADDR)).to.be.rejectedWith(reason);
+      });
+      it('should revert if try to call init function twice', async () => {
+        const libFactory = await ethers.getContractFactory('LinearDistributionIntervalDecrease');
+        const lib = await libFactory.deploy();
+
+        const [implFactory, proxyFactory] = await Promise.all([
+          ethers.getContractFactory('BuilderSubnets', {
+            libraries: {
+              LinearDistributionIntervalDecrease: await lib.getAddress(),
+            },
+          }),
+          ethers.getContractFactory('ERC1967Proxy'),
+          ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+        ]);
+
+        const impl = await implFactory.deploy();
+        const proxy = await proxyFactory.deploy(impl, '0x');
+        const contract = impl.attach(proxy) as BuilderSubnets;
+
+        const invalidBuilderV3 = await deployFeeConfig(OWNER, 1);
+
+        await expect(contract.BuilderSubnets_init(token, feeConfig, TREASURY, 1, invalidBuilderV3)).to.be.rejectedWith(
+          'BS: invalid BuildersV3',
+        );
       });
     });
 
@@ -149,6 +173,9 @@ describe('BuilderSubnets', () => {
 
       const data = await builders.rewardCalculationStartsAt();
       expect(data).to.equal(12345);
+    });
+    it('should revert if called by non-owner', async () => {
+      await expect(builders.setRewardCalculationStartsAt(0)).to.be.revertedWith("BS: can't be zero");
     });
     it('should revert if called by non-owner', async () => {
       await expect(builders.connect(BOB).setRewardCalculationStartsAt(1)).to.be.revertedWith(
@@ -343,15 +370,21 @@ describe('BuilderSubnets', () => {
         'BS: invalid starts at timestamp',
       );
     });
+    it('should revert when try to create subnet from not owner before migration end', async () => {
+      await expect(builders.connect(BOB).createSubnet(subnet, metadata)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
   });
 
   describe('#editSubnetMetadata', () => {
     let subnet: IBuilderSubnets.SubnetStruct;
     let metadata: IBuilderSubnets.SubnetMetadataStruct;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       subnet = getDefaultSubnet(BOB, SUBNET_TREASURY);
       metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
     });
     it('should edit the existed Subnet', async () => {
       const metadata2 = {
@@ -383,9 +416,10 @@ describe('BuilderSubnets', () => {
     let subnet: IBuilderSubnets.SubnetStruct;
     let metadata: IBuilderSubnets.SubnetMetadataStruct;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       subnet = getDefaultSubnet(BOB, SUBNET_TREASURY);
       metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
     });
     it('should set the new Subnet owner', async () => {
       await builders.connect(BOB).createSubnet(subnet, metadata);
@@ -415,9 +449,10 @@ describe('BuilderSubnets', () => {
     let subnet: IBuilderSubnets.SubnetStruct;
     let metadata: IBuilderSubnets.SubnetMetadataStruct;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       subnet = getDefaultSubnet(BOB, SUBNET_TREASURY);
       metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
     });
     it('should set the new Subnet min stake', async () => {
       await builders.connect(BOB).createSubnet(subnet, metadata);
@@ -439,9 +474,10 @@ describe('BuilderSubnets', () => {
     let subnet: IBuilderSubnets.SubnetStruct;
     let metadata: IBuilderSubnets.SubnetMetadataStruct;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       subnet = getDefaultSubnet(BOB, SUBNET_TREASURY);
       metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
     });
     it('should set the new Subnet min stake', async () => {
       await builders.connect(BOB).createSubnet(subnet, metadata);
@@ -474,6 +510,7 @@ describe('BuilderSubnets', () => {
       const subnet = getDefaultSubnet(BOB, SUBNET_TREASURY);
       const metadata = getDefaultSubnetMetadata();
 
+      await builders.setIsMigrationOver(true);
       await builders.connect(BOB).createSubnet(subnet, metadata);
       subnetId = await builders.getSubnetId(subnet.name);
     });
@@ -504,6 +541,7 @@ describe('BuilderSubnets', () => {
     beforeEach(async () => {
       const subnet = getDefaultSubnet(OWNER, SUBNET_TREASURY);
       const metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(getDefaultBuildersPoolData().payoutStart);
       await builders.setBuildersRewardPoolData(getDefaultBuildersPoolData());
@@ -512,7 +550,7 @@ describe('BuilderSubnets', () => {
       subnetId = await builders.getSubnetId(subnet.name);
     });
 
-    it('should stake correctly, from account A to account B', async () => {
+    it('should stake correctly', async () => {
       await setNextTime(oneDay * 100);
       await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
 
@@ -534,7 +572,7 @@ describe('BuilderSubnets', () => {
 
       // *****
 
-      await builders.connect(BOB).stake(subnetId, OWNER, wei(20), 0);
+      await builders.connect(OWNER).stake(subnetId, OWNER, wei(20), 0);
       staker = await builders.stakers(subnetId, OWNER);
       expect(staker.lastStake).to.eq(oneDay * 100 + 1);
       expect(staker.claimLockEnd).to.eq(oneDay * 100 + 1);
@@ -547,7 +585,7 @@ describe('BuilderSubnets', () => {
       allSubnetsData = await builders.allSubnetsData();
       expect(allSubnetsData.staked).to.eq(wei(30));
       expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 100 + 1);
-      expect(await token.balanceOf(BOB)).to.eq(wei(970));
+      expect(await token.balanceOf(OWNER)).to.eq(wei(980));
       expect(await token.balanceOf(builders)).to.eq(wei(30));
     });
     it('should stake correctly, with power factor, apply users claim lock end', async () => {
@@ -580,7 +618,7 @@ describe('BuilderSubnets', () => {
 
       // *****
 
-      await builders.connect(BOB).stake(subnetId, OWNER, wei(20), builderPool.payoutStart + oneDay * 1000);
+      await builders.connect(OWNER).stake(subnetId, OWNER, wei(20), builderPool.payoutStart + oneDay * 1000);
 
       const powerFactor2 = await builders.getPowerFactor(
         builderPool.payoutStart + oneDay + 1,
@@ -601,7 +639,7 @@ describe('BuilderSubnets', () => {
       allSubnetsData = await builders.allSubnetsData();
       expect(allSubnetsData.staked).to.eq(wei(30));
       expect(allSubnetsData.lastCalculatedTimestamp).to.eq(builderPool.payoutStart + oneDay + 1);
-      expect(await token.balanceOf(BOB)).to.eq(wei(970));
+      expect(await token.balanceOf(OWNER)).to.eq(wei(980));
       expect(await token.balanceOf(builders)).to.eq(wei(30));
     });
     it('should stake correctly, with power factor, apply current timestamp claim lock end', async () => {
@@ -709,18 +747,20 @@ describe('BuilderSubnets', () => {
       );
     });
     it('should revert when stake amount is zero', async () => {
-      await expect(builders.stake(subnetId, BOB, wei(0), 0)).to.be.revertedWith('BS: nothing to stake');
+      await expect(builders.connect(BOB).stake(subnetId, BOB, wei(0), 0)).to.be.revertedWith('BS: nothing to stake');
     });
     it('should revert when sender is incorrect', async () => {
-      await builders.setIsMigrationOver(true);
-      await expect(builders.stake(subnetId, BOB, wei(1), 0)).to.be.revertedWith('BS: invalid sender');
+      await builders.setIsMigrationOver(false);
+      await expect(builders.connect(BOB).stake(subnetId, BOB, wei(1), 0)).to.be.revertedWith('BS: invalid sender (2)');
     });
     it('should revert stake is not started', async () => {
-      await expect(builders.stake(subnetId, BOB, wei(1), 0)).to.be.revertedWith("BS: stake isn't started");
+      await expect(builders.connect(BOB).stake(subnetId, BOB, wei(1), 0)).to.be.revertedWith("BS: stake isn't started");
     });
     it('should revert when staked amount too low', async () => {
       await setNextTime(oneDay * 100);
-      await expect(builders.stake(subnetId, BOB, wei(0.1), 0)).to.be.revertedWith('BS: staked amount too low');
+      await expect(builders.connect(BOB).stake(subnetId, BOB, wei(0.1), 0)).to.be.revertedWith(
+        'BS: staked amount too low',
+      );
     });
   });
 
@@ -731,6 +771,7 @@ describe('BuilderSubnets', () => {
     beforeEach(async () => {
       const subnet = getDefaultSubnet(OWNER, SUBNET_TREASURY);
       const metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(getDefaultBuildersPoolData().payoutStart);
       await builders.setBuildersRewardPoolData(getDefaultBuildersPoolData());
@@ -808,7 +849,7 @@ describe('BuilderSubnets', () => {
 
       await setNextTime(builderPool.payoutStart + oneDay - 1);
       await builders.setSubnetMaxClaimLockEnd(subnetId, builderPool.payoutStart + oneDay * 2000);
-      await builders.connect(OWNER).stake(subnetId, BOB, wei(10), builderPool.payoutStart + oneDay * 1000);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), builderPool.payoutStart + oneDay * 1000);
 
       const powerFactor = await builders.getPowerFactor(
         builderPool.payoutStart + oneDay,
@@ -831,14 +872,14 @@ describe('BuilderSubnets', () => {
       const allSubnetsData = await builders.allSubnetsData();
       expect(allSubnetsData.staked).to.eq(wei(4));
       expect(allSubnetsData.lastCalculatedTimestamp).to.eq(builderPool.payoutStart + 10 * oneDay);
-      expect(await token.balanceOf(BOB)).to.eq(wei(1006));
+      expect(await token.balanceOf(BOB)).to.eq(wei(996));
       expect(await token.balanceOf(builders)).to.eq(wei(4));
     });
     it('should withdraw correctly with fee', async () => {
       await feeConfig.setFeeForOperation(builders, await builders.FEE_WITHDRAW_OPERATION(), wei(0.2, 25));
 
       await setNextTime(oneDay * 101);
-      await builders.connect(OWNER).stake(subnetId, BOB, wei(100), 0);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(100), 0);
 
       await setNextTime(oneDay * 110);
       await builders.connect(BOB).withdraw(subnetId, wei(9999));
@@ -855,7 +896,7 @@ describe('BuilderSubnets', () => {
       const allSubnetsData = await builders.allSubnetsData();
       expect(allSubnetsData.staked).to.eq(wei(0));
       expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 110);
-      expect(await token.balanceOf(BOB)).to.eq(wei(1080));
+      expect(await token.balanceOf(BOB)).to.eq(wei(980));
       expect(await token.balanceOf(FEE_TREASURY)).to.eq(wei(20));
       expect(await token.balanceOf(builders)).to.eq(wei(0));
     });
@@ -889,6 +930,7 @@ describe('BuilderSubnets', () => {
     beforeEach(async () => {
       const subnet = getDefaultSubnet(OWNER, SUBNET_TREASURY);
       const metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(99 * oneDay);
       await builders.setBuildersRewardPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
@@ -899,7 +941,7 @@ describe('BuilderSubnets', () => {
 
     it('should claim correctly and change the desired storage', async () => {
       await setNextTime(oneDay * 100);
-      await builders.connect(OWNER).stake(subnetId, BOB, wei(10), 0);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
       await setNextTime(oneDay * 101 + 1);
       await builders.connect(BOB).claim(subnetId, BOB);
 
@@ -915,19 +957,23 @@ describe('BuilderSubnets', () => {
     });
     it('should claim correctly, check reward calculation', async () => {
       await setNextTime(oneDay * 100);
-      await builders.connect(OWNER).stake(subnetId, BOB, wei(10), 0);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
 
-      await setNextTime(oneDay * 101 + 1);
+      await setTime(oneDay * 101);
+      const rewards = await builders.getStakerRewards(subnetId, BOB);
+      // 10 / 399 * 199 = 4.9874686716792
+      expect(rewards).to.closeTo(wei(4.9874), wei(0.001));
+
       await builders.connect(OWNER).claim(subnetId, BOB);
       // 200 + 199 = 399
       // 10 / 399 * 199 * 0.8 = 3.98997493734336
-      expect(await token.balanceOf(BOB)).to.closeTo(wei(1000) + wei(3.9899), wei(0.001));
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(3.9899), wei(0.001));
 
       await setNextTime(oneDay * 102);
       await builders.connect(BOB).claim(subnetId, BOB);
       // 200 + 199 + 198 = 597
       // (10 / 399 * 199 + 10 / 597 * 198) * 0.8 = 6.64324126900165
-      expect(await token.balanceOf(BOB)).to.closeTo(wei(1000) + wei(6.6432), wei(0.001));
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(6.6432), wei(0.001));
 
       await setNextTime(oneDay * 102 + 1);
       await builders.connect(OWNER).stake(subnetId, OWNER, wei(20), 0);
@@ -937,21 +983,21 @@ describe('BuilderSubnets', () => {
       await builders.connect(BOB).claim(subnetId, OWNER);
       // 200 + 199 + 198 + 197 = 794
       // (10 / 399 * 199 + 10 / 597 * 198 + 10 / 794 * 197) * 0.8 = 8.62812791887571
-      expect(await token.balanceOf(BOB)).to.closeTo(wei(1000) + wei(8.6281), wei(0.001));
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(8.6281), wei(0.001));
       // (20 / 794 * 197) * 0.8 = 3.96977329974811
-      expect(await token.balanceOf(OWNER)).to.closeTo(wei(970) + wei(3.9697), wei(0.001));
+      expect(await token.balanceOf(OWNER)).to.closeTo(wei(980) + wei(3.9697), wei(0.001));
     });
     it('should claim correctly, with all fees', async () => {
       await feeConfig.setFeeForOperation(builders, await builders.FEE_CLAIM_OPERATION(), wei(0.3, 25));
 
       await setNextTime(oneDay * 100);
-      await builders.connect(OWNER).stake(subnetId, BOB, wei(10), 0);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
 
       await setNextTime(oneDay * 101 + 1);
       await builders.connect(BOB).claim(subnetId, BOB);
       // 200 + 199 = 399
       // 10 / 399 * 199 * 0.5 = 2.4937343358396
-      expect(await token.balanceOf(BOB)).to.closeTo(wei(1000) + wei(2.4937), wei(0.001));
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(2.4937), wei(0.001));
       // 10 / 399 * 199 * 0.3 = 1.49624060150376
       expect(await token.balanceOf(FEE_TREASURY)).to.closeTo(wei(1.4962), wei(0.001));
       // 10 / 399 * 199 * 0.2 = 0.99749373433584
@@ -964,13 +1010,13 @@ describe('BuilderSubnets', () => {
       const subnetId_ = await builders.getSubnetId(subnet_.name);
 
       await setNextTime(oneDay * 100);
-      await builders.connect(OWNER).stake(subnetId_, BOB, wei(10), 0);
+      await builders.connect(BOB).stake(subnetId_, BOB, wei(10), 0);
 
       await setNextTime(oneDay * 101 + 1);
       await builders.connect(BOB).claim(subnetId_, BOB);
       // 200 + 199 = 399
       // 10 / 399 * 199 = 4.9874686716792
-      expect(await token.balanceOf(BOB)).to.closeTo(wei(1000) + wei(4.9874), wei(0.001));
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(4.9874), wei(0.001));
     });
     it('should claim correctly, with fees sum more than 100%', async () => {
       await feeConfig.setFeeForOperation(builders, await builders.FEE_CLAIM_OPERATION(), wei(0.3, 25));
@@ -981,7 +1027,7 @@ describe('BuilderSubnets', () => {
       const subnetId_ = await builders.getSubnetId(subnet_.name);
 
       await setNextTime(oneDay * 100);
-      await builders.connect(OWNER).stake(subnetId_, BOB, wei(10), 0);
+      await builders.connect(BOB).stake(subnetId_, BOB, wei(10), 0);
 
       await setNextTime(oneDay * 101 + 1);
       await builders.connect(BOB).claim(subnetId_, BOB);
@@ -990,7 +1036,7 @@ describe('BuilderSubnets', () => {
       expect(await token.balanceOf(FEE_TREASURY)).to.closeTo(wei(1.4962), wei(0.001));
       // 10 / 399 * 199 - 10 / 399 * 199 * 0.3 = 3.49122807017544
       expect(await token.balanceOf(SUBNET_TREASURY)).to.closeTo(wei(3.49122), wei(0.001));
-      expect(await token.balanceOf(BOB)).to.eq(wei(1000));
+      expect(await token.balanceOf(BOB)).to.eq(wei(990));
     });
     it('should correctly calculate contract share limits', async () => {
       await token.connect(MINTER).mint(BOB, wei(10000));
@@ -1012,7 +1058,7 @@ describe('BuilderSubnets', () => {
       await builders.setSubnetMaxClaimLockEnd(subnetId, builderPool.payoutStart + oneDay * 345 * 10);
       // 20720 / 10.7 = 1936.4485
       await builders.connect(BOB).stake(subnetId, BOB, wei(1936.44), poolStart + oneDay * 345 * 10);
-      await expect(builders.stake(subnetId, BOB, wei(0.1), 0)).to.be.revertedWith(
+      await expect(builders.connect(BOB).stake(subnetId, BOB, wei(0.1), 0)).to.be.revertedWith(
         'BS: the amount of stakes exceeded the amount of rewards',
       );
     });
@@ -1036,6 +1082,7 @@ describe('BuilderSubnets', () => {
     beforeEach(async () => {
       const subnet = getDefaultSubnet(OWNER, SUBNET_TREASURY);
       const metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
       await builders.createSubnet(subnet, metadata);
       await builders.setRewardCalculationStartsAt(99 * oneDay);
       await builders.setBuildersRewardPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
@@ -1148,6 +1195,12 @@ describe('BuilderSubnets', () => {
       expect(res).to.eq(wei(0));
 
       res = await builders.getPeriodRewardForStake(wei(10), oneDay * 2 + 1, oneDay * 2);
+      expect(res).to.eq(wei(0));
+    });
+    it('should return 0 when `virtualStaked` zero', async () => {
+      let res = wei(0);
+
+      res = await builders.getPeriodRewardForStake(wei(0), oneDay * 2, oneDay * 2 + 1);
       expect(res).to.eq(wei(0));
     });
   });

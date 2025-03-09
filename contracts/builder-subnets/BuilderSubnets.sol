@@ -10,7 +10,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
 import {IBuilderSubnets, IERC165} from "../interfaces/builder-subnets/IBuilderSubnets.sol";
-import {IBuildersTreasury} from "../interfaces/builders/IBuildersTreasury.sol";
+import {IBuildersV3} from "../interfaces/builders/IBuildersV3.sol";
 
 import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
 import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionIntervalDecrease.sol";
@@ -56,6 +56,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      * subnet creation can't be in the past.
      */
     bool public isMigrationOver;
+    address public buildersV3;
 
     // uint256 public totalStaked;
     // uint256 public totalVirtualStaked;
@@ -91,7 +92,8 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         address token_,
         address feeConfig_,
         address treasury_,
-        uint256 minWithdrawLockPeriodAfterStake_
+        uint256 minWithdrawLockPeriodAfterStake_,
+        address buildersV3_
     ) external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -101,6 +103,9 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         setMinWithdrawLockPeriodAfterStake(minWithdrawLockPeriodAfterStake_);
 
         token = token_;
+
+        require(IERC165(buildersV3_).supportsInterface(type(IBuildersV3).interfaceId), "BS: invalid BuildersV3");
+        buildersV3 = buildersV3_;
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
@@ -134,6 +139,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     }
 
     function setRewardCalculationStartsAt(uint128 rewardCalculationStartsAt_) external onlyOwner {
+        require(rewardCalculationStartsAt_ > 0, "BS: can't be zero");
         rewardCalculationStartsAt = rewardCalculationStartsAt_;
 
         emit RewardCalculationStartsAtSet(rewardCalculationStartsAt_);
@@ -178,6 +184,9 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     function createSubnet(Subnet calldata subnet_, SubnetMetadata calldata metadata_) public {
         bytes32 subnetId_ = getSubnetId(subnet_.name);
 
+        if (isMigrationOver != true) {
+            _checkOwner();
+        }
         require(!_subnetExists(subnetId_), "BS: the subnet already exist");
         require(bytes(subnet_.name).length != 0, "BS: invalid name");
         require(subnet_.owner != address(0), "BS: invalid owner address");
@@ -268,7 +277,9 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         uint128 claimLockEnd_
     ) external onlyExistedSubnet(subnetId_) {
         if (isMigrationOver) {
-            require(stakerAddress_ == _msgSender(), "BS: invalid sender");
+            require(stakerAddress_ == _msgSender(), "BS: invalid sender (1)");
+        } else {
+            require(buildersV3 == _msgSender(), "BS: invalid sender (2)");
         }
 
         require(amount_ > 0, "BS: nothing to stake");
@@ -410,7 +421,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
 
         Staker storage staker = stakers[subnetId_][stakerAddress_];
 
-        return getPowerFactor(staker.lastStake, staker.claimLockEnd);
+        return (staker.virtualStaked * PRECISION) / staker.staked;
     }
 
     function getPowerFactor(uint128 from_, uint128 to_) public pure returns (uint256) {
@@ -441,7 +452,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      * `reward` = Σ(`rewardForPeriod`)
      */
     function getPeriodRewardForStake(uint256 virtualStaked_, uint128 from_, uint128 to_) public view returns (uint256) {
-        if (to_ <= from_) {
+        if (to_ <= from_ || virtualStaked_ == 0) {
             return 0;
         }
         uint128 period_ = 1 days;
@@ -462,9 +473,8 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             }
 
             uint256 emissionFromPeriodStartToPeriodEnd_ = getPeriodRewardForBuildersPool(from_, toForPeriod_);
-            uint256 shareForPeriod_ = (virtualStaked_ * PRECISION) / emissionToPeriodEnd_;
 
-            rewards_ += (shareForPeriod_ * emissionFromPeriodStartToPeriodEnd_) / PRECISION;
+            rewards_ += (virtualStaked_ * emissionFromPeriodStartToPeriodEnd_) / emissionToPeriodEnd_;
             from_ = toForPeriod_;
         }
 
