@@ -162,7 +162,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     function setSubnetCreationFee(
         uint256 subnetCreationFeeAmount_,
         address subnetCreationFeeTreasury_
-    ) public onlyOwner {
+    ) external onlyOwner {
         require(subnetCreationFeeTreasury_ != address(0), "BS: invalid creation fee treasury");
 
         subnetCreationFeeAmount = subnetCreationFeeAmount_;
@@ -181,7 +181,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /*** Subnet management functionality for the Builders                                       ***/
     /**********************************************************************************************/
 
-    function createSubnet(Subnet calldata subnet_, SubnetMetadata calldata metadata_) public {
+    function createSubnet(Subnet calldata subnet_, SubnetMetadata calldata metadata_) external {
         bytes32 subnetId_ = getSubnetId(subnet_.name);
 
         if (isMigrationOver != true) {
@@ -215,13 +215,13 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     function editSubnetMetadata(
         bytes32 subnetId_,
         SubnetMetadata calldata metadata_
-    ) public onlySubnetOwner(subnetId_) {
+    ) external onlySubnetOwner(subnetId_) {
         subnetsMetadata[subnetId_] = metadata_;
 
         emit SubnetMetadataEdited(subnetId_, metadata_);
     }
 
-    function setSubnetOwnership(bytes32 subnetId_, address newValue_) public onlySubnetOwner(subnetId_) {
+    function setSubnetOwnership(bytes32 subnetId_, address newValue_) external onlySubnetOwner(subnetId_) {
         require(newValue_ != address(0), "BS: new owner is the zero address");
 
         Subnet storage subnet = subnets[subnetId_];
@@ -232,7 +232,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetOwnerSet(subnetId_, oldValue_, newValue_);
     }
 
-    function setSubnetMinStake(bytes32 subnetId_, uint256 newValue_) public onlySubnetOwner(subnetId_) {
+    function setSubnetMinStake(bytes32 subnetId_, uint256 newValue_) external onlySubnetOwner(subnetId_) {
         Subnet storage subnet = subnets[subnetId_];
         uint256 oldValue_ = subnet.minStake;
 
@@ -241,7 +241,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetMinStakeSet(subnetId_, oldValue_, newValue_);
     }
 
-    function setSubnetFeeTreasury(bytes32 subnetId_, address newValue_) public onlySubnetOwner(subnetId_) {
+    function setSubnetFeeTreasury(bytes32 subnetId_, address newValue_) external onlySubnetOwner(subnetId_) {
         Subnet storage subnet = subnets[subnetId_];
         address oldValue_ = subnet.feeTreasury;
 
@@ -251,7 +251,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetFeeTreasurySet(subnetId_, oldValue_, newValue_);
     }
 
-    function setSubnetMaxClaimLockEnd(bytes32 subnetId_, uint128 newValue_) public onlySubnetOwner(subnetId_) {
+    function setSubnetMaxClaimLockEnd(bytes32 subnetId_, uint128 newValue_) external onlySubnetOwner(subnetId_) {
         Subnet storage subnet = subnets[subnetId_];
         uint128 oldValue_ = subnet.maxClaimLockEnd;
 
@@ -414,7 +414,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /*** Functionality for the Power Factor                                                     ***/
     /**********************************************************************************************/
 
-    function getStakerPowerFactor(bytes32 subnetId_, address stakerAddress_) public view returns (uint256) {
+    function getStakerPowerFactor(bytes32 subnetId_, address stakerAddress_) external view returns (uint256) {
         if (!_subnetExists(subnetId_)) {
             return PRECISION;
         }
@@ -432,7 +432,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /*** Functionality for the rewards calculation                                              ***/
     /**********************************************************************************************/
 
-    function getStakerRewards(bytes32 subnetId_, address stakerAddress_) public view returns (uint256) {
+    function getStakerRewards(bytes32 subnetId_, address stakerAddress_) external view returns (uint256) {
         uint256 currentRate_ = _getCurrentRewardRate();
 
         return _getStakerRewards(currentRate_, stakers[subnetId_][stakerAddress_]);
