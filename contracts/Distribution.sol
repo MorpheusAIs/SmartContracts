@@ -68,7 +68,7 @@ contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** Pool managment and data retrieval                                                      ***/
+    /*** Pool management and data retrieval                                                      ***/
     /**********************************************************************************************/
     function createPool(Pool calldata pool_) public onlyOwner {
         require(pool_.payoutStart > block.timestamp, "DS: invalid payout start value");

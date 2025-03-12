@@ -21,7 +21,7 @@ import {
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { setTime } from '@/test/helpers/block-helper';
-import { oneHour } from '@/test/helpers/distribution-helper';
+import { getDefaultPool, getDefaultRewardsPools, oneHour } from '@/test/helpers/distribution-helper';
 import { Reverter } from '@/test/helpers/reverter';
 
 describe('Distributor', () => {
@@ -35,7 +35,7 @@ describe('Distributor', () => {
   let distributor: Distributor;
   let commonToken: ERC20Token;
 
-  type DepositPoolTestInfo = {
+  type DepositPoolTestOnlyInfo = {
     chainLinkPath: string;
     chainLinkPrice: bigint;
     aggregatorV3: AggregatorV3;
@@ -43,7 +43,8 @@ describe('Distributor', () => {
     depositPool: DepositPool;
   };
 
-  let dpCommonTokenInfo: DepositPoolTestInfo;
+  let dpToken1Info: DepositPoolTestOnlyInfo;
+  let dpToken2Info: DepositPoolTestOnlyInfo;
 
   before(async () => {
     [OWNER, ALAN, BOB] = await ethers.getSigners();
@@ -55,9 +56,16 @@ describe('Distributor', () => {
     commonToken = await deployERC20Token();
 
     // START form test structs
-    dpCommonTokenInfo = {
+    dpToken1Info = {
       chainLinkPath: 'wETH/USD',
       chainLinkPrice: wei(100, 8),
+      aggregatorV3: await deployAggregatorV3(),
+      token: await deployERC20Token(),
+      depositPool: await deployDepositPool(commonToken),
+    };
+    dpToken2Info = {
+      chainLinkPath: 'cbBTC/USD',
+      chainLinkPrice: wei(200, 8),
       aggregatorV3: await deployAggregatorV3(),
       token: await deployERC20Token(),
       depositPool: await deployDepositPool(commonToken),
@@ -65,9 +73,9 @@ describe('Distributor', () => {
     // END
 
     // START base ChainLink setup
-    const paths = [dpCommonTokenInfo.chainLinkPath];
-    const aggregators = [[dpCommonTokenInfo.aggregatorV3]];
-    const answers = [[dpCommonTokenInfo.chainLinkPrice]];
+    const paths = [dpToken1Info.chainLinkPath, dpToken2Info.chainLinkPath];
+    const aggregators = [[dpToken1Info.aggregatorV3], [dpToken2Info.aggregatorV3]];
+    const answers = [[dpToken1Info.chainLinkPrice], [dpToken2Info.chainLinkPrice]];
 
     await chainLinkDataConsumerV3.updateDataFeeds(paths, aggregators);
     for (let i = 0; i < answers.length; i++) {
@@ -83,7 +91,7 @@ describe('Distributor', () => {
   afterEach(reverter.revert);
 
   describe('UUPS proxy functionality', () => {
-    describe('#Distribution_init', () => {
+    describe('#Distributor_init', () => {
       it('should set correct data after creation', async () => {
         expect(await distributor.chainLinkDataConsumerV3()).to.eq(await chainLinkDataConsumerV3.getAddress());
       });
@@ -110,56 +118,37 @@ describe('Distributor', () => {
           'Ownable: caller is not the owner',
         );
       });
-      it('should revert if `isNotUpgradeable == true`', async () => {
-        await distributor.removeUpgradeability();
-
-        await expect(distributor.upgradeTo(ZERO_ADDR)).to.be.revertedWith("DR: upgrade isn't available");
-      });
     });
   });
 
-  describe('#createPool', () => {
-    it('should create pool with correct data', async () => {
-      await distributor.addDepositPoolDetails(
-        dpCommonTokenInfo.depositPool.getAddress(),
-        dpCommonTokenInfo.chainLinkPath,
-      );
+  describe('#addDepositPoolDetails', () => {
+    it('should', async () => {
+      await distributor.addDepositPoolDetails(dpToken1Info.depositPool.getAddress(), dpToken1Info.chainLinkPath);
+      await distributor.addDepositPoolDetails(dpToken2Info.depositPool.getAddress(), dpToken2Info.chainLinkPath);
 
-      console.log(await distributor.depositPoolsDetails(0));
-
-      // const poolData: IDistribution.PoolStruct = await distribution.pools(0);
-      // expect(_comparePoolStructs(pool, poolData)).to.be.true;
+      // console.log(await distributor.depositPoolsDetails(0));
+      // console.log(await distributor.depositPoolsDetails(1));
     });
-    // it('should correctly pool with constant reward', async () => {
-    //   const pool = getDefaultPool();
-    //   pool.rewardDecrease = 0;
+  });
+  describe('#createRewardPools', () => {
+    it('should create reward pools', async () => {
+      const rewardPools = getDefaultRewardsPools();
+      await distributor.createRewardPools(rewardPools);
 
-    //   await distribution.createPool(pool);
-
-    //   const poolData: IDistribution.PoolStruct = await distribution.pools(0);
-    //   expect(_comparePoolStructs(pool, poolData)).to.be.true;
-    // });
-
-    // describe('should revert if try to create pool with incorrect data', () => {
-    //   it('if `payoutStart == 0`', async () => {
-    //     const pool = getDefaultPool();
-    //     pool.payoutStart = 0;
-
-    //     await expect(distribution.createPool(pool)).to.be.rejectedWith('DR: invalid payout start value');
-    //   });
-    //   it('if `decreaseInterval == 0`', async () => {
-    //     const pool = getDefaultPool();
-    //     pool.decreaseInterval = 0;
-
-    //     await expect(distribution.createPool(pool)).to.be.rejectedWith('DR: invalid decrease interval');
-    //   });
-    // });
-
-    // it('should revert if caller is not owner', async () => {
-    //   await expect(distribution.connect(SECOND).createPool(getDefaultPool())).to.be.revertedWith(
-    //     'Ownable: caller is not the owner',
-    //   );
-    // });
+      for (let i = 0; i < rewardPools.length; i++) {
+        const createdRewardPool = await distributor.rewardPools(i);
+        expect(createdRewardPool.payoutStart).to.eq(rewardPools[i].payoutStart);
+        expect(createdRewardPool.decreaseInterval).to.eq(rewardPools[i].decreaseInterval);
+        expect(createdRewardPool.initialReward).to.eq(rewardPools[i].initialReward);
+        expect(createdRewardPool.rewardDecrease).to.eq(rewardPools[i].rewardDecrease);
+      }
+    });
+  });
+  describe('#getRewardsFromRewardPool', () => {
+    it('should return 0 if reward pool is not exist', async () => {
+      const reward = await distributor.getRewardsFromRewardPool(0, 0, 99999);
+      expect(reward).to.eq(0);
+    });
   });
 });
 

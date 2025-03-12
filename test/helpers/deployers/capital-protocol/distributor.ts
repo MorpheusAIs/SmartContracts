@@ -3,8 +3,15 @@ import { ethers } from 'hardhat';
 import { ChainLinkDataConsumerV3, Distributor } from '@/generated-types/ethers';
 
 export const deployDistributor = async (chainLinkDataConsumerV3: ChainLinkDataConsumerV3): Promise<Distributor> => {
+  const [lib1Factory] = await Promise.all([ethers.getContractFactory('LinearDistributionIntervalDecrease')]);
+  const lib1 = await lib1Factory.deploy();
+
   const [implFactory, proxyFactory] = await Promise.all([
-    ethers.getContractFactory('Distributor'),
+    ethers.getContractFactory('Distributor', {
+      libraries: {
+        LinearDistributionIntervalDecrease: await lib1.getAddress(),
+      },
+    }),
     ethers.getContractFactory('ERC1967Proxy'),
   ]);
 

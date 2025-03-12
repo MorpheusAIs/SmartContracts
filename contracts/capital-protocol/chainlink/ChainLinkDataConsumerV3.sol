@@ -82,10 +82,6 @@ contract ChainLinkDataConsumerV3 is IChainLinkDataConsumerV3, OwnableUpgradeable
         return res_;
     }
 
-    function getDecimals() public pure returns (uint8) {
-        return 8;
-    }
-
     /**********************************************************************************************/
     /*** UUPS                                                                                   ***/
     /**********************************************************************************************/

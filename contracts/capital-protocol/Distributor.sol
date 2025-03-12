@@ -20,10 +20,27 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
         uint256 depositTokenPrice;
     }
 
-    bool public isNotUpgradeable;
+    struct DepositPoolData {
+        uint256 rate;
+    }
+
+    struct DepositPoolsData {
+        uint256 rate;
+    }
+
+    struct RewardPool {
+        uint128 payoutStart;
+        uint128 decreaseInterval;
+        uint256 initialReward;
+        uint256 rewardDecrease;
+    }
 
     address public chainLinkDataConsumerV3;
+
+    RewardPool[] public rewardPools;
+
     DepositPoolDetails[] public depositPoolsDetails;
+    mapping(uint256 => DepositPoolData) public depositPoolData;
 
     constructor() {
         _disableInitializers();
@@ -40,14 +57,22 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
     //     return interfaceId_ == type(IBuildersTreasury).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     // }
 
+    /**********************************************************************************************/
+    /*** Global contract management functionality for the contract `owner()`                    ***/
+    /**********************************************************************************************/
+
     function setChainLinkDataConsumerV3(address value_) public onlyOwner {
         require(
             IERC165(value_).supportsInterface(type(IChainLinkDataConsumerV3).interfaceId),
-            "BS: invalid data consumer"
+            "DR: invalid data consumer"
         );
 
         chainLinkDataConsumerV3 = value_;
     }
+
+    /**********************************************************************************************/
+    /*** `DepositPoolDetails` management functionality for the contract `owner()`               ***/
+    /**********************************************************************************************/
 
     function addDepositPoolDetails(address poolContract_, string memory chainLinkPath_) external onlyOwner {
         require(
@@ -77,18 +102,50 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** UUPS                                                                                   ***/
+    /***                ***/
     /**********************************************************************************************/
 
-    function removeUpgradeability() external onlyOwner {
-        isNotUpgradeable = true;
+    function createRewardPools(RewardPool[] calldata rewardPools_) public onlyOwner {
+        for (uint256 i = 0; i < rewardPools_.length; i++) {
+            require(rewardPools_[i].decreaseInterval > 0, "DR: invalid decrease interval");
+
+            rewardPools.push(rewardPools_[i]);
+        }
     }
+
+    function getRewardsFromRewardPool(
+        uint256 rewardPoolIndex_,
+        uint128 from_,
+        uint128 to_
+    ) public view returns (uint256) {
+        if (rewardPoolIndex_ >= rewardPools.length) {
+            return 0;
+        }
+
+        RewardPool storage rewardPool = rewardPools[rewardPoolIndex_];
+
+        return
+            LinearDistributionIntervalDecrease.getPeriodReward(
+                rewardPool.initialReward,
+                rewardPool.rewardDecrease,
+                rewardPool.payoutStart,
+                rewardPool.decreaseInterval,
+                from_,
+                to_
+            );
+    }
+
+    function onlyExistedRewardPool(uint256 rewardPoolIndex_) public view {
+        require(rewardPoolIndex_ < rewardPools.length, "DR: reward pool doesn't exist");
+    }
+
+    /**********************************************************************************************/
+    /*** UUPS                                                                                   ***/
+    /**********************************************************************************************/
 
     function version() external pure returns (uint256) {
         return 1;
     }
 
-    function _authorizeUpgrade(address) internal view override onlyOwner {
-        require(!isNotUpgradeable, "DR: upgrade isn't available");
-    }
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 }

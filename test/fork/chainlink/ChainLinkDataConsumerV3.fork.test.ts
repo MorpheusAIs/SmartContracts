@@ -63,7 +63,7 @@ describe('ChainLinkDataConsumerV3', () => {
 
   describe('#getChainLinkDataFeedLatestAnswer', () => {
     it('should return correct prices', async () => {
-      const decimals = await consumer.getDecimals();
+      const decimals = 8;
 
       for (let i = 0; i < paths.length; i++) {
         const res = await consumer.getChainLinkDataFeedLatestAnswer(await consumer.getPathId(paths[i]));
