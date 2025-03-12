@@ -367,6 +367,29 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         }
     }
 
+    /**
+     * @dev With claiming, there can be so many calculation periods that a transaction
+     * won't fit into a block. In this case, we can use this function to calculate
+     * rewards in parts.
+     */
+    function collectPendingRewards(uint128 to_) external {
+        if (allSubnetsData.virtualStaked == 0) {
+            allSubnetsData.lastCalculatedTimestamp = uint128(block.timestamp);
+            return;
+        }
+
+        to_ = to_ > block.timestamp ? uint128(block.timestamp) : to_;
+
+        uint256 currentRewards_ = getPeriodRewardForStake(
+            allSubnetsData.virtualStaked,
+            allSubnetsData.lastCalculatedTimestamp,
+            to_
+        );
+
+        allSubnetsData.rate += (currentRewards_ * PRECISION) / allSubnetsData.virtualStaked;
+        allSubnetsData.lastCalculatedTimestamp = to_;
+    }
+
     function getMaxTotalVirtualStaked(uint128 to_) public view returns (uint256) {
         return (maxStakedShareForBuildersPool * getPeriodRewardForBuildersPool(0, to_)) / PRECISION;
     }

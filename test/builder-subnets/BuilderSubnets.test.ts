@@ -1204,6 +1204,71 @@ describe('BuilderSubnets', () => {
       expect(res).to.eq(wei(0));
     });
   });
+
+  describe('#collectPendingRewards', () => {
+    let subnetId: string;
+
+    beforeEach(async () => {
+      const subnet = getDefaultSubnet(OWNER, SUBNET_TREASURY);
+      const metadata = getDefaultSubnetMetadata();
+      await builders.createSubnet(subnet, metadata);
+      await builders.setIsMigrationOver(true);
+      await builders.setRewardCalculationStartsAt(99 * oneDay);
+      await builders.setBuildersRewardPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
+
+      subnetId = await builders.getSubnetId(subnet.name);
+    });
+
+    it('should collect pending rewards, periods', async () => {
+      await setNextTime(oneDay * 100);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
+
+      await setNextTime(oneDay * 103);
+      await builders.connect(OWNER).collectPendingRewards(oneDay * 101);
+      await builders.connect(BOB).collectPendingRewards(oneDay * 102);
+      await builders.connect(OWNER).claim(subnetId, BOB);
+      // 200 + 199 + 198 + 197 = 794
+      // (10 / 399 * 199 + 10 / 597 * 198 + 10 / 794 * 197) * 0.8 = 8.62812791887571
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(8.6281), wei(0.001));
+    });
+    it('should collect pending rewards, max', async () => {
+      await setNextTime(oneDay * 100);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
+
+      await setNextTime(oneDay * 102);
+      await builders.connect(OWNER).collectPendingRewards(oneDay * 999);
+      await builders.connect(OWNER).claim(subnetId, BOB);
+      // 200 + 199 + 198 = 597
+      // (10 / 399 * 199 + 10 / 597 * 198) * 0.8 = 6.64324126900165
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(6.6432), wei(0.001));
+    });
+    it('should collect pending rewards', async () => {
+      await setNextTime(oneDay * 100);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
+      await setNextTime(oneDay * 102);
+      await builders.connect(BOB).claim(subnetId, BOB);
+      await builders.connect(BOB).withdraw(subnetId, wei(999));
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(1000) + wei(6.6432), wei(0.001));
+      let allSubnetsData = await builders.allSubnetsData();
+      expect(allSubnetsData.virtualStaked).to.eq(wei(0));
+      expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 102 + 1);
+
+      await setNextTime(oneDay * 110);
+      await builders.connect(OWNER).collectPendingRewards(oneDay * 999);
+      allSubnetsData = await builders.allSubnetsData();
+      expect(allSubnetsData.virtualStaked).to.eq(wei(0));
+      expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 110);
+
+      await setNextTime(oneDay * 111);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
+      await setNextTime(oneDay * 112);
+      await builders.connect(BOB).claim(subnetId, BOB);
+      // 200 + 199 + 198 + 197 + 196 + 195 + 194 + 193 + 192 + 191 + 190 + 189 + 188 = 2522
+      // (10 / 2522 * 188) * 0.8 = 8.62812791887571
+      expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(6.6432) + wei(0.5962), wei(0.001));
+    });
+  });
 });
 
 // npx hardhat test "test/builder-subnets/BuilderSubnets.test.ts"
