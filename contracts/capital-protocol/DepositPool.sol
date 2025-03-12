@@ -31,7 +31,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
     // Pool storage
     // Pool[] public pools;
-    // mapping(uint256 => PoolData) public poolsData;
+    mapping(uint256 => RewardPoolData) public rewardPoolsData;
 
     // User storage
     mapping(address => mapping(uint256 => UserData)) public usersData;
@@ -63,7 +63,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     /*** Modifiers                                                                              ***/
     /**********************************************************************************************/
     modifier poolPublic(uint256 rewardPoolId_) {
-        require(rewardPoolsData[rewardPoolId_].isPublic, "DS: pool isn't public");
+        require(rewardPoolsProtocolDetails[rewardPoolId_].isPublic, "DS: pool isn't public");
         _;
     }
 
@@ -165,13 +165,17 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         Distributor(distributor).onlyExistedRewardPool(rewardPoolId_);
 
         address user_ = _msgSender();
+        Distributor.RewardPool memory rewardPool_ = Distributor(distributor).getRewardPool(rewardPoolId_);
 
-        Pool storage pool = pools[rewardPoolId_];
+        RewardPoolProtocolDetails storage rewardPoolProtocolDetails = rewardPoolsProtocolDetails[rewardPoolId_];
         PoolLimits storage poolLimits = poolsLimits[rewardPoolId_];
-        PoolData storage poolData = poolsData[rewardPoolId_];
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
         UserData storage userData = usersData[user_][rewardPoolId_];
 
-        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
+        require(
+            block.timestamp > rewardPool_.payoutStart + rewardPoolProtocolDetails.claimLockPeriod,
+            "DS: pool claim is locked (1)"
+        );
         require(
             block.timestamp > userData.lastStake + poolLimits.claimLockPeriodAfterStake,
             "DS: pool claim is locked (S)"
@@ -196,9 +200,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         }
 
         // Update pool data
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
-        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
+        rewardPoolData.totalVirtualDeposited =
+            rewardPoolData.totalVirtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
 
         // Update user data
         userData.rate = currentPoolRate_;
@@ -218,14 +225,18 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         Distributor(distributor).onlyExistedRewardPool(rewardPoolId_);
 
         address referrer_ = _msgSender();
+        Distributor.RewardPool memory rewardPool_ = Distributor(distributor).getRewardPool(rewardPoolId_);
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(rewardPoolId_);
 
-        Pool storage pool = pools[rewardPoolId_];
+        RewardPoolProtocolDetails storage rewardPoolProtocolDetails = rewardPoolsProtocolDetails[rewardPoolId_];
         PoolLimits storage poolLimits = poolsLimits[rewardPoolId_];
         ReferrerData storage referrerData = referrersData[referrer_][rewardPoolId_];
 
-        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
+        require(
+            block.timestamp > rewardPool_.payoutStart + rewardPoolProtocolDetails.claimLockPeriod,
+            "DS: pool claim is locked"
+        );
         require(
             block.timestamp > referrerData.lastClaim + poolLimits.claimLockPeriodAfterClaim,
             "DS: pool claim is locked (C)"
@@ -235,9 +246,9 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         // uint256 pendingRewards_ = referrerData.claimReferrerTier(currentPoolRate_);
 
         // Update pool data
-        PoolData storage poolData = poolsData[rewardPoolId_];
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
 
         // Transfer rewards
         IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, referrer_);
@@ -259,7 +270,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         address user_ = _msgSender();
         uint256 currentPoolRate_ = _getCurrentPoolRate(rewardPoolId_);
 
-        PoolData storage poolData = poolsData[rewardPoolId_];
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
         UserData storage userData = usersData[user_][rewardPoolId_];
 
         require(userData.deposited > 0, "DS: user isn't staked");
@@ -276,9 +287,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         }
 
         // Update pool data
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
-        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
+        rewardPoolData.totalVirtualDeposited =
+            rewardPoolData.totalVirtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
 
         // Update user data
         userData.rate = currentPoolRate_;
@@ -290,7 +304,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function getCurrentUserReward(uint256 rewardPoolId_, address user_) public view returns (uint256) {
-        if (!_poolExists(rewardPoolId_)) {
+        if (!Distributor(distributor).isRewardPoolExist(rewardPoolId_)) {
             return 0;
         }
 
@@ -301,7 +315,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function getCurrentReferrerReward(uint256 rewardPoolId_, address user_) public view returns (uint256) {
-        if (!_poolExists(rewardPoolId_)) {
+        if (!Distributor(distributor).isRewardPoolExist(rewardPoolId_)) {
             return 0;
         }
 
@@ -316,8 +330,8 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         uint128 claimLockEnd_,
         address referrer_
     ) private {
-        Pool storage pool = pools[rewardPoolId_];
-        PoolData storage poolData = poolsData[rewardPoolId_];
+        RewardPoolProtocolDetails storage rewardPoolProtocolDetails = rewardPoolsProtocolDetails[rewardPoolId_];
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
         UserData storage userData = usersData[user_][rewardPoolId_];
 
         if (claimLockEnd_ == 0) {
@@ -329,7 +343,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             referrer_ = userData.referrer;
         }
 
-        if (pool.isPublic) {
+        if (rewardPoolProtocolDetails.isPublic) {
             require(amount_ > 0, "DS: nothing to stake");
 
             // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
@@ -339,7 +353,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
             amount_ = balanceAfter_ - balanceBefore_;
 
-            require(userData.deposited + amount_ >= pool.minimalStake, "DS: amount too low");
+            require(userData.deposited + amount_ >= rewardPoolProtocolDetails.minimalStake, "DS: amount too low");
 
             totalDepositedInPublicPools += amount_;
         }
@@ -365,9 +379,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         );
 
         // Update pool data
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
-        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
+        rewardPoolData.totalVirtualDeposited =
+            rewardPoolData.totalVirtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
 
         // Update user data
         userData.lastStake = uint128(block.timestamp);
@@ -383,8 +400,10 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _withdraw(address user_, uint256 rewardPoolId_, uint256 amount_, uint256 currentPoolRate_) private {
-        Pool storage pool = pools[rewardPoolId_];
-        PoolData storage poolData = poolsData[rewardPoolId_];
+        Distributor.RewardPool memory rewardPool_ = Distributor(distributor).getRewardPool(rewardPoolId_);
+
+        RewardPoolProtocolDetails storage rewardPoolProtocolDetails = rewardPoolsProtocolDetails[rewardPoolId_];
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
         UserData storage userData = usersData[user_][rewardPoolId_];
 
         uint256 deposited_ = userData.deposited;
@@ -395,11 +414,11 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         }
 
         uint256 newDeposited_;
-        if (pool.isPublic) {
+        if (rewardPoolProtocolDetails.isPublic) {
             require(
-                block.timestamp < pool.payoutStart ||
-                    (block.timestamp > pool.payoutStart + pool.withdrawLockPeriod &&
-                        block.timestamp > userData.lastStake + pool.withdrawLockPeriodAfterStake),
+                block.timestamp < rewardPool_.payoutStart ||
+                    (block.timestamp > rewardPool_.payoutStart + rewardPoolProtocolDetails.withdrawLockPeriod &&
+                        block.timestamp > userData.lastStake + rewardPoolProtocolDetails.withdrawLockPeriodAfterStake),
                 "DS: pool withdraw is locked"
             );
 
@@ -412,7 +431,9 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
             require(amount_ > 0, "DS: nothing to withdraw");
             require(
-                newDeposited_ >= pool.minimalStake || newDeposited_ == 0 || depositTokenContractBalance_ == amount_,
+                newDeposited_ >= rewardPoolProtocolDetails.minimalStake ||
+                    newDeposited_ == 0 ||
+                    depositTokenContractBalance_ == amount_,
                 "DS: invalid withdraw amount"
             );
         } else {
@@ -443,9 +464,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         );
 
         // Update pool data
-        poolData.lastUpdate = uint128(block.timestamp);
-        poolData.rate = currentPoolRate_;
-        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
+        rewardPoolData.totalVirtualDeposited =
+            rewardPoolData.totalVirtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
 
         // Update user data
         userData.rate = currentPoolRate_;
@@ -453,7 +477,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
 
-        if (pool.isPublic) {
+        if (rewardPoolProtocolDetails.isPublic) {
             totalDepositedInPublicPools -= amount_;
 
             IERC20(depositToken).safeTransfer(user_, amount_);
@@ -515,9 +539,9 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             }
         }
 
-        PoolData storage poolData = poolsData[rewardPoolId_];
-        poolData.totalVirtualDeposited =
-            poolData.totalVirtualDeposited +
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
+        rewardPoolData.totalVirtualDeposited =
+            rewardPoolData.totalVirtualDeposited +
             newVirtualAmountStaked -
             oldVirtualAmountStaked;
     }
@@ -531,19 +555,17 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _getCurrentPoolRate(uint256 rewardPoolId_) private view returns (uint256) {
-        PoolData storage poolData = poolsData[rewardPoolId_];
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolId_];
 
-        if (poolData.totalVirtualDeposited == 0) {
-            return poolData.rate;
+        if (rewardPoolData.totalVirtualDeposited == 0) {
+            return rewardPoolData.rate;
         }
 
-        uint256 rewards_ = getPeriodReward(rewardPoolId_, poolData.lastUpdate, uint128(block.timestamp));
+        // TODO:
+        // uint256 rewards_ = getPeriodReward(rewardPoolId_, rewardPoolData.lastUpdate, uint128(block.timestamp));
+        uint256 rewards_ = 0;
 
-        return poolData.rate + (rewards_ * PRECISION) / poolData.totalVirtualDeposited;
-    }
-
-    function _poolExists(uint256 rewardPoolId_) private view returns (bool) {
-        return rewardPoolId_ < pools.length;
+        return rewardPoolData.rate + (rewards_ * PRECISION) / rewardPoolData.totalVirtualDeposited;
     }
 
     /**********************************************************************************************/
@@ -555,7 +577,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         uint128 claimLockStart_,
         uint128 claimLockEnd_
     ) public view returns (uint256) {
-        if (!_poolExists(rewardPoolId_)) {
+        if (!Distributor(distributor).isRewardPoolExist(rewardPoolId_)) {
             return PRECISION;
         }
 
@@ -563,7 +585,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function getCurrentUserMultiplier(uint256 rewardPoolId_, address user_) public view returns (uint256) {
-        if (!_poolExists(rewardPoolId_)) {
+        if (!Distributor(distributor).isRewardPoolExist(rewardPoolId_)) {
             return PRECISION;
         }
 
@@ -573,7 +595,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function getReferrerMultiplier(uint256 rewardPoolId_, address referrer_) public view returns (uint256) {
-        if (!_poolExists(rewardPoolId_)) {
+        if (!Distributor(distributor).isRewardPoolExist(rewardPoolId_)) {
             return 0;
         }
 

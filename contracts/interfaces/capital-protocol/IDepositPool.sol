@@ -46,7 +46,7 @@ interface IDepositPool is IERC165, IReferrer {
      * @param rate The current reward rate.
      * @param totalVirtualDeposited The total amount of tokens deposited in the pool with multiplier.
      */
-    struct PoolData {
+    struct RewardPoolData {
         uint128 lastUpdate;
         uint256 rate;
         uint256 totalVirtualDeposited;
