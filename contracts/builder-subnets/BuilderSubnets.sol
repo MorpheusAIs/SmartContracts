@@ -452,6 +452,8 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      * `reward` = Σ(`rewardForPeriod`)
      */
     function getPeriodRewardForStake(uint256 virtualStaked_, uint128 from_, uint128 to_) public view returns (uint256) {
+        from_ = from_ < rewardCalculationStartsAt ? rewardCalculationStartsAt : from_;
+
         if (to_ <= from_ || virtualStaked_ == 0) {
             return 0;
         }
