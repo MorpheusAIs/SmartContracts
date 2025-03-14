@@ -16,19 +16,22 @@ import {IPool as AaveIPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolDataProvider as AaveIPoolDataProvider} from "@aave/core-v3/contracts/interfaces/IPoolDataProvider.sol";
 
 contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+
     struct DepositPool {
-        address poolContract;
+        address depositPoolAddress;
         address depositToken;
         string chainLinkPath;
         uint256 depositTokenPrice;
         address aToken;
         // uint256 rate;
         uint256 deposited;
+        uint256 rewards;
     }
 
-    struct DepositPools {
+    struct DepositPoolsTotal {
         // uint256 rate;
-        uint256 deposited;
+        uint256 totalDeposited;
     }
 
     struct RewardPool {
@@ -45,7 +48,7 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
     RewardPool[] public rewardPools;
 
     address[] public depositPoolAddresses;
-    DepositPools public depositPools;
+    DepositPoolsTotal public depositPoolsTotal;
     mapping(address => DepositPool) public depositPools;
 
     constructor() {
@@ -92,19 +95,27 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
     /*** `DepositPoolDetails` management functionality for the contract `owner()`               ***/
     /**********************************************************************************************/
 
-    function addDepositPool(address poolContract_, string memory chainLinkPath_) external onlyOwner {
+    function addDepositPool(address depositPoolAddress_, string memory chainLinkPath_) external onlyOwner {
         require(
-            IERC165(poolContract_).supportsInterface(type(IDepositPool).interfaceId),
-            "DR: invalid capital contract address"
+            IERC165(depositPoolAddress_).supportsInterface(type(IDepositPool).interfaceId),
+            "DR: invalid deposit pool address"
         );
 
-        address depositToken_ = IDepositPool(poolContract_).depositToken();
+        address depositToken_ = IDepositPool(depositPoolAddress_).depositToken();
         (address aToken_, , ) = AaveIPoolDataProvider(aavePoolDataProvider).getReserveTokensAddresses(depositToken_);
 
-        depositPools memory depositPool_ = depositPools(poolContract_, depositToken_, chainLinkPath_, 0, aToken_);
+        DepositPool memory depositPool_ = DepositPool(
+            depositPoolAddress_,
+            depositToken_,
+            chainLinkPath_,
+            0,
+            aToken_,
+            0,
+            0
+        );
 
-        depositPoolAddresses.push(poolContract_);
-        depositPools[poolContract_] = depositPool_;
+        depositPoolAddresses.push(depositPoolAddress_);
+        depositPools[depositPoolAddress_] = depositPool_;
 
         updateDepositTokensPrices();
     }
@@ -114,15 +125,19 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
         IChainLinkDataConsumerV3 chainLinkDataConsumerV3_ = IChainLinkDataConsumerV3(chainLinkDataConsumerV3);
 
         for (uint256 i = 0; i < length_; i++) {
-            address depositPoolAddress = depositPoolAddresses[i];
-            bytes32 chainLinkPathId = chainLinkDataConsumerV3_.getPathId(
-                depositPools[depositPoolAddress].chainLinkPath
+            address depositPoolAddress_ = depositPoolAddresses[i];
+            bytes32 chainLinkPathId_ = chainLinkDataConsumerV3_.getPathId(
+                depositPools[depositPoolAddress_].chainLinkPath
             );
-            uint256 price_ = chainLinkDataConsumerV3_.getChainLinkDataFeedLatestAnswer(chainLinkPathId);
+            uint256 price_ = chainLinkDataConsumerV3_.getChainLinkDataFeedLatestAnswer(chainLinkPathId_);
 
             require(price_ > 0, "DR: price for pair is zero");
-            depositPools[depositPoolAddress].depositTokenPrice = price_;
+            depositPools[depositPoolAddress_].depositTokenPrice = price_;
         }
+    }
+
+    function onlyExistedDepositPool(address depositPoolAddress_) public view {
+        require(depositPools[depositPoolAddress_].depositPoolAddress != address(0), "DR: deposit pool doesn't exist");
     }
 
     /**********************************************************************************************/
@@ -175,11 +190,37 @@ contract Distributor is OwnableUpgradeable, UUPSUpgradeable {
     /*** Aave                                                                                   ***/
     /**********************************************************************************************/
 
-    function supplyToAave(uint256 amount_) external {
-        address depositPoolAddress = _msgSender();
-        DepositPool storage depositPool = depositPools[depositPoolAddress];
+    function supplyToAave(address user_, uint256 amount_) external {
+        address depositPoolAddress_ = _msgSender();
+        onlyExistedDepositPool(depositPoolAddress_);
 
+        DepositPool storage depositPool = depositPools[depositPoolAddress_];
+
+        IERC20(depositPool.depositToken).safeTransferFrom(user_, address(this), amount_);
         AaveIPool(aavePool).supply(depositPool.depositToken, amount_, address(this), 0);
+
+        depositPool.deposited += amount_;
+    }
+
+    /**
+     *
+     */
+
+    function distributeRewards() public {
+        updateDepositTokensPrices();
+
+        uint256 length_ = depositPoolAddresses.length;
+
+        uint256[] memory yields = new uint256[](length_);
+        for (uint256 i = 0; i < length_; i++) {
+            DepositPool storage depositPool = depositPools[depositPoolAddresses[i]];
+
+            // TODO: include yieldWithdrawn
+            uint256 underlyingYield_ = IERC20(depositPool.aToken).balanceOf(address(this)) - depositPool.deposited;
+            uint256 yield_ = underlyingYield_ * depositPool.depositTokenPrice;
+
+            yields[i] = yield_;
+        }
     }
 
     /**********************************************************************************************/
