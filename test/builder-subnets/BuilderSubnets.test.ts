@@ -1269,6 +1269,68 @@ describe('BuilderSubnets', () => {
       expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(6.6432) + wei(0.5962), wei(0.001));
     });
   });
+
+  describe('#resetPowerFactor', () => {
+    let subnetId: string;
+
+    beforeEach(async () => {
+      const subnet = getDefaultSubnet(OWNER, SUBNET_TREASURY);
+      const metadata = getDefaultSubnetMetadata();
+      await builders.setIsMigrationOver(true);
+      await builders.createSubnet(subnet, metadata);
+      await builders.setRewardCalculationStartsAt(99 * oneDay);
+      await builders.setBuildersRewardPoolData({ ...getDefaultBuildersPoolData(), payoutStart: 99 * oneDay });
+      await builders.setMaxStakedShareForBuildersPool(wei(1, 25));
+
+      subnetId = await builders.getSubnetId(subnet.name);
+    });
+
+    it('should correctly reset the power factor', async () => {
+      await token.connect(MINTER).mint(BOB, wei(10000));
+      await token.connect(BOB).approve(builders, wei(10000));
+
+      await builders.setMaxStakedShareForBuildersPool(wei(0.6, 25));
+
+      const builderPool = getRealBuildersPoolData();
+      await builders.setBuildersRewardPoolData(builderPool);
+      const poolStart = builderPool.payoutStart;
+
+      // 3.0285
+      // const powerFactor = await builders.getPowerFactor(poolStart + oneDay * 10, poolStart + oneDay * 345 * 2);
+
+      await setNextTime(poolStart + oneDay * 10);
+      await builders.setSubnetMaxClaimLockEnd(subnetId, builderPool.payoutStart + oneDay * 345 * 10);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), poolStart + oneDay * 345 * 2);
+
+      await setTime(poolStart + oneDay * 345 * 2 + 1);
+      let staker = await builders.stakers(subnetId, BOB);
+      expect(staker.staked).to.eq(wei(10));
+      expect(staker.virtualStaked).to.closeTo(wei(30.285), wei(0.0001));
+      expect(staker.pendingRewards).to.eq(wei(0));
+
+      await setTime(poolStart + oneDay * 345 * 3 + 1);
+      staker = await builders.stakers(subnetId, BOB);
+      expect(staker.staked).to.eq(wei(10));
+      expect(staker.virtualStaked).to.closeTo(wei(30.285), wei(0.0001));
+      expect(staker.pendingRewards).to.eq(wei(0));
+
+      await builders.resetPowerFactor([subnetId], [BOB]);
+
+      staker = await builders.stakers(subnetId, BOB);
+      expect(staker.staked).to.eq(wei(10));
+      expect(staker.virtualStaked).to.eq(wei(10));
+      expect(staker.pendingRewards).to.greaterThan(wei(0));
+    });
+    it('should revert when stake without stakes', async () => {
+      await expect(builders.resetPowerFactor([subnetId], [BOB])).to.be.revertedWith('BS: stake without stakes');
+    });
+    it('should revert when claim is still locked', async () => {
+      await setNextTime(oneDay * 100);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), oneDay * 110);
+
+      await expect(builders.resetPowerFactor([subnetId], [BOB])).to.be.revertedWith('BS: claim is still locked');
+    });
+  });
 });
 
 // npx hardhat test "test/builder-subnets/BuilderSubnets.test.ts"

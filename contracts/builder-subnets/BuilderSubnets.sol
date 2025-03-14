@@ -390,6 +390,18 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         allSubnetsData.lastCalculatedTimestamp = to_;
     }
 
+    function resetPowerFactor(bytes32[] calldata subnetIds_, address[] calldata stakerAddresses_) external {
+        require(subnetIds_.length == stakerAddresses_.length, "BS: invalid arrays length");
+
+        for (uint256 i = 0; i < subnetIds_.length; i++) {
+            Staker storage staker = stakers[subnetIds_[i]][stakerAddresses_[i]];
+            require(staker.staked > 0, "BS: stake without stakes");
+            require(staker.claimLockEnd < block.timestamp, "BS: claim is still locked");
+
+            _updateStorage(subnetIds_[i], stakerAddresses_[i], staker.staked, staker.claimLockEnd);
+        }
+    }
+
     function getMaxTotalVirtualStaked(uint128 to_) public view returns (uint256) {
         return (maxStakedShareForBuildersPool * getPeriodRewardForBuildersPool(0, to_)) / PRECISION;
     }
