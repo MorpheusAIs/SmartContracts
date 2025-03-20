@@ -378,7 +378,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             return;
         }
 
-        to_ = to_ > block.timestamp ? uint128(block.timestamp) : to_;
+        to_ = uint128(uint256(to_).min(uint128(block.timestamp)));
 
         uint256 currentRewards_ = getPeriodRewardForStake(
             allSubnetsData.virtualStaked,
@@ -388,6 +388,8 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
 
         allSubnetsData.rate += (currentRewards_ * PRECISION) / allSubnetsData.virtualStaked;
         allSubnetsData.lastCalculatedTimestamp = to_;
+
+        emit RewardsCollected(to_);
     }
 
     function resetPowerFactor(bytes32[] calldata subnetIds_, address[] calldata stakerAddresses_) external {
@@ -399,6 +401,8 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             require(staker.claimLockEnd < block.timestamp, "BS: claim is still locked");
 
             _updateStorage(subnetIds_[i], stakerAddresses_[i], staker.staked, staker.claimLockEnd);
+
+            emit PowerFactorReset(subnetIds_[i], stakerAddresses_[i]);
         }
     }
 

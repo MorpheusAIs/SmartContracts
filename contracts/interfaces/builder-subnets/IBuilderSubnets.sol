@@ -127,11 +127,25 @@ interface IBuilderSubnets is IERC165 {
      * @param treasury The treasury address
      */
     event SubnetCreationFeeSet(uint256 amount, address treasury);
+
     /**
      * The event that is emitted when the `isMigrationOver` is set.
      * @param isMigrationOver The new value.
      */
     event IsMigrationOverSet(bool isMigrationOver);
+
+    /**
+     * The event that is emitted when the `collectPendingRewards` call.
+     * @param to The timestamp.
+     */
+    event RewardsCollected(uint128 to);
+
+    /**
+     * The event that is emitted when the power factor for Staker in the Subnet reset.
+     * @param subnetId The Subnet ID.
+     * @param stakerAddress The Staker address.
+     */
+    event PowerFactorReset(bytes32 subnetId, address stakerAddress);
 
     /**
      * The event that is emitted when the Subnet created or edited.
