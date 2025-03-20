@@ -197,6 +197,12 @@ interface IBuilderSubnets is IERC165 {
     event Claimed(bytes32 indexed subnetId, address stakerAddress, Staker staker, uint256 amount);
 
     /**
+     * The event that is emitted when the rewards not distribute between Stakers.
+     * @param rewards The reward amount.
+     */
+    event RewardsNotDistributed(uint256 rewards);
+
+    /**
      * The function to set the FeeConfig contract address.
      * @param feeConfig_ The address of the new FeeConfig.
      */

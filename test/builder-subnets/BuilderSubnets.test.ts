@@ -1268,6 +1268,19 @@ describe('BuilderSubnets', () => {
       // (10 / 2522 * 188) * 0.8 = 8.62812791887571
       expect(await token.balanceOf(BOB)).to.closeTo(wei(990) + wei(6.6432) + wei(0.5962), wei(0.001));
     });
+    it('should return 0 when `virtualStaked` zero', async () => {
+      let res = wei(0);
+
+      res = await builders.getPeriodRewardForStake(wei(0), oneDay * 2, oneDay * 2 + 1);
+      expect(res).to.eq(wei(0));
+    });
+    it('should return 0 when `virtualStaked` zero', async () => {
+      await setNextTime(oneDay * 100);
+      await builders.connect(BOB).stake(subnetId, BOB, wei(10), 0);
+
+      await setNextTime(oneDay * 102);
+      await expect(builders.collectPendingRewards(oneDay * 100 - 1)).to.be.rejectedWith('BS: `to_` is too low');
+    });
   });
 
   describe('#resetPowerFactor', () => {
