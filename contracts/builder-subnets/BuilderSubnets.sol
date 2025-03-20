@@ -378,7 +378,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             return;
         }
 
-        to_ = uint128(uint256(to_).min(uint128(block.timestamp)));
+        to_ = to_ > block.timestamp ? uint128(block.timestamp) : to_;
 
         uint256 currentRewards_ = getPeriodRewardForStake(
             allSubnetsData.virtualStaked,
