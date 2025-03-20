@@ -3,11 +3,16 @@ pragma solidity ^0.8.20;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-contract AggregatorV3 is AggregatorV3Interface {
-    int256 answerResult;
+contract ChainLinkAggregatorV3Mock is AggregatorV3Interface {
+    int256 public answerResult;
+    uint8 public decimals;
 
-    function decimals() external pure returns (uint8) {
-        return 8;
+    constructor(uint8 decimals_) {
+        decimals = decimals_;
+    }
+
+    function setDecimals(uint8 value_) external {
+        decimals = value_;
     }
 
     function description() external pure returns (string memory) {

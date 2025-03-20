@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 
 import { setTime } from '../helpers/block-helper';
 
-import { DistributionExt, DistributionV2, L1SenderV2 } from '@/generated-types/ethers';
+import { DistributionExt, DistributionV2, L1SenderMock } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { getDefaultPool, oneDay, oneHour } from '@/test/helpers/distribution-helper';
@@ -76,14 +76,14 @@ describe('DistributionExt', () => {
 
   describe('#_authorizeUpgrade', () => {
     it('should correctly upgrade', async () => {
-      const V2Factory = await ethers.getContractFactory('L1SenderV2');
+      const V2Factory = await ethers.getContractFactory('L1SenderMock');
       const V2Implementation = await V2Factory.deploy();
 
       await distributionExt.upgradeTo(V2Implementation);
 
-      const V2 = V2Factory.attach(distributionExt) as L1SenderV2;
+      const V2 = V2Factory.attach(distributionExt) as L1SenderMock;
 
-      expect(await V2.version()).to.eq(2);
+      expect(await V2.version()).to.eq(666);
     });
     it('should revert if caller is not the owner', async () => {
       await expect(distributionExt.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(

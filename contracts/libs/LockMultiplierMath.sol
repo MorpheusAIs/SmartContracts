@@ -11,7 +11,7 @@ import {LogExpMath} from "./LogExpMath.sol";
 library LockMultiplierMath {
     uint128 constant DECIMAL = 1e18;
 
-    function _getLockPeriodMultiplier(uint128 start_, uint128 end_) internal pure returns (uint256) {
+    function getLockPeriodMultiplier(uint128 start_, uint128 end_) external pure returns (uint256) {
         uint256 powerMax = 16_613_275_460_000_000_000; // 16.61327546 * DECIMAL
 
         uint256 maximalMultiplier_ = 10_700_000_000_000_000_000; // 10.7 * DECIMAL

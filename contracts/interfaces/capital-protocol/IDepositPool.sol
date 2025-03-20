@@ -35,7 +35,7 @@ interface IDepositPool is IERC165, IReferrer {
      * @param claimLockPeriodAfterStake The period in seconds when the user can't claim tokens after staking.
      * @param claimLockPeriodAfterClaim The period in seconds when the user can't claim tokens after claiming.
      */
-    struct PoolLimits {
+    struct RewardPoolLimits {
         uint128 claimLockPeriodAfterStake;
         uint128 claimLockPeriodAfterClaim;
     }
@@ -77,26 +77,25 @@ interface IDepositPool is IERC165, IReferrer {
         address referrer;
     }
 
-    /**
-     * The event that is emitted when the pool is created.
-     * @param poolId The pool's id.
-     * @param pool The pool's data.
-     */
-    event PoolCreated(uint256 indexed poolId, Pool pool);
+    struct RewardPoolProtocolDetails {
+        uint128 withdrawLockPeriodAfterStake;
+        uint128 claimLockPeriodAfterStake;
+        uint128 claimLockPeriodAfterClaim;
+        uint256 minimalStake;
+        uint256 distributedRewards;
+    }
 
-    /**
-     * The event that is emitted when the pool is edited.
-     * @param poolId The pool's id.
-     * @param pool The pool's data.
-     */
-    event PoolEdited(uint256 indexed poolId, Pool pool);
+    event DistributorSet(address distributor);
 
-    /**
-     * The event that is emitted when the pool limits are edited.
-     * @param poolId The pool's id.
-     * @param poolLimit The pool's limit data.
-     */
-    event PoolLimitsEdited(uint256 indexed poolId, PoolLimits poolLimit);
+    event RewardPoolsDataSet(
+        uint256 rewardPoolIndex,
+        uint128 withdrawLockPeriodAfterStake,
+        uint128 claimLockPeriodAfterStake,
+        uint128 claimLockPeriodAfterClaim,
+        uint256 minimalStake
+    );
+
+    event Migrated(uint256 rewardPoolIndex);
 
     /**
      * The event that is emitted when the pool referrers tiers are edited.
@@ -138,11 +137,6 @@ interface IDepositPool is IERC165, IReferrer {
      * @param amount The amount of tokens.
      */
     event UserWithdrawn(uint256 indexed poolId, address indexed user, uint256 amount);
-
-    /**
-     * The event that is emitted when the overplus of the deposit tokens is bridged.
-     */
-    event OverplusBridged(uint256 amount, bytes uniqueId);
 
     /**
      * The event that is emitted when the user locks his rewards.

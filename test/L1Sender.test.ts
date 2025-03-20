@@ -6,7 +6,7 @@ import {
   GatewayRouterMock,
   IL1Sender,
   L1Sender,
-  L1SenderV2,
+  L1SenderMock,
   L2MessageReceiver,
   LZEndpointMock,
   MOR,
@@ -180,14 +180,14 @@ describe('L1Sender', () => {
 
     describe('#_authorizeUpgrade', () => {
       it('should correctly upgrade', async () => {
-        const l1SenderV2Factory = await ethers.getContractFactory('L1SenderV2');
+        const l1SenderV2Factory = await ethers.getContractFactory('L1SenderMock');
         const l1SenderV2Implementation = await l1SenderV2Factory.deploy();
 
         await l1Sender.upgradeTo(l1SenderV2Implementation);
 
-        const l1SenderV2 = l1SenderV2Factory.attach(l1Sender) as L1SenderV2;
+        const l1SenderV2 = l1SenderV2Factory.attach(l1Sender) as L1SenderMock;
 
-        expect(await l1SenderV2.version()).to.eq(2);
+        expect(await l1SenderV2.version()).to.eq(666);
       });
       it('should revert if caller is not the owner', async () => {
         await expect(l1Sender.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(

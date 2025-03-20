@@ -3,13 +3,13 @@ import { ethers } from 'hardhat';
 
 import { Reverter } from '../../helpers/reverter';
 
-import { ChainLinkDataConsumerV3 } from '@/generated-types/ethers';
-import { deployChainLinkDataConsumerV3 } from '@/test/helpers/deployers';
+import { ChainLinkDataConsumer } from '@/generated-types/ethers';
+import { deployChainLinkDataConsumer } from '@/test/helpers/deployers';
 
-describe('ChainLinkDataConsumerV3', () => {
+describe('ChainLinkDataConsumer', () => {
   const reverter = new Reverter();
 
-  let consumer: ChainLinkDataConsumerV3;
+  let consumer: ChainLinkDataConsumer;
 
   const data = [
     {
@@ -46,7 +46,7 @@ describe('ChainLinkDataConsumerV3', () => {
       },
     ]);
 
-    consumer = await deployChainLinkDataConsumerV3();
+    consumer = await deployChainLinkDataConsumer();
 
     await consumer.updateDataFeeds(paths, feeds);
 
@@ -63,7 +63,7 @@ describe('ChainLinkDataConsumerV3', () => {
 
   describe('#getChainLinkDataFeedLatestAnswer', () => {
     it('should return correct prices', async () => {
-      const decimals = 8;
+      const decimals = 18;
 
       for (let i = 0; i < paths.length; i++) {
         const res = await consumer.getChainLinkDataFeedLatestAnswer(await consumer.getPathId(paths[i]));
@@ -76,4 +76,4 @@ describe('ChainLinkDataConsumerV3', () => {
   });
 });
 
-// npm run generate-types && npx hardhat test "test/fork/chainlink/ChainLinkDataConsumerV3.fork.test.ts"
+// npm run generate-types && npx hardhat test "test/fork/capital-protocol/ChainLinkDataConsumer.fork.test.ts"

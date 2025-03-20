@@ -1,17 +1,25 @@
 import { ethers } from 'hardhat';
 
-import { ChainLinkDataConsumerV3, Distributor } from '@/generated-types/ethers';
+import {
+  AavePoolDataProviderMock,
+  AavePoolMock,
+  ChainLinkDataConsumerMock,
+  Distributor,
+  L1SenderMock,
+  L1SenderV2,
+  RewardPoolMock,
+} from '@/generated-types/ethers';
+import '@/generated-types/ethers/contracts/mock';
 
-export const deployDistributor = async (chainLinkDataConsumerV3: ChainLinkDataConsumerV3): Promise<Distributor> => {
-  const [lib1Factory] = await Promise.all([ethers.getContractFactory('LinearDistributionIntervalDecrease')]);
-  const lib1 = await lib1Factory.deploy();
-
+export const deployDistributor = async (
+  chainLinkDataConsumer: ChainLinkDataConsumerMock,
+  aavePool: AavePoolMock,
+  aavePoolDataProvider: AavePoolDataProviderMock,
+  rewardPool: RewardPoolMock,
+  l1Sender: L1SenderV2 | L1SenderMock,
+): Promise<Distributor> => {
   const [implFactory, proxyFactory] = await Promise.all([
-    ethers.getContractFactory('Distributor', {
-      libraries: {
-        LinearDistributionIntervalDecrease: await lib1.getAddress(),
-      },
-    }),
+    ethers.getContractFactory('Distributor'),
     ethers.getContractFactory('ERC1967Proxy'),
   ]);
 
@@ -19,7 +27,7 @@ export const deployDistributor = async (chainLinkDataConsumerV3: ChainLinkDataCo
   const proxy = await proxyFactory.deploy(impl, '0x');
   const contract = impl.attach(proxy) as Distributor;
 
-  await contract.Distributor_init(chainLinkDataConsumerV3);
+  await contract.Distributor_init(chainLinkDataConsumer, aavePool, aavePoolDataProvider, rewardPool, l1Sender);
 
   return contract;
 };

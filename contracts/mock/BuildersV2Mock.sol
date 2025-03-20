@@ -11,7 +11,7 @@ contract BuildersV2Mock is UUPSUpgradeable {
     }
 
     function getLockPeriodMultiplier(uint128 start_, uint128 end_) public pure returns (uint256) {
-        return LockMultiplierMath._getLockPeriodMultiplier(start_, end_);
+        return LockMultiplierMath.getLockPeriodMultiplier(start_, end_);
     }
 
     function _authorizeUpgrade(address) internal view override {}

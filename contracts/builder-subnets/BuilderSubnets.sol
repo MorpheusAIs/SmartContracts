@@ -432,7 +432,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     }
 
     function getPowerFactor(uint128 from_, uint128 to_) public pure returns (uint256) {
-        return LockMultiplierMath._getLockPeriodMultiplier(from_, to_);
+        return LockMultiplierMath.getLockPeriodMultiplier(from_, to_);
     }
 
     /**********************************************************************************************/

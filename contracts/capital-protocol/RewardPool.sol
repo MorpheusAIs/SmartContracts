@@ -9,12 +9,12 @@ import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionInte
 import {IRewardPool, IERC165} from "../interfaces/capital-protocol/IRewardPool.sol";
 
 contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
-    bool isNotUpgradeable;
     RewardPool[] public rewardPools;
 
     /**********************************************************************************************/
-    /*** INIT, IERC165                                                                          ***/
+    /*** Init, IERC165                                                                          ***/
     /**********************************************************************************************/
+
     constructor() {
         _disableInitializers();
     }
@@ -23,8 +23,8 @@ contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
         __Ownable_init();
         __UUPSUpgradeable_init();
 
-        for (uint256 i_ = 0; i_ < poolsInfo_.length; i_++) {
-            addRewardPool(poolsInfo_[i_]);
+        for (uint256 i = 0; i < poolsInfo_.length; i++) {
+            addRewardPool(poolsInfo_[i]);
         }
     }
 
@@ -33,8 +33,9 @@ contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** REWARD POOL MANAGEMENT                                                                 ***/
+    /*** Reward pools management, `owner()` functionality                                       ***/
     /**********************************************************************************************/
+
     function addRewardPool(RewardPool calldata rewardPool_) public onlyOwner {
         require(rewardPool_.decreaseInterval > 0, "RP: invalid decrease interval");
 
@@ -44,19 +45,35 @@ contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** GETTERS                                                                                ***/
+    /*** Main getters                                                                           ***/
     /**********************************************************************************************/
 
-    function rewardPoolExists(uint256 poolId_) public view returns (bool) {
-        return poolId_ < rewardPools.length;
+    function isRewardPoolExist(uint256 index_) public view returns (bool) {
+        return index_ < rewardPools.length;
     }
 
-    function getPeriodRewards(uint256 poolId_, uint128 startTime_, uint128 endTime_) public view returns (uint256) {
-        if (!rewardPoolExists(poolId_)) {
+    function isRewardPoolPublic(uint256 index_) public view returns (bool) {
+        return rewardPools[index_].isPublic;
+    }
+
+    function onlyExistedRewardPool(uint256 index_) external view {
+        require(isRewardPoolExist(index_), "RP: the reward pool doesn't exist");
+    }
+
+    function onlyPublicRewardPool(uint256 index_) external view {
+        require(isRewardPoolPublic(index_), "RP: the pool isn't public");
+    }
+
+    function onlyNotPublicRewardPool(uint256 index_) external view {
+        require(!isRewardPoolPublic(index_), "RP: the pool is public");
+    }
+
+    function getPeriodRewards(uint256 index_, uint128 startTime_, uint128 endTime_) external view returns (uint256) {
+        if (!isRewardPoolExist(index_)) {
             return 0;
         }
 
-        RewardPool storage rewardPool = rewardPools[poolId_];
+        RewardPool storage rewardPool = rewardPools[index_];
 
         return
             LinearDistributionIntervalDecrease.getPeriodReward(
@@ -72,15 +89,10 @@ contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** UUPS                                                                                   ***/
     /**********************************************************************************************/
-    function removeUpgradeability() external onlyOwner {
-        isNotUpgradeable = true;
-    }
 
     function version() external pure returns (uint256) {
         return 1;
     }
 
-    function _authorizeUpgrade(address) internal view override onlyOwner {
-        require(!isNotUpgradeable, "RP: upgrade isn't available");
-    }
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 }
