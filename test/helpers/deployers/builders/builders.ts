@@ -1,4 +1,3 @@
-import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { ethers } from 'hardhat';
 
 import { Builders, BuildersTreasury, FeeConfig, MOROFT } from '@/generated-types/ethers';

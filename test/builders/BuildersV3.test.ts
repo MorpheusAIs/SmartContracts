@@ -12,7 +12,7 @@ import { deployBuilderSubnets, deployBuilders, deployFeeConfig, deployMOROFT } f
 import { oneDay, oneHour } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
-import { BuilderSubnets, Builders, BuildersTreasury, BuildersV3, FeeConfig, MOROFT } from '@/generated-types/ethers';
+import { Builders, BuildersTreasury, BuildersV3, FeeConfig, MOROFT } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
 describe('BuildersV3', () => {
@@ -25,7 +25,6 @@ describe('BuildersV3', () => {
   let MINTER: SignerWithAddress;
 
   let builders: Builders;
-  let builderSubnets: BuilderSubnets;
 
   let buildersTreasury: BuildersTreasury;
   let feeConfig: FeeConfig;
@@ -36,7 +35,6 @@ describe('BuildersV3', () => {
 
     token = await deployMOROFT(101, OWNER, OWNER, MINTER);
     feeConfig = await deployFeeConfig(FEE_TREASURY);
-    builderSubnets = await deployBuilderSubnets(token, feeConfig, MINTER, 0);
     const { builders: builders_, buildersTreasury: buildersTreasury_ } = await deployBuilders(
       token,
       feeConfig,
@@ -85,21 +83,18 @@ describe('BuildersV3', () => {
     });
   });
 
-  describe('#setIsPaused', () => {
+  describe('#setPaused', () => {
     it('should set new value', async () => {
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
 
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       expect(await buildersV3.isPaused()).to.eq(true);
-
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(false);
-      expect(await buildersV3.isPaused()).to.eq(false);
     });
     it('should revert if caller is not the migration owner', async () => {
       const buildersV3 = await upgradeToV3(builders);
 
-      await expect(buildersV3.setIsPaused(true)).to.be.revertedWith('BU: caller is not the migration owner');
+      await expect(buildersV3.setPaused()).to.be.revertedWith('BU: caller is not the migration owner');
     });
   });
 
@@ -107,6 +102,8 @@ describe('BuildersV3', () => {
     it('should set new value', async () => {
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
+
+      const builderSubnets = await deployBuilderSubnets(token, feeConfig, MINTER, 0, buildersV3);
 
       await buildersV3.connect(MIGRATION_OWNER).setBuilderSubnets(builderSubnets);
       expect(await buildersV3.builderSubnets()).to.eq(await builderSubnets.getAddress());
@@ -135,7 +132,7 @@ describe('BuildersV3', () => {
 
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await expect(buildersV3.createBuilderPool(getDefaultBuilderPool(OWNER))).to.be.revertedWith('BU: paused');
     });
     it('should pause builder pools edits', async () => {
@@ -144,7 +141,7 @@ describe('BuildersV3', () => {
 
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await expect(buildersV3.editBuilderPool(getDefaultBuilderPool(OWNER))).to.be.revertedWith('BU: paused');
     });
     it('should pause deposits', async () => {
@@ -156,7 +153,7 @@ describe('BuildersV3', () => {
 
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await expect(buildersV3.deposit(poolId, wei(1))).to.be.revertedWith('BU: paused');
     });
     it('should pause withdraws', async () => {
@@ -170,7 +167,7 @@ describe('BuildersV3', () => {
 
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await expect(buildersV3.withdraw(poolId, wei(0.1))).to.be.revertedWith('BU: paused');
     });
     it('should pause claim', async () => {
@@ -186,7 +183,7 @@ describe('BuildersV3', () => {
 
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await expect(buildersV3.claim(poolId, BOB)).to.be.revertedWith('BU: paused');
     });
   });
@@ -212,49 +209,53 @@ describe('BuildersV3', () => {
         maxClaimLockEnd: builderPool.claimLockEnd,
       };
 
+      const buildersV3 = await upgradeToV3(builders);
+
+      const builderSubnets = await deployBuilderSubnets(token, feeConfig, MINTER, 0, buildersV3);
       await builderSubnets.createSubnet(subnet, getDefaultSubnetMetadata());
       await builderSubnets.setMaxStakedShareForBuildersPool(wei(1, 25));
-      await builderSubnets.setBuildersPoolData(getDefaultBuildersPoolData());
+      await builderSubnets.setBuildersRewardPoolData(getDefaultBuildersPoolData());
 
-      const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await buildersV3.connect(MIGRATION_OWNER).setBuilderSubnets(builderSubnets);
 
       await setNextTime(oneDay * 111);
-      await buildersV3.connect(MIGRATION_OWNER).migrateUserStake(poolId, OWNER);
+      await buildersV3.connect(OWNER).migrateUserStake(poolId);
 
       expect(await buildersV3.isBuilderPoolUserMigrate(poolId, OWNER)).to.eq(true);
       expect(await buildersV3.totalDepositsMigrated()).to.eq(wei(10));
       let staker = await builderSubnets.stakers(poolId, OWNER);
       expect(staker.lastStake).to.eq(oneDay * 111);
-      expect(staker.lastInteraction).to.eq(oneDay * 111);
       expect(staker.claimLockEnd).to.eq(oneDay * 111);
       expect(staker.staked).to.eq(wei(10));
       expect(staker.virtualStaked).to.eq(wei(10));
       expect(staker.pendingRewards).to.eq(wei(0));
-      let buildersSubnetData = await builderSubnets.buildersSubnetsData(poolId);
+      let buildersSubnetData = await builderSubnets.subnetsData(poolId);
       expect(buildersSubnetData.staked).to.eq(wei(10));
       expect(buildersSubnetData.virtualStaked).to.eq(wei(10));
-      expect(await builderSubnets.totalStaked()).to.eq(wei(10));
+      let allSubnetsData = await builderSubnets.allSubnetsData();
+      expect(allSubnetsData.staked).to.eq(wei(10));
+      expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 111);
       expect(await token.balanceOf(buildersV3)).to.eq(wei(20));
       expect(await token.balanceOf(builderSubnets)).to.eq(wei(10));
 
-      await buildersV3.connect(MIGRATION_OWNER).migrateUserStake(poolId, BOB);
+      await buildersV3.connect(BOB).migrateUserStake(poolId);
 
       expect(await buildersV3.isBuilderPoolUserMigrate(poolId, BOB)).to.eq(true);
       expect(await buildersV3.totalDepositsMigrated()).to.eq(wei(30));
       staker = await builderSubnets.stakers(poolId, BOB);
       expect(staker.lastStake).to.eq(oneDay * 111 + 1);
-      expect(staker.lastInteraction).to.eq(oneDay * 111 + 1);
       expect(staker.claimLockEnd).to.eq(oneDay * 111 + 1);
       expect(staker.staked).to.eq(wei(20));
       expect(staker.virtualStaked).to.eq(wei(20));
       expect(staker.pendingRewards).to.eq(wei(0));
-      buildersSubnetData = await builderSubnets.buildersSubnetsData(poolId);
+      buildersSubnetData = await builderSubnets.subnetsData(poolId);
       expect(buildersSubnetData.staked).to.eq(wei(30));
       expect(buildersSubnetData.virtualStaked).to.eq(wei(30));
-      expect(await builderSubnets.totalStaked()).to.eq(wei(30));
+      allSubnetsData = await builderSubnets.allSubnetsData();
+      expect(allSubnetsData.staked).to.eq(wei(30));
+      expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 111 + 1);
       expect(await token.balanceOf(buildersV3)).to.eq(wei(0));
       expect(await token.balanceOf(builderSubnets)).to.eq(wei(30));
     });
@@ -281,13 +282,15 @@ describe('BuildersV3', () => {
         maxClaimLockEnd: builderPool.claimLockEnd,
       };
 
+      const buildersV3 = await upgradeToV3(builders);
+
+      const builderSubnets = await deployBuilderSubnets(token, feeConfig, MINTER, 0, buildersV3);
       await builderSubnets.createSubnet(subnet, getDefaultSubnetMetadata());
       await builderSubnets.setMaxStakedShareForBuildersPool(wei(1, 25));
-      await builderSubnets.setBuildersPoolData(getDefaultBuildersPoolData());
+      await builderSubnets.setBuildersRewardPoolData(getDefaultBuildersPoolData());
 
-      const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
-      await buildersV3.connect(MIGRATION_OWNER).setIsPaused(true);
+      await buildersV3.connect(MIGRATION_OWNER).setPaused();
       await buildersV3.connect(MIGRATION_OWNER).setBuilderSubnets(builderSubnets);
 
       await setNextTime(oneDay * 111);
@@ -297,21 +300,21 @@ describe('BuildersV3', () => {
       expect(await buildersV3.totalDepositsMigrated()).to.eq(wei(30));
       let staker = await builderSubnets.stakers(poolId, OWNER);
       expect(staker.lastStake).to.eq(oneDay * 111);
-      expect(staker.lastInteraction).to.eq(oneDay * 111);
       expect(staker.claimLockEnd).to.eq(oneDay * 111);
       expect(staker.staked).to.eq(wei(10));
       expect(staker.virtualStaked).to.eq(wei(10));
       expect(staker.pendingRewards).to.eq(wei(0));
-      const buildersSubnetData = await builderSubnets.buildersSubnetsData(poolId);
+      const buildersSubnetData = await builderSubnets.subnetsData(poolId);
       expect(buildersSubnetData.staked).to.eq(wei(30));
       expect(buildersSubnetData.virtualStaked).to.eq(wei(30));
-      expect(await builderSubnets.totalStaked()).to.eq(wei(30));
+      const allSubnetsData = await builderSubnets.allSubnetsData();
+      expect(allSubnetsData.staked).to.eq(wei(30));
+      expect(allSubnetsData.lastCalculatedTimestamp).to.eq(oneDay * 111);
       expect(await token.balanceOf(buildersV3)).to.eq(wei(0));
       expect(await token.balanceOf(builderSubnets)).to.eq(wei(30));
 
       staker = await builderSubnets.stakers(poolId, BOB);
       expect(staker.lastStake).to.eq(oneDay * 111);
-      expect(staker.lastInteraction).to.eq(oneDay * 111);
       expect(staker.claimLockEnd).to.eq(oneDay * 111);
       expect(staker.staked).to.eq(wei(20));
       expect(staker.virtualStaked).to.eq(wei(20));

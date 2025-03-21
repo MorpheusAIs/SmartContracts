@@ -53,7 +53,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function Builders_init(
+    function BuildersV3_init(
         address depositToken_,
         address feeConfig_,
         address buildersTreasury_,
@@ -362,7 +362,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
     /**********************************************************************************************/
 
     modifier onlyMigrationOwner() {
-        require(migrationOwner == _msgSender(), "BU: caller is not the migration owner");
+        _onlyMigrationOwner();
         _;
     }
 
@@ -376,6 +376,10 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
 
+    function _onlyMigrationOwner() private view {
+        require(migrationOwner == _msgSender(), "BU: caller is not the migration owner");
+    }
+
     function setMigrationOwner(address value_) external onlyOwner {
         migrationOwner = value_;
 
@@ -385,6 +389,9 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
     function setBuilderSubnets(address value_) external onlyMigrationOwner {
         require(IERC165(value_).supportsInterface(type(IBuilderSubnets).interfaceId), "BU: invalid contract");
 
+        if (builderSubnets != address(0)) {
+            IERC20(depositToken).approve(builderSubnets, 0);
+        }
         IERC20(depositToken).approve(value_, type(uint256).max);
 
         builderSubnets = value_;
@@ -392,10 +399,10 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         emit BuilderSubnetsSet(value_);
     }
 
-    function setIsPaused(bool value_) external onlyMigrationOwner {
-        isPaused = value_;
+    function setPaused() external onlyMigrationOwner {
+        isPaused = true;
 
-        emit IsPausedSet(value_);
+        emit IsPausedSet(true);
     }
 
     function migrateUsersStake(
@@ -408,8 +415,8 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function migrateUserStake(bytes32 builderPoolId_, address user_) public onlyMigrationOwner whenPaused {
-        _migrateUserStake(builderPoolId_, user_);
+    function migrateUserStake(bytes32 builderPoolId_) public whenPaused {
+        _migrateUserStake(builderPoolId_, _msgSender());
     }
 
     function _migrateUserStake(bytes32 builderPoolId_, address user_) private {

@@ -261,14 +261,19 @@ interface IBuildersV3 is IERC165 {
 
     /**
      * The function to set the new pause value.
-     * @param value_ New value
      */
-    function setIsPaused(bool value_) external;
+    function setPaused() external;
 
     /**
-     * The function to migrate stake to the new contract.
-     * @param builderPoolId_ The pool's id.
-     * @param user_ The user's address.
+     * The function to migrate user's stakes to the new contract.
+     * @param builderPoolIds_ The pool's ids.
+     * @param users_ The user's addresses.
      */
-    function migrateUserStake(bytes32 builderPoolId_, address user_) external;
+    function migrateUsersStake(bytes32[] calldata builderPoolIds_, address[] calldata users_) external;
+
+    /**
+     * The function to migrate caller stake to the new contract.
+     * @param builderPoolId_ The pool's id.
+     */
+    function migrateUserStake(bytes32 builderPoolId_) external;
 }

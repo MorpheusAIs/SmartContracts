@@ -7,7 +7,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * This is the interface for BuilderSubnets contract.
  */
 interface IBuilderSubnets is IERC165 {
-    struct BuildersSubnet {
+    struct Subnet {
         string name;
         address owner;
         uint256 minStake;
@@ -18,35 +18,35 @@ interface IBuilderSubnets is IERC165 {
         uint128 maxClaimLockEnd;
     }
 
-    struct BuildersSubnetMetadata {
+    struct SubnetMetadata {
         string slug;
         string description;
         string website;
         string image;
     }
 
-    struct BuildersSubnetData {
+    struct SubnetData {
         uint256 staked;
         uint256 virtualStaked;
     }
 
-    struct BuildersSubnetsData {
-        uint256 lastCalculatedTimestamp;
-        uint256 rate;
+    struct AllSubnetsData {
         uint256 staked;
         uint256 virtualStaked;
+        uint256 rate;
+        uint128 lastCalculatedTimestamp;
     }
 
     struct Staker {
-        uint128 lastInteraction;
-        uint128 lastStake;
-        uint128 claimLockEnd;
         uint256 staked;
         uint256 virtualStaked;
         uint256 pendingRewards;
+        uint256 rate;
+        uint128 lastStake;
+        uint128 claimLockEnd;
     }
 
-    struct BuildersPoolData {
+    struct BuildersRewardPoolData {
         uint256 initialAmount;
         uint256 decreaseAmount;
         uint128 payoutStart;
@@ -99,9 +99,9 @@ interface IBuilderSubnets is IERC165 {
 
     /**
      * The event that is emitted when the builders pool data is set.
-     * @param buildersPoolData The new value.
+     * @param buildersRewardPoolData The new value.
      */
-    event BuildersPoolDataSet(BuildersPoolData buildersPoolData);
+    event BuildersRewardPoolDataSet(BuildersRewardPoolData buildersRewardPoolData);
 
     /**
      * The event that is emitted when the reward calculation starts at timestamp is set.
@@ -127,6 +127,7 @@ interface IBuilderSubnets is IERC165 {
      * @param treasury The treasury address
      */
     event SubnetCreationFeeSet(uint256 amount, address treasury);
+
     /**
      * The event that is emitted when the `isMigrationOver` is set.
      * @param isMigrationOver The new value.
@@ -134,18 +135,31 @@ interface IBuilderSubnets is IERC165 {
     event IsMigrationOverSet(bool isMigrationOver);
 
     /**
+     * The event that is emitted when the `collectPendingRewards` call.
+     * @param to The timestamp.
+     */
+    event RewardsCollected(uint128 to);
+
+    /**
+     * The event that is emitted when the power factor for Staker in the Subnet reset.
+     * @param subnetId The Subnet ID.
+     * @param stakerAddress The Staker address.
+     */
+    event PowerFactorReset(bytes32 subnetId, address stakerAddress);
+
+    /**
      * The event that is emitted when the Subnet created or edited.
      * @param subnetId The Subnet ID.
      * @param subnet The Subnet data.
      */
-    event SubnetEdited(bytes32 indexed subnetId, BuildersSubnet subnet);
+    event SubnetEdited(bytes32 indexed subnetId, Subnet subnet);
 
     /**
      * The event that is emitted when the Subnet created or edited.
      * @param subnetId The Subnet ID.
      * @param subnetMetadata The Subnet metadata.
      */
-    event SubnetMetadataEdited(bytes32 indexed subnetId, BuildersSubnetMetadata subnetMetadata);
+    event SubnetMetadataEdited(bytes32 indexed subnetId, SubnetMetadata subnetMetadata);
 
     /**
      * The event that is emitted when the Staker staked.
@@ -183,12 +197,10 @@ interface IBuilderSubnets is IERC165 {
     event Claimed(bytes32 indexed subnetId, address stakerAddress, Staker staker, uint256 amount);
 
     /**
-     * The event that is emitted when the Staker collect the rewards.
-     * @param subnetId The Subnet ID.
-     * @param stakerAddress The Staker address.
-     * @param staker The Staker struct.
+     * The event that is emitted when the rewards not distribute between Stakers.
+     * @param rewards The reward amount.
      */
-    event PendingRewardsCollected(bytes32 indexed subnetId, address stakerAddress, Staker staker);
+    event RewardsNotDistributed(uint256 rewards);
 
     /**
      * The function to set the FeeConfig contract address.
@@ -204,11 +216,11 @@ interface IBuilderSubnets is IERC165 {
     function setTreasury(address treasury_) external;
 
     /**
-     * The function to set the `buildersPoolData` variable. Can be taken from the Distribution
+     * The function to set the `buildersRewardPoolData` variable. Can be taken from the Distribution
      * contract on the Ethereum network.
-     * @param buildersPoolData_ The new value.
+     * @param buildersRewardPoolData_ The new value.
      */
-    function setBuildersPoolData(BuildersPoolData calldata buildersPoolData_) external;
+    function setBuildersRewardPoolData(BuildersRewardPoolData calldata buildersRewardPoolData_) external;
 
     /**
      * The function to set `rewardCalculationStartsAt` variable
@@ -252,14 +264,14 @@ interface IBuilderSubnets is IERC165 {
      * @param subnet_ The Subnet data.
      * @param metadata_ The Subnet metadata.
      */
-    function createSubnet(BuildersSubnet calldata subnet_, BuildersSubnetMetadata calldata metadata_) external;
+    function createSubnet(Subnet calldata subnet_, SubnetMetadata calldata metadata_) external;
 
     /**
      * The function to edit the Subnet metadata.
      * @param subnetId_ The Subnet ID.
      * @param metadata_ The Subnet metadata.
      */
-    function editSubnetMetadata(bytes32 subnetId_, BuildersSubnetMetadata calldata metadata_) external;
+    function editSubnetMetadata(bytes32 subnetId_, SubnetMetadata calldata metadata_) external;
 
     /**
      * The function to change the Subnet ownership.
@@ -305,16 +317,6 @@ interface IBuilderSubnets is IERC165 {
     function claim(bytes32 subnetId_, address stakerAddress_) external;
 
     /**
-     * With claiming, there can be so many calculation periods that a transaction
-     * won't fit into a block. In this case, we can use this function to calculate
-     * rewards in parts.
-     * @param subnetId_ The Subnet ID.
-     * @param stakerAddress_ The staker address.
-     * @param to_ Rewards calculates to this timestamp.
-     */
-    function collectPendingRewards(bytes32 subnetId_, address stakerAddress_, uint128 to_) external;
-
-    /**
      * The function to receive the max total virtual stake for the current contract and network.
      * Used when Staker stake or withdraw, total stake can't exceed this result.
      * @param to_ To calculated timestamp
@@ -339,9 +341,8 @@ interface IBuilderSubnets is IERC165 {
      * The function to receive the Staker rewards amount.
      * @param subnetId_ The Subnet ID.
      * @param stakerAddress_ The staker address.
-     * @param to_ Rewards calculates to this timestamp.
      */
-    function getStakerRewards(bytes32 subnetId_, address stakerAddress_, uint128 to_) external view returns (uint256);
+    function getStakerRewards(bytes32 subnetId_, address stakerAddress_) external view returns (uint256);
 
     /**
      * The function to calculate rewards for the period.

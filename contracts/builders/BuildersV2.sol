@@ -42,7 +42,7 @@ contract BuildersV2 is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function Builders_init(
+    function BuildersV2_init(
         address depositToken_,
         address feeConfig_,
         address buildersTreasury_,
