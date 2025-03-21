@@ -87,7 +87,7 @@ describe('ChainLinkDataConsumer', () => {
     });
 
     describe('#version()', () => {
-      it('should revert if caller is not the owner', async () => {
+      it('should return correct version', async () => {
         expect(await dataConsumer.version()).to.eq(1);
       });
     });

@@ -3,19 +3,21 @@ import { ethers } from 'hardhat';
 import {
   AavePoolDataProviderMock,
   AavePoolMock,
+  ChainLinkDataConsumer,
   ChainLinkDataConsumerMock,
   Distributor,
   L1SenderMock,
   L1SenderV2,
+  RewardPool,
   RewardPoolMock,
 } from '@/generated-types/ethers';
 import '@/generated-types/ethers/contracts/mock';
 
 export const deployDistributor = async (
-  chainLinkDataConsumer: ChainLinkDataConsumerMock,
-  aavePool: AavePoolMock,
-  aavePoolDataProvider: AavePoolDataProviderMock,
-  rewardPool: RewardPoolMock,
+  chainLinkDataConsumer: ChainLinkDataConsumer | ChainLinkDataConsumerMock,
+  aavePool: string | AavePoolMock,
+  aavePoolDataProvider: string | AavePoolDataProviderMock,
+  rewardPool: RewardPool | RewardPoolMock,
   l1Sender: L1SenderV2 | L1SenderMock,
 ): Promise<Distributor> => {
   const [implFactory, proxyFactory] = await Promise.all([

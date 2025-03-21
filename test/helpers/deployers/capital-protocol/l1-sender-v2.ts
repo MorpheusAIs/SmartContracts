@@ -12,7 +12,7 @@ export const deployL1SenderV2 = async (): Promise<L1SenderV2> => {
   const proxy = await proxyFactory.deploy(impl, '0x');
   const contract = impl.attach(proxy) as L1SenderV2;
 
-  // await contract.L1SenderV2__init();
+  await contract.L1SenderV2__init();
 
   return contract;
 };

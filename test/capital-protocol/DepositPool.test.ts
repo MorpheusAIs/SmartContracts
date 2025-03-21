@@ -175,9 +175,9 @@ describe('DepositPool', () => {
     });
   });
 
-  describe('#setRewardPoolsData', () => {
+  describe('#setRewardPoolProtocolDetails', () => {
     it('should edit pool limits with correct data', async () => {
-      await depositPool.setRewardPoolsData(rewardPoolId, 1, 2, 3, 4);
+      await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 2, 3, 4);
 
       const rewardPoolProtocolDetails = await depositPool.rewardPoolsProtocolDetails(rewardPoolId);
       expect(rewardPoolProtocolDetails.withdrawLockPeriodAfterStake).to.be.eq(1);
@@ -186,9 +186,9 @@ describe('DepositPool', () => {
       expect(rewardPoolProtocolDetails.minimalStake).to.be.eq(4);
     });
     it('should revert if caller is not owner', async () => {
-      await expect(depositPool.connect(SECOND).setRewardPoolsData(rewardPoolId, 1, 2, 3, 4)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
+      await expect(
+        depositPool.connect(SECOND).setRewardPoolProtocolDetails(rewardPoolId, 1, 2, 3, 4),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -1610,7 +1610,7 @@ describe('DepositPool', () => {
       );
     });
     it('should revert if amount is less than minimal stake', async () => {
-      await depositPool.setRewardPoolsData(rewardPoolId, 1, 1, 1, wei(999));
+      await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 1, 1, wei(999));
       await expect(depositPool.stake(rewardPoolId, wei(1), 0, ZERO_ADDR)).to.be.revertedWith('DS: amount too low');
     });
     it('should revert if amount is equal zero', async () => {
@@ -2410,12 +2410,12 @@ describe('DepositPool', () => {
     it("should revert if `claimLockPeriodAfterStake` didn't pass", async () => {
       await setTime(oneDay + oneDay);
       await depositPool.stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
-      await depositPool.setRewardPoolsData(rewardPoolId, 1, 999999, 3, 4);
+      await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 999999, 3, 4);
 
       await expect(depositPool.claim(rewardPoolId, OWNER)).to.be.revertedWith('DS: pool claim is locked (S)');
     });
     it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
-      await depositPool.setRewardPoolsData(rewardPoolId, 1, 0, 60, 4);
+      await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 0, 60, 4);
 
       // Add rewards
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98));
@@ -2460,7 +2460,7 @@ describe('DepositPool', () => {
     });
     beforeEach(async () => {
       await depositPool.migrate(rewardPoolId);
-      await depositPool.setRewardPoolsData(rewardPoolId, oneDay - 1, 1, 2, wei(0.1));
+      await depositPool.setRewardPoolProtocolDetails(rewardPoolId, oneDay - 1, 1, 2, wei(0.1));
     });
 
     it('should correctly withdraw, few users, withdraw all', async () => {
@@ -2896,7 +2896,7 @@ describe('DepositPool', () => {
         expect(referrerData.pendingRewards).to.eq(0);
       });
       it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
-        await depositPool.setRewardPoolsData(rewardPoolId, 1, 0, 60, 4);
+        await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 0, 60, 4);
 
         await setTime(oneDay * 2);
         await depositPool.stake(rewardPoolId, wei(1), 0, OWNER);

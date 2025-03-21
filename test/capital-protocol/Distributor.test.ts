@@ -172,7 +172,7 @@ describe('Distributor', () => {
     });
 
     describe('#version()', () => {
-      it('should revert if caller is not the owner', async () => {
+      it('should return correct version', async () => {
         expect(await distributor.version()).to.eq(1);
       });
     });
@@ -782,6 +782,34 @@ describe('Distributor', () => {
       await expect(
         dp1Info.depositPool.connect(BOB).sendMintMessage(privateRewardPoolId, BOB, wei(1), ZERO_ADDR),
       ).to.be.revertedWith("DR: deposit pool doesn't exist");
+    });
+  });
+
+  describe('#withdrawUndistributedRewards', () => {
+    beforeEach(async () => {
+      await createDepositPools();
+      await distributor.setRewardPoolLastCalculatedTimestamp(publicRewardPoolId, 1);
+    });
+
+    it('should correctly withdraw', async () => {
+      await imitateYield([wei(1), wei(1)], wei(33), [wei(0, 6), wei(0)]);
+      await distributor.distributeRewards(publicRewardPoolId);
+      expect(await distributor.undistributedRewards()).to.eq(wei(33));
+
+      await distributor.withdrawUndistributedRewards(BOB, ZERO_ADDR);
+      expect(await l1SenderMock.minted(BOB)).to.eq(wei(33));
+
+      expect(await distributor.undistributedRewards()).to.eq(wei(0));
+    });
+    it('should revert when nothing to withdraw', async () => {
+      await expect(distributor.withdrawUndistributedRewards(BOB, ZERO_ADDR)).to.be.revertedWith(
+        'DR: nothing to withdraw',
+      );
+    });
+    it('should revert when caller is not the owner', async () => {
+      await expect(distributor.connect(BOB).withdrawUndistributedRewards(BOB, ZERO_ADDR)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
     });
   });
 

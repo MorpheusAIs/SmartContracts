@@ -6,11 +6,12 @@ import { Reverter } from '../../helpers/reverter';
 import { ChainLinkDataConsumer } from '@/generated-types/ethers';
 import { deployChainLinkDataConsumer } from '@/test/helpers/deployers';
 
-describe('ChainLinkDataConsumer', () => {
+describe('ChainLinkDataConsumer Fork', () => {
   const reverter = new Reverter();
 
   let consumer: ChainLinkDataConsumer;
 
+  //
   const data = [
     {
       path: 'USDC/USD',
@@ -29,8 +30,8 @@ describe('ChainLinkDataConsumer', () => {
       addresses: ['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'],
     },
     {
-      path: 'wstETH/USD',
-      addresses: ['0x164b276057258d81941e97B0a900D4C7B358bCe0'],
+      path: 'stETH/USD',
+      addresses: ['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8'],
     },
   ];
   const paths = data.map((e) => e.path);
@@ -41,7 +42,7 @@ describe('ChainLinkDataConsumer', () => {
       {
         forking: {
           jsonRpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-          blockNumber: 21923000,
+          blockNumber: 22093000,
         },
       },
     ]);

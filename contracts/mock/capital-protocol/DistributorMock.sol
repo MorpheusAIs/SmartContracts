@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IDistributor, IERC165} from "../../interfaces/capital-protocol/IDistributor.sol";
+import {IL1SenderV2} from "../../interfaces/capital-protocol/IL1SenderV2.sol";
+
 import "../tokens/ERC20Token.sol";
 
 contract DistributorMock {
@@ -32,8 +34,7 @@ contract DistributorMock {
             0,
             0,
             IDistributor.Strategy.NONE,
-            address(0),
-            [uint256(0), 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            address(0)
         );
 
         depositPools[depositPoolAddress_] = depositPool_;
@@ -53,10 +54,25 @@ contract DistributorMock {
 
         return distributedRewardsAnswer + preventWarnings_ - preventWarnings_;
     }
-    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable {
-        uint256 preventWarnings_ = uint256(uint160(refundTo_));
+
+    function sendMintMessage(
+        uint256 rewardPoolIndex_,
+        address user_,
+        uint256 amount_,
+        address refundTo_
+    ) external payable {
+        uint256 preventWarnings_ = uint256(uint160(refundTo_)) + rewardPoolIndex_;
 
         ERC20Token(rewardToken).mint(user_, amount_ + preventWarnings_ - preventWarnings_);
+    }
+
+    function sendMintMessageToL1Sender(
+        address l1Sender_,
+        address user_,
+        uint256 amount_,
+        address refundTo_
+    ) external payable {
+        IL1SenderV2(l1Sender_).sendMintMessage{value: msg.value}(user_, amount_, refundTo_);
     }
 
     function supply(uint256 rewardPoolIndex_, uint256 amount_) external {
@@ -69,9 +85,11 @@ contract DistributorMock {
         );
     }
 
-    function withdraw(uint256 rewardPoolIndex_, uint256 amount_) external {
+    function withdraw(uint256 rewardPoolIndex_, uint256 amount_) external returns (uint256) {
         uint256 preventWarnings_ = rewardPoolIndex_;
 
         IERC20(depositPools[msg.sender].token).safeTransfer(msg.sender, amount_ + preventWarnings_ - preventWarnings_);
+
+        return amount_;
     }
 }

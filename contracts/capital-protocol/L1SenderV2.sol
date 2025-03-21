@@ -1,143 +1,234 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ILayerZeroEndpoint} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/interfaces/ILayerZeroEndpoint.sol";
-
-import {IGatewayRouter} from "@arbitrum/token-bridge-contracts/contracts/tokenbridge/libraries/gateway/IGatewayRouter.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+
+import {ILayerZeroEndpoint} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/interfaces/ILayerZeroEndpoint.sol";
+
+import {IGatewayRouter} from "@arbitrum/token-bridge-contracts/contracts/tokenbridge/libraries/gateway/IGatewayRouter.sol";
+
 import {IL1SenderV2, IERC165} from "../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
 import {IWStETH} from "../interfaces/tokens/IWStETH.sol";
 
 contract L1SenderV2 is IL1SenderV2, OwnableUpgradeable, UUPSUpgradeable {
-    address public unwrappedDepositToken;
-    address public distribution;
+    /** @dev stETH token address */
+    address public stETH;
 
-    DepositTokenConfig public depositTokenConfig;
-    RewardTokenConfig public rewardTokenConfig;
+    /** @dev `Distributor` contract address. */
+    address public distributor;
 
-    modifier onlyDistribution() {
-        require(_msgSender() == distribution, "L1S: invalid sender");
-        _;
-    }
+    /** @dev The config for Arbitrum bridge. Send wstETH to the Arbitrum */
+    ArbitrumBridgeConfig public arbitrumBridgeConfig;
+
+    /** @dev The config for LayerZero. Send MOR mint message to the Arbitrum */
+    LayerZeroConfig public layerZeroConfig;
+
+    /** @dev UPGRADE `L1SenderV2` storage updates, add Uniswap integration  */
+    address public uniswapSwapRouter;
+
+    /**********************************************************************************************/
+    /*** Init, IERC165                                                                          ***/
+    /**********************************************************************************************/
 
     constructor() {
         _disableInitializers();
     }
 
-    function L1SenderV2__init(
-        address distribution_,
-        RewardTokenConfig calldata rewardTokenConfig_,
-        DepositTokenConfig calldata depositTokenConfig_
-    ) external initializer {
+    function L1SenderV2__init() external initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
-
-        setDistribution(distribution_);
-        setRewardTokenConfig(rewardTokenConfig_);
-        setDepositTokenConfig(depositTokenConfig_);
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
         return interfaceId_ == type(IL1SenderV2).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     }
 
-    function setDistribution(address distribution_) public onlyOwner {
-        distribution = distribution_;
+    /**********************************************************************************************/
+    /*** Global contract management functionality for the contract `owner()`                    ***/
+    /**********************************************************************************************/
+
+    function setStETh(address value_) external onlyOwner {
+        require(value_ != address(0), "L1S: invalid stETH address");
+
+        stETH = value_;
+
+        emit stETHSet(value_);
     }
 
-    function setRewardTokenConfig(RewardTokenConfig calldata newConfig_) public onlyOwner {
-        rewardTokenConfig = newConfig_;
+    function setDistributor(address value_) external onlyOwner {
+        require(IERC165(value_).supportsInterface(type(IDistributor).interfaceId), "L1S: invalid distributor address");
+
+        distributor = value_;
+
+        emit DistributorSet(value_);
     }
 
-    function setDepositTokenConfig(DepositTokenConfig calldata newConfig_) public onlyOwner {
-        require(newConfig_.receiver != address(0), "L1S: invalid receiver");
+    /**
+     * https://docs.uniswap.org/contracts/v3/reference/deployments/ethereum-deployments
+     */
+    function setUniswapSwapRouter(address value_) external onlyOwner {
+        require(value_ != address(0), "L1S: invalid `uniswapSwapRouter` address");
 
-        DepositTokenConfig storage oldConfig = depositTokenConfig;
+        uniswapSwapRouter = value_;
 
-        _replaceDepositToken(oldConfig.token, newConfig_.token);
-        _replaceDepositTokenGateway(oldConfig.gateway, newConfig_.gateway, oldConfig.token, newConfig_.token);
-
-        depositTokenConfig = newConfig_;
+        emit UniswapSwapRouterSet(value_);
     }
 
-    function _replaceDepositToken(address oldToken_, address newToken_) private {
-        bool isTokenChanged_ = oldToken_ != newToken_;
+    /**********************************************************************************************/
+    /*** LayerZero functionality                                                                ***/
+    /**********************************************************************************************/
 
-        if (oldToken_ != address(0) && isTokenChanged_) {
-            // Remove allowance from stETH to wstETH
-            IERC20(unwrappedDepositToken).approve(oldToken_, 0);
-        }
+    /**
+     * @dev https://docs.layerzero.network/v1/deployments/deployed-contracts
+     * Gateway - see `EndpointV1` at the link
+     * Receiver - `L2MessageReceiver` address
+     * Receiver Chain Id - see `EndpointId` at the link
+     * Zro Payment Address - the address of the ZRO token holder who would pay for the transaction
+     * Adapter Params - parameters for custom functionality. e.g. receive airdropped native gas from the relayer on destination
+     */
+    function setLayerZeroConfig(LayerZeroConfig calldata layerZeroConfig_) external onlyOwner {
+        layerZeroConfig = layerZeroConfig_;
 
-        if (isTokenChanged_) {
-            // Get stETH from wstETH
-            address unwrappedToken_ = IWStETH(newToken_).stETH();
-            // Increase allowance from stETH to wstETH. To exchange stETH for wstETH
-            IERC20(unwrappedToken_).approve(newToken_, type(uint256).max);
-
-            unwrappedDepositToken = unwrappedToken_;
-        }
+        emit LayerZeroConfigSet(layerZeroConfig_);
     }
 
-    function _replaceDepositTokenGateway(
-        address oldGateway_,
-        address newGateway_,
-        address oldToken_,
-        address newToken_
-    ) private {
-        bool isAllowedChanged_ = (oldToken_ != newToken_) || (oldGateway_ != newGateway_);
+    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable {
+        require(_msgSender() == distributor, "L1S: the `msg.sender` isn't `distributor`");
 
-        if (oldGateway_ != address(0) && isAllowedChanged_) {
-            IERC20(oldToken_).approve(IGatewayRouter(oldGateway_).getGateway(oldToken_), 0);
-        }
-
-        if (isAllowedChanged_) {
-            IERC20(newToken_).approve(IGatewayRouter(newGateway_).getGateway(newToken_), type(uint256).max);
-        }
-    }
-
-    function sendDepositToken(
-        uint256 gasLimit_,
-        uint256 maxFeePerGas_,
-        uint256 maxSubmissionCost_
-    ) external payable onlyDistribution returns (bytes memory) {
-        DepositTokenConfig storage config = depositTokenConfig;
-
-        // Get current stETH balance
-        uint256 amountUnwrappedToken_ = IERC20(unwrappedDepositToken).balanceOf(address(this));
-        // Wrap all stETH to wstETH
-        uint256 amount_ = IWStETH(config.token).wrap(amountUnwrappedToken_);
-
-        bytes memory data_ = abi.encode(maxSubmissionCost_, "");
-
-        return
-            IGatewayRouter(config.gateway).outboundTransfer{value: msg.value}(
-                config.token,
-                config.receiver,
-                amount_,
-                gasLimit_,
-                maxFeePerGas_,
-                data_
-            );
-    }
-
-    function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable onlyDistribution {
-        RewardTokenConfig storage config = rewardTokenConfig;
+        LayerZeroConfig storage config = layerZeroConfig;
 
         bytes memory receiverAndSenderAddresses_ = abi.encodePacked(config.receiver, address(this));
         bytes memory payload_ = abi.encode(user_, amount_);
 
+        // https://docs.layerzero.network/v1/developers/evm/evm-guides/send-messages
         ILayerZeroEndpoint(config.gateway).send{value: msg.value}(
-            config.receiverChainId, // communicator LayerZero chainId
-            receiverAndSenderAddresses_, // send to this address to the communicator
-            payload_, // bytes payload
-            payable(refundTo_), // refund address
-            config.zroPaymentAddress, // future parameter
-            config.adapterParams // adapterParams (see "Advanced Features")
+            config.receiverChainId,
+            receiverAndSenderAddresses_,
+            payload_,
+            payable(refundTo_),
+            config.zroPaymentAddress,
+            config.adapterParams
         );
+
+        emit MintMessageSent(user_, amount_);
+    }
+
+    /**********************************************************************************************/
+    /*** Arbitrum bridge functionality                                                          ***/
+    /**********************************************************************************************/
+
+    /**
+     * @dev https://docs.arbitrum.io/build-decentralized-apps/reference/contract-addresses
+     * wstETH - the wstETH token address
+     * Gateway - see `L1 Gateway Router` at the link
+     * Receiver - `L2MessageReceiver` address
+     */
+    function setArbitrumBridgeConfig(ArbitrumBridgeConfig calldata newConfig_) external onlyOwner {
+        require(stETH != address(0), "L1S: stETH is not set");
+        require(newConfig_.receiver != address(0), "L1S: invalid receiver");
+
+        ArbitrumBridgeConfig memory oldConfig_ = arbitrumBridgeConfig;
+
+        if (oldConfig_.wstETH != address(0)) {
+            IERC20(stETH).approve(oldConfig_.wstETH, 0);
+            IERC20(oldConfig_.wstETH).approve(IGatewayRouter(oldConfig_.gateway).getGateway(oldConfig_.wstETH), 0);
+        }
+
+        IERC20(stETH).approve(newConfig_.wstETH, type(uint256).max);
+        IERC20(newConfig_.wstETH).approve(
+            IGatewayRouter(newConfig_.gateway).getGateway(newConfig_.wstETH),
+            type(uint256).max
+        );
+
+        arbitrumBridgeConfig = newConfig_;
+
+        emit ArbitrumBridgeConfigSet(newConfig_);
+    }
+
+    function sendWstETH(
+        uint256 gasLimit_,
+        uint256 maxFeePerGas_,
+        uint256 maxSubmissionCost_
+    ) external payable onlyOwner returns (bytes memory) {
+        ArbitrumBridgeConfig memory config_ = arbitrumBridgeConfig;
+        require(config_.wstETH != address(0), "L1S: wstETH isn't set");
+
+        uint256 stETHBalance_ = IERC20(stETH).balanceOf(address(this));
+        if (stETHBalance_ > 0) {
+            IWStETH(config_.wstETH).wrap(stETHBalance_);
+        }
+
+        uint256 amount_ = IWStETH(config_.wstETH).balanceOf(address(this));
+
+        bytes memory data_ = abi.encode(maxSubmissionCost_, "");
+
+        bytes memory res_ = IGatewayRouter(config_.gateway).outboundTransfer{value: msg.value}(
+            config_.wstETH,
+            config_.receiver,
+            amount_,
+            gasLimit_,
+            maxFeePerGas_,
+            data_
+        );
+
+        emit WstETHSent(amount_, gasLimit_, maxFeePerGas_, maxSubmissionCost_, res_);
+
+        return res_;
+    }
+
+    /**********************************************************************************************/
+    /*** Uniswap functionality                                                                  ***/
+    /**********************************************************************************************/
+
+    /**
+     * @dev
+     * https://docs.uniswap.org/contracts/v3/guides/swaps/single-swaps
+     */
+    function swapExactInputSingle(
+        address tokenIn_,
+        address tokenOut_,
+        uint256 amountIn_,
+        uint256 amountOutMinimum_,
+        uint24 poolFee_
+    ) external onlyOwner returns (uint256) {
+        require(tokenIn_ != address(0) && tokenIn_ != arbitrumBridgeConfig.wstETH, "L1S: invalid `tokenIn_` address");
+        require(tokenOut_ != address(0), "L1S: invalid `tokenOut_` address");
+        require(amountIn_ != 0, "L1S: invalid `amountIn_` value");
+        require(amountOutMinimum_ != 0, "L1S: invalid `amountOutMinimum_` value");
+
+        TransferHelper.safeApprove(tokenIn_, uniswapSwapRouter, amountIn_);
+
+        // We set the sqrtPriceLimitx96 to be 0 to ensure we swap our exact input amount.
+        ISwapRouter.ExactInputSingleParams memory params_ = ISwapRouter.ExactInputSingleParams({
+            tokenIn: tokenIn_,
+            tokenOut: tokenOut_,
+            fee: poolFee_,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountIn: amountIn_,
+            amountOutMinimum: amountOutMinimum_,
+            sqrtPriceLimitX96: 0
+        });
+
+        uint256 amountOut_ = ISwapRouter(uniswapSwapRouter).exactInputSingle(params_);
+
+        emit TokensSwapped(tokenIn_, tokenOut_, amountIn_, amountOut_);
+
+        return amountOut_;
+    }
+
+    /**********************************************************************************************/
+    /*** UUPS                                                                                   ***/
+    /**********************************************************************************************/
+
+    function version() external pure returns (uint256) {
+        return 2;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

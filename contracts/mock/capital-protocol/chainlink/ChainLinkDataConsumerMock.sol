@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IChainLinkDataConsumer, IERC165} from "../../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
+import {IChainLinkDataConsumer, IERC165} from "../../../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
 
 contract ChainLinkDataConsumerMock is IERC165 {
     bytes32 public pathId;

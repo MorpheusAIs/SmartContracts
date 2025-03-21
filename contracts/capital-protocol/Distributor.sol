@@ -18,8 +18,6 @@ import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkD
 import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
 
-import "hardhat/console.sol";
-
 contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
     using DecimalsConverter for uint256;
@@ -122,6 +120,9 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         emit L1SenderSet(value_);
     }
 
+    /**
+     * @dev https://aave.com/docs/resources/addresses. See `Pool`.
+     */
     function setAavePool(address value_) public onlyOwner {
         require(value_ != address(0), "DR: invalid Aave pool address");
 
@@ -130,6 +131,9 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         emit AavePoolSet(value_);
     }
 
+    /**
+     * @dev https://aave.com/docs/resources/addresses. See `AaveProtocolDataProvider`.
+     */
     function setAavePoolDataProvider(address value_) public onlyOwner {
         require(value_ != address(0), "DR: invalid Aave pool data provider address");
 
@@ -215,8 +219,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             0,
             0,
             strategy_,
-            aToken_,
-            [uint256(0), 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            aToken_
         );
 
         depositPoolAddresses[rewardPoolIndex_].push(depositPoolAddress_);
@@ -402,6 +405,14 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         distributeRewards(rewardPoolIndex_);
         _withdrawYield(rewardPoolIndex_, depositPoolAddress_);
+    }
+
+    function withdrawUndistributedRewards(address user_, address refundTo_) external payable onlyOwner {
+        require(undistributedRewards > 0, "DR: nothing to withdraw");
+
+        IL1SenderV2(l1Sender).sendMintMessage{value: msg.value}(user_, undistributedRewards, refundTo_);
+
+        undistributedRewards = 0;
     }
 
     /**

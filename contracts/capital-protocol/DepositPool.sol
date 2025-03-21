@@ -7,9 +7,9 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
+import {IDepositPool, IERC165} from "../interfaces/capital-protocol/IDepositPool.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
 import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
-import {IDepositPool, IERC165} from "../interfaces/capital-protocol/IDepositPool.sol";
 
 import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
 import {ReferrerLib} from "../libs/ReferrerLib.sol";
@@ -23,28 +23,52 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
     bool public isNotUpgradeable;
 
+    /** @dev Main stake token for the contract */
     address public depositToken;
+
+    /** @dev `L1SenderV2` contract address */
     address public l1Sender;
 
+    /**
+     * @dev Contain information about reward pools. Removed in `DepositPool`,
+     * v6 update, moved to the `RewardPool` contract.
+     */
     Pool[] public unusedStorage1;
+
+    /** @dev Contain internal data about the reward pools, necessary for calculations */
     mapping(uint256 => RewardPoolData) public rewardPoolsData;
+
+    /** @dev Contain internal data about the users deposits, necessary for calculations */
     mapping(address => mapping(uint256 => UserData)) public usersData;
+
+    /** @dev Contain total real deposited amount for `depositToken` */
     uint256 public totalDepositedInPublicPools;
 
-    // Pools limits, V4 update
-    mapping(uint256 => RewardPoolLimits) public rewardPoolsLimits;
+    /**
+     * @dev UPGRADE. `DistributionV4` storage updates, add pool limits.
+     * Removed in `DepositPool`, v6 update, moved to `rewardPoolsProtocolDetails`
+     */
+    mapping(uint256 => RewardPoolLimits) public unusedStorage2;
 
-    // Referral storage, V5 update
+    /** @dev UPGRADE `DistributionV5` storage updates, add referrers. */
     mapping(uint256 => ReferrerTier[]) public referrerTiers;
     mapping(address => mapping(uint256 => ReferrerData)) public referrersData;
+    /** @dev UPGRADE `DistributionV5` end. */
 
-    // Referral storage, V6 update. Migrate to `DepositPool` contract
+    /** @dev UPGRADE `DepositPool`, v6. Storage updates, add few deposit pools. */
+
+    /** @dev This flag determines whether the migration has been completed. */
     bool public isMigrationOver;
+
+    /** @dev `Distributor` contract address. */
     address public distributor;
+
+    /** @dev Contain information about rewards pools needed for this contract. */
     mapping(uint256 => RewardPoolProtocolDetails) public rewardPoolsProtocolDetails;
+    /** @dev UPGRADE `DepositPool`, v6 end. */
 
     /**********************************************************************************************/
-    /*** Init                                                                                   ***/
+    /*** Init, IERC165                                                                          ***/
     /**********************************************************************************************/
 
     constructor() {
@@ -80,7 +104,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         emit DistributorSet(value_);
     }
 
-    function setRewardPoolsData(
+    function setRewardPoolProtocolDetails(
         uint256 rewardPoolIndex_,
         uint128 withdrawLockPeriodAfterStake_,
         uint128 claimLockPeriodAfterStake_,
@@ -207,6 +231,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function claim(uint256 rewardPoolIndex_, address receiver_) external payable {
+        require(isMigrationOver == true, "DS: migration isn't over");
         IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
 
         UserData storage userData = usersData[_msgSender()][rewardPoolIndex_];
@@ -269,6 +294,8 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function claimReferrerTier(uint256 rewardPoolIndex_, address receiver_) external payable {
+        require(isMigrationOver == true, "DS: migration isn't over");
+
         IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
         IDistributor(distributor).distributeRewards(rewardPoolIndex_);
 
@@ -319,6 +346,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function lockClaim(uint256 rewardPoolIndex_, uint128 claimLockEnd_) external {
+        require(isMigrationOver == true, "DS: migration isn't over");
         IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
 
         require(claimLockEnd_ > block.timestamp, "DS: invalid lock end value (1)");
@@ -687,40 +715,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             ReferrerLib.getReferralMultiplier(referrer_) -
             PRECISION;
     }
-
-    /**********************************************************************************************/
-    /*** Bridge                                                                                 ***/
-    /**********************************************************************************************/
-
-    // function overplus() public view returns (uint256) {
-    //     uint256 depositTokenContractBalance_ = IERC20(depositToken).balanceOf(address(this));
-    //     if (depositTokenContractBalance_ <= totalDepositedInPublicPools) {
-    //         return 0;
-    //     }
-
-    //     return depositTokenContractBalance_ - totalDepositedInPublicPools;
-    // }
-
-    // function bridgeOverplus(
-    //     uint256 gasLimit_,
-    //     uint256 maxFeePerGas_,
-    //     uint256 maxSubmissionCost_
-    // ) external payable onlyOwner returns (bytes memory) {
-    //     uint256 overplus_ = overplus();
-    //     require(overplus_ > 0, "DS: overplus is zero");
-
-    //     IERC20(depositToken).safeTransfer(l1Sender, overplus_);
-
-    //     bytes memory bridgeMessageId_ = IL1Sender(l1Sender).sendDepositToken{value: msg.value}(
-    //         gasLimit_,
-    //         maxFeePerGas_,
-    //         maxSubmissionCost_
-    //     );
-
-    //     emit OverplusBridged(overplus_, bridgeMessageId_);
-
-    //     return bridgeMessageId_;
-    // }
 
     /**********************************************************************************************/
     /*** UUPS                                                                                   ***/
