@@ -32,7 +32,7 @@ describe('L1Sender', () => {
   let lZEndpointMockL1: LZEndpointMock;
   let lZEndpointMockL2: LZEndpointMock;
 
-  let gatewayRouter: GatewayRouterMock;
+  let gatewayRouter: ArbitrumBridgeGatewayRouterMock;
 
   let l1Sender: L1Sender;
   let l2MessageReceiver: L2MessageReceiver;
@@ -55,7 +55,7 @@ describe('L1Sender', () => {
       ethers.getContractFactory('LZEndpointMock'),
       ethers.getContractFactory('MOR'),
       ethers.getContractFactory('L1Sender'),
-      ethers.getContractFactory('GatewayRouterMock'),
+      ethers.getContractFactory('ArbitrumBridgeGatewayRouterMock'),
       ethers.getContractFactory('StETHMock'),
       ethers.getContractFactory('WStETHMock'),
       ethers.getContractFactory('L2MessageReceiver'),
@@ -255,7 +255,7 @@ describe('L1Sender', () => {
     it('should reset allowances when token and gateway changed', async () => {
       const [WStETHMock, GatewayRouterMock, StETHMock] = await Promise.all([
         ethers.getContractFactory('WStETHMock'),
-        ethers.getContractFactory('GatewayRouterMock'),
+        ethers.getContractFactory('ArbitrumBridgeGatewayRouterMock'),
         ethers.getContractFactory('StETHMock'),
       ]);
 
@@ -315,7 +315,7 @@ describe('L1Sender', () => {
       expect(await newUnwrappedToken.allowance(l1Sender, newDepositToken)).to.be.equal(ethers.MaxUint256);
     });
     it('should reset allowances when only gateway changed', async () => {
-      const [GatewayRouterMock] = await Promise.all([ethers.getContractFactory('GatewayRouterMock')]);
+      const [GatewayRouterMock] = await Promise.all([ethers.getContractFactory('ArbitrumBridgeGatewayRouterMock')]);
       const [newGatewayRouter] = await Promise.all([GatewayRouterMock.deploy()]);
 
       const newConfig = {

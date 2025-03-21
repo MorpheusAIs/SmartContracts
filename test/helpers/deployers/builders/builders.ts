@@ -8,8 +8,15 @@ export const deployBuilders = async (
   editPoolDeadline: number,
   minimalWithdrawLockPeriod: number,
 ): Promise<{ builders: Builders; buildersTreasury: BuildersTreasury }> => {
+  const [lib2Factory] = await Promise.all([ethers.getContractFactory('LockMultiplierMath')]);
+  const [lib2] = await Promise.all([await lib2Factory.deploy()]);
+
   const [implBuildersFactory, implBuildersTreasuryFactory, proxyFactory] = await Promise.all([
-    ethers.getContractFactory('Builders'),
+    ethers.getContractFactory('Builders', {
+      libraries: {
+        LockMultiplierMath: await lib2.getAddress(),
+      },
+    }),
     ethers.getContractFactory('BuildersTreasury'),
     ethers.getContractFactory('ERC1967Proxy'),
   ]);

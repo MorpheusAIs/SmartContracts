@@ -10,17 +10,21 @@ export const deployBuilderSubnets = async (
   minWithdrawLockPeriodAfterStake: number,
   buildersV3Predefined?: BuildersV3,
 ): Promise<BuilderSubnets> => {
-  const libFactory = await ethers.getContractFactory('LinearDistributionIntervalDecrease');
-  const lib = await libFactory.deploy();
+  const [lib1Factory, lib2Factory, proxyFactory] = await Promise.all([
+    ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+    ethers.getContractFactory('LockMultiplierMath'),
+    ethers.getContractFactory('ERC1967Proxy'),
+  ]);
 
-  const [implFactory, proxyFactory] = await Promise.all([
+  const [lib1, lib2] = await Promise.all([await lib1Factory.deploy(), await lib2Factory.deploy()]);
+
+  const [implFactory] = await Promise.all([
     ethers.getContractFactory('BuilderSubnets', {
       libraries: {
-        LinearDistributionIntervalDecrease: await lib.getAddress(),
+        LinearDistributionIntervalDecrease: await lib1.getAddress(),
+        LockMultiplierMath: await lib2.getAddress(),
       },
     }),
-    ethers.getContractFactory('ERC1967Proxy'),
-    ethers.getContractFactory('LinearDistributionIntervalDecrease'),
   ]);
 
   const impl = await implFactory.deploy();
@@ -29,7 +33,11 @@ export const deployBuilderSubnets = async (
 
   let buildersV3;
   if (!buildersV3Predefined) {
-    const [buildersV3Factory] = await Promise.all([ethers.getContractFactory('BuildersV3')]);
+    const buildersV3Factory = await ethers.getContractFactory('BuildersV3', {
+      libraries: {
+        LockMultiplierMath: await lib2.getAddress(),
+      },
+    });
     buildersV3 = await buildersV3Factory.deploy();
   } else {
     buildersV3 = buildersV3Predefined;

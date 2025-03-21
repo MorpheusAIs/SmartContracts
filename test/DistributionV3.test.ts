@@ -3,10 +3,10 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import {
+  ArbitrumBridgeGatewayRouterMock,
   Distribution,
   DistributionV3,
   DistributionV3__factory,
-  GatewayRouterMock,
   IDistributionV3,
   IL1Sender,
   L1Sender,
@@ -17,7 +17,7 @@ import {
   MOR,
   NonfungiblePositionManagerMock,
   StETHMock,
-  SwapRouterMock,
+  UniswapSwapRouterMock,
   WStETHMock,
 } from '@/generated-types/ethers';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';
@@ -78,13 +78,13 @@ describe('DistributionV3', () => {
       ethers.getContractFactory('LZEndpointMock'),
       ethers.getContractFactory('L2MessageReceiver'),
       ethers.getContractFactory('L2TokenReceiverV2'),
-      ethers.getContractFactory('GatewayRouterMock'),
-      ethers.getContractFactory('SwapRouterMock'),
+      ethers.getContractFactory('ArbitrumBridgeGatewayRouterMock'),
+      ethers.getContractFactory('UniswapSwapRouterMock'),
       ethers.getContractFactory('NonfungiblePositionManagerMock'),
     ]);
 
-    let gatewayRouter: GatewayRouterMock;
-    let swapRouter: SwapRouterMock;
+    let gatewayRouter: ArbitrumBridgeGatewayRouterMock;
+    let swapRouter: UniswapSwapRouterMock;
     let nonfungiblePositionManager: NonfungiblePositionManagerMock;
     let l2TokenReceiverImplementation: L2TokenReceiverV2;
     let l2MessageReceiverImplementation: L2MessageReceiver;

@@ -113,11 +113,11 @@ describe('BuildersV3', () => {
 
       await expect(buildersV3.setBuilderSubnets(MINTER)).to.be.revertedWith('BU: caller is not the migration owner');
     });
-    it('should revert if', async () => {
+    it('should revert if invalid contract', async () => {
       const buildersV3 = await upgradeToV3(builders);
       await buildersV3.setMigrationOwner(MIGRATION_OWNER);
 
-      const BuildersV3Mock = await ethers.getContractFactory('BuildersV3');
+      const BuildersV3Mock = await ethers.getContractFactory('L1Sender');
       const buildersV3Mock = await BuildersV3Mock.deploy();
 
       await expect(buildersV3.connect(MIGRATION_OWNER).setBuilderSubnets(buildersV3Mock)).to.be.revertedWith(
@@ -323,7 +323,14 @@ describe('BuildersV3', () => {
   });
 
   const upgradeToV3 = async (buildersV1: Builders): Promise<BuildersV3> => {
-    const BuildersV3 = await ethers.getContractFactory('BuildersV3');
+    const [lib2Factory] = await Promise.all([ethers.getContractFactory('LockMultiplierMath')]);
+    const [lib2] = await Promise.all([await lib2Factory.deploy()]);
+
+    const BuildersV3 = await ethers.getContractFactory('BuildersV3', {
+      libraries: {
+        LockMultiplierMath: await lib2.getAddress(),
+      },
+    });
     const buildersV3Impl = await BuildersV3.deploy();
 
     await buildersV1.upgradeTo(buildersV3Impl);

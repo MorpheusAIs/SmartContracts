@@ -24,7 +24,7 @@ describe('L2TokenReceiver', () => {
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
-  let swapRouter: SwapRouterMock;
+  let swapRouter: UniswapSwapRouterMock;
   let nonfungiblePositionManager: NonfungiblePositionManagerMock;
 
   let l2TokenReceiver: L2TokenReceiver;
@@ -39,7 +39,7 @@ describe('L2TokenReceiver', () => {
         ethers.getContractFactory('L2TokenReceiver'),
         ethers.getContractFactory('StETHMock'),
         ethers.getContractFactory('MOR'),
-        ethers.getContractFactory('SwapRouterMock'),
+        ethers.getContractFactory('UniswapSwapRouterMock'),
         ethers.getContractFactory('NonfungiblePositionManagerMock'),
       ]);
 
