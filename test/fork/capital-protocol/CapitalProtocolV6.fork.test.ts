@@ -5,10 +5,12 @@ import { ethers } from 'hardhat';
 import { Reverter } from '../../helpers/reverter';
 
 import {
+  AavePoolMock,
   ChainLinkDataConsumer,
   DepositPool,
   DistributionV5,
   Distributor,
+  ERC20Token,
   L1Sender,
   L1SenderV2,
   RewardPool,
@@ -17,7 +19,14 @@ import {
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { getCurrentBlockTime, setTime } from '@/test/helpers/block-helper';
-import { deployChainLinkDataConsumer, deployDistributor, deployRewardPool } from '@/test/helpers/deployers';
+import {
+  deployChainLinkDataConsumer,
+  deployDepositPoolMock,
+  deployDistributor,
+  deployERC20Token,
+  deployRewardPool,
+  deployUniswapSwapRouterMock,
+} from '@/test/helpers/deployers';
 import { oneDay } from '@/test/helpers/distribution-helper';
 
 describe('CapitalProtocolV6 Fork', () => {
@@ -26,8 +35,8 @@ describe('CapitalProtocolV6 Fork', () => {
   let OWNER: SignerWithAddress;
   let BOB: SignerWithAddress;
   let STETH_HOLDER: SignerWithAddress;
-  let PUBLIC_POO_USER_ADDRESS: SignerWithAddress;
-  let PRIVATE_POO_USER_ADDRESS: SignerWithAddress;
+  let PUBLIC_POOL_USER_ADDRESS: SignerWithAddress;
+  let PRIVATE_POOL_USER_ADDRESS: SignerWithAddress;
 
   let distributionV5: DistributionV5;
   let distributor: Distributor;
@@ -56,11 +65,11 @@ describe('CapitalProtocolV6 Fork', () => {
 
     [OWNER, BOB] = await ethers.getSigners();
     STETH_HOLDER = await ethers.getImpersonatedSigner(stETHHolder);
-    PUBLIC_POO_USER_ADDRESS = await ethers.getImpersonatedSigner(publicPoolUserAddress);
-    PRIVATE_POO_USER_ADDRESS = await ethers.getImpersonatedSigner(privatePoolUserAddress);
+    PUBLIC_POOL_USER_ADDRESS = await ethers.getImpersonatedSigner(publicPoolUserAddress);
+    PRIVATE_POOL_USER_ADDRESS = await ethers.getImpersonatedSigner(privatePoolUserAddress);
 
-    await BOB.sendTransaction({ to: PUBLIC_POO_USER_ADDRESS, value: wei(1) });
-    await BOB.sendTransaction({ to: PRIVATE_POO_USER_ADDRESS, value: wei(1) });
+    await BOB.sendTransaction({ to: PUBLIC_POOL_USER_ADDRESS, value: wei(1) });
+    await BOB.sendTransaction({ to: PRIVATE_POOL_USER_ADDRESS, value: wei(1) });
 
     distributionV5 = await getDeployedDistributionV5();
     l1Sender = await getDeployedL1Sender();
@@ -141,14 +150,14 @@ describe('CapitalProtocolV6 Fork', () => {
       await migrate(depositPool);
 
       const stETH = await getStETH(depositPool);
-      await stETH.connect(STETH_HOLDER).transfer(PUBLIC_POO_USER_ADDRESS, wei(1));
+      await stETH.connect(STETH_HOLDER).transfer(PUBLIC_POOL_USER_ADDRESS, wei(1));
 
-      await depositPool.connect(PUBLIC_POO_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
-      await depositPool.connect(PUBLIC_POO_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
+      await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
+      await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
 
       await setTime((await getCurrentBlockTime()) + 100 * oneDay);
-      await depositPool.connect(PUBLIC_POO_USER_ADDRESS).claim(0, PUBLIC_POO_USER_ADDRESS, { value: wei(0.1) });
-      await depositPool.connect(PUBLIC_POO_USER_ADDRESS).withdraw(0, wei(999));
+      await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).claim(0, PUBLIC_POOL_USER_ADDRESS, { value: wei(0.1) });
+      await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).withdraw(0, wei(999));
     });
     it('should correctly stake, claim, withdraw after the migration, private pool', async () => {
       const depositPool = await upgradeDistributionV5ToDepositPool();
@@ -157,7 +166,125 @@ describe('CapitalProtocolV6 Fork', () => {
       await depositPool.manageUsersInPrivateRewardPool(1, [privatePoolUserAddress], [wei(100)], [0], [ZERO_ADDR]);
 
       await setTime((await getCurrentBlockTime()) + 100 * oneDay);
-      await depositPool.connect(PRIVATE_POO_USER_ADDRESS).claim(1, PRIVATE_POO_USER_ADDRESS, { value: wei(0.1) });
+      await depositPool.connect(PRIVATE_POOL_USER_ADDRESS).claim(1, PRIVATE_POOL_USER_ADDRESS, { value: wei(0.1) });
+    });
+  });
+
+  describe('#distributeRewards', () => {
+    it('should distribute rewards with stETH, USDC, USDT, wBTC, cbBTC', async () => {
+      const distributor_test = await deployDistributor(
+        chainLinkDataConsumer,
+        aavePoolAddress,
+        aaveProtocolDataProvider,
+        rewardPool,
+        l1SenderV2,
+      );
+
+      const erc20Factory = await ethers.getContractFactory('ERC20Token');
+      const localToken = await deployERC20Token();
+      const pairs = [
+        {
+          pair: 'stETH/USD',
+          depositPool: await deployDepositPoolMock(localToken, distributor_test),
+          depositToken: erc20Factory.attach('0xae7ab96520de3a18e5e111b5eaab095312d7fe84') as ERC20Token,
+          strategy: 0,
+          feed: ['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8'],
+        },
+        {
+          pair: 'USDC/USD',
+          depositPool: await deployDepositPoolMock(localToken, distributor_test),
+          depositToken: erc20Factory.attach('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48') as ERC20Token,
+          strategy: 2,
+          feed: ['0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6'],
+        },
+        {
+          pair: 'USDT/USD',
+          depositPool: await deployDepositPoolMock(localToken, distributor_test),
+          depositToken: erc20Factory.attach('0xdac17f958d2ee523a2206206994597c13d831ec7') as ERC20Token,
+          strategy: 2,
+          feed: ['0x3E7d1eAB13ad0104d2750B8863b489D65364e32D'],
+        },
+        {
+          pair: 'cbBTC/USD',
+          depositPool: await deployDepositPoolMock(localToken, distributor_test),
+          depositToken: erc20Factory.attach('0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf') as ERC20Token,
+          strategy: 2,
+          feed: ['0x2665701293fCbEB223D11A08D826563EDcCE423A'],
+        },
+        {
+          pair: 'wBTC/BTC,BTC/USD',
+          depositPool: await deployDepositPoolMock(localToken, distributor_test),
+          depositToken: erc20Factory.attach('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599') as ERC20Token,
+          strategy: 2,
+          feed: ['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'],
+        },
+      ];
+
+      for (let i = 0; i < pairs.length; i++) {
+        await chainLinkDataConsumer.updateDataFeeds([pairs[i].pair], [pairs[i].feed]);
+        await distributor_test.addDepositPool(
+          0,
+          pairs[i].depositPool,
+          pairs[i].depositToken,
+          pairs[i].pair,
+          pairs[i].strategy,
+        );
+      }
+
+      // ADD YIELD
+      const wethAddress = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+      const weth = erc20Factory.attach(wethAddress) as ERC20Token;
+      await weth.deposit({ value: wei(20) });
+
+      // Swap wETH
+      const uniswapRouter = await deployUniswapSwapRouterMock();
+      // https://docs.uniswap.org/contracts/v3/reference/deployments/ethereum-deployments
+      await uniswapRouter.setUniswapSwapRouter('0xE592427A0AEce92De3Edee1F18E0157C05861564');
+
+      await weth.transfer(uniswapRouter, wei(20));
+      // Receive stETH
+      await pairs[0].depositToken.connect(STETH_HOLDER).transfer(OWNER, wei(1));
+      // Receive USDC
+      await uniswapRouter.swapExactInputSingle(wethAddress, pairs[1].depositToken, wei(1), 0, 500, OWNER);
+      // Receive USDT
+      await uniswapRouter.swapExactInputSingle(wethAddress, pairs[2].depositToken, wei(1), 0, 500, OWNER);
+      // Receive cbBTC
+      await uniswapRouter.swapExactInputSingle(wethAddress, pairs[4].depositToken, wei(5), 0, 500, uniswapRouter);
+      await uniswapRouter.swapExactInputSingle(
+        pairs[4].depositToken,
+        pairs[3].depositToken,
+        await pairs[4].depositToken.balanceOf(uniswapRouter),
+        0,
+        100,
+        OWNER,
+      );
+      // Receive wBTC
+      await uniswapRouter.swapExactInputSingle(wethAddress, pairs[4].depositToken, wei(5), 0, 500, OWNER);
+
+      // Move yield to distributor
+      const aavePool = (await ethers.getContractFactory('AavePoolMock')).attach(aavePoolAddress) as AavePoolMock;
+
+      for (let i = 0; i < pairs.length; i++) {
+        if (pairs[i].strategy == 0) {
+          await pairs[i].depositToken.transfer(distributor_test, await pairs[i].depositToken.balanceOf(OWNER));
+          expect(await pairs[i].depositToken.balanceOf(distributor_test)).greaterThan(0);
+        } else {
+          await pairs[i].depositToken.approve(aavePool, await pairs[i].depositToken.balanceOf(OWNER));
+          await aavePool.supply(
+            pairs[i].depositToken,
+            await pairs[i].depositToken.balanceOf(OWNER),
+            distributor_test,
+            0,
+          );
+        }
+      }
+
+      await distributor_test.setRewardPoolLastCalculatedTimestamp(0, (await getCurrentBlockTime()) - 50 * oneDay);
+      await distributor_test.distributeRewards(0);
+
+      for (let i = 0; i < pairs.length; i++) {
+        expect(await distributor_test.getDistributedRewards(0, pairs[i].depositPool)).greaterThan(0);
+      }
     });
   });
 
@@ -283,7 +410,15 @@ describe('CapitalProtocolV6 Fork', () => {
 
     //////////
 
+    await chainLinkDataConsumer.updateDataFeeds(['USDC/USD'], [['0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6']]);
+    await chainLinkDataConsumer.updateDataFeeds(['USDT/USD'], [['0x3E7d1eAB13ad0104d2750B8863b489D65364e32D']]);
+    await chainLinkDataConsumer.updateDataFeeds(['cbBTC/USD'], [['0x2665701293fCbEB223D11A08D826563EDcCE423A']]);
+    await chainLinkDataConsumer.updateDataFeeds(
+      ['wBTC/BTC,BTC/USD'],
+      [['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c']],
+    );
     await chainLinkDataConsumer.updateDataFeeds(['stETH/USD'], [['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8']]);
+
     await l1SenderV2.setDistributor(distributor);
 
     //////////

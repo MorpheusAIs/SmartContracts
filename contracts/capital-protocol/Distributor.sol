@@ -207,7 +207,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         if (strategy_ == Strategy.AAVE) {
             (aToken_, , ) = AaveIPoolDataProvider(aavePoolDataProvider).getReserveTokensAddresses(token_);
 
-            IERC20(token_).approve(aavePool, type(uint256).max);
+            IERC20(token_).safeApprove(aavePool, type(uint256).max);
             IERC20(aToken_).approve(aavePool, type(uint256).max);
         }
 

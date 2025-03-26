@@ -14,6 +14,10 @@ contract ERC20Token is ERC20, ERC20Capped {
         _mint(account_, amount_);
     }
 
+    function deposit() external payable {
+        _mint(msg.sender, msg.value);
+    }
+
     function _mint(address account_, uint256 amount_) internal override(ERC20, ERC20Capped) {
         ERC20Capped._mint(account_, amount_);
     }
