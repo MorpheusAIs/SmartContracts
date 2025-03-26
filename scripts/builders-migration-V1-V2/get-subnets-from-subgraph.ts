@@ -55,7 +55,7 @@ type BuilderUsersSubgraphResponse = {
 const formBuilderUsersQuery = (builderProjectId: string) => {
   return `
   {
-    buildersUsers (where: {buildersProject: "${builderProjectId}", staked_gt: 0}) {
+    buildersUsers (first: 1000, where: {buildersProject: "${builderProjectId}", staked_gt: 0}) {
      address
     }
   }
@@ -80,6 +80,8 @@ async function fetchData() {
   try {
     // Get Builders
     const builders = (await callSubgraph(BUILDERS_QUERY)) as BuildersProjectsSubgraphResponse;
+
+    console.log(`Loaded: ${builders.data.buildersProjects.length} entities`);
 
     // Add Staker to each Builder
     const data: Array<BuilderProject & { users: string[]; description: string; website: string }> = [];
@@ -112,7 +114,7 @@ async function fetchData() {
       }
     }
 
-    const filename = 'subnets.json';
+    const filename = 'builders-v1-subnets.json';
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 
     console.log(`Data saved to ${filename}`);
@@ -126,3 +128,5 @@ fetchData()
   .catch((e) => {
     console.log(`Error: ${e}`);
   });
+
+// npx tsx get-subnets-from-subgraph.ts
