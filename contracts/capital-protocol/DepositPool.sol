@@ -621,31 +621,29 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
 
             emit UserReferred(rewardPoolIndex_, user_, newReferrer_, newDeposited_);
+        } else if (oldReferrer_ == newReferrer_) {
+            oldVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+            newReferrerData.applyReferrerTier(
+                referrerTiers[rewardPoolIndex_],
+                oldDeposited_,
+                newDeposited_,
+                currentPoolRate_
+            );
+            newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+            emit UserReferred(rewardPoolIndex_, user_, newReferrer_, newDeposited_);
         } else {
-            if (oldReferrer_ == newReferrer_) {
-                oldVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+            ReferrerData storage oldReferrerData = referrersData[oldReferrer_][rewardPoolIndex_];
 
-                newReferrerData.applyReferrerTier(
-                    referrerTiers[rewardPoolIndex_],
-                    oldDeposited_,
-                    newDeposited_,
-                    currentPoolRate_
-                );
-                newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+            oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
 
-                emit UserReferred(rewardPoolIndex_, user_, newReferrer_, newDeposited_);
-            } else {
-                ReferrerData storage oldReferrerData = referrersData[oldReferrer_][rewardPoolIndex_];
+            oldReferrerData.applyReferrerTier(referrerTiers[rewardPoolIndex_], oldDeposited_, 0, currentPoolRate_);
+            newReferrerData.applyReferrerTier(referrerTiers[rewardPoolIndex_], 0, newDeposited_, currentPoolRate_);
+            newVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
 
-                oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
-
-                oldReferrerData.applyReferrerTier(referrerTiers[rewardPoolIndex_], oldDeposited_, 0, currentPoolRate_);
-                newReferrerData.applyReferrerTier(referrerTiers[rewardPoolIndex_], 0, newDeposited_, currentPoolRate_);
-                newVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
-
-                emit UserReferred(rewardPoolIndex_, user_, oldReferrer_, 0);
-                emit UserReferred(rewardPoolIndex_, user_, newReferrer_, newDeposited_);
-            }
+            emit UserReferred(rewardPoolIndex_, user_, oldReferrer_, 0);
+            emit UserReferred(rewardPoolIndex_, user_, newReferrer_, newDeposited_);
         }
 
         RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolIndex_];
