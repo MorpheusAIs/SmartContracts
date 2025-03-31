@@ -6,8 +6,8 @@ import {
   BuilderSubnets,
   BuilderSubnets__factory,
   Builders,
-  BuildersV2,
-  BuildersV2__factory,
+  BuildersV3,
+  BuildersV3__factory,
   Builders__factory,
   ERC1967Proxy__factory,
 } from '@/generated-types/ethers';
@@ -33,41 +33,43 @@ const maxShareForNetwork = wei(1, 25);
 const rewardCalculationStartsAt = 1739577600;
 
 module.exports = async function (deployer: Deployer) {
-  const builderSubnets = await deployBuildersSubnets(deployer);
-  const buildersV2Impl = await deployBuildersV2(deployer);
   const builders = await deployer.deployed(Builders__factory, buildersAddress);
+  const buildersV2Impl = await deployBuildersV3(deployer);
 
   // MULTISIG EXECUTION ONLY, added for the tests
   const buildersOwner = await getBuildersOwner(builders);
   await builders.connect(buildersOwner).upgradeTo(buildersV2Impl);
-  const buildersV2 = await deployer.deployed(BuildersV2__factory, buildersAddress);
-  await buildersV2.connect(buildersOwner).setMigrationOwner((await deployer.getSigner()).getAddress());
+  const buildersV3 = await deployer.deployed(BuildersV3__factory, buildersAddress);
+  await buildersV3.connect(buildersOwner).setMigrationOwner((await deployer.getSigner()).getAddress());
   // END
 
-  // START prepare buildersV2 for migrations
-  await buildersV2.setBuilderSubnets(builderSubnets);
-  await buildersV2.setIsPaused(true);
+  const builderSubnets = await deployBuildersSubnets(deployer, buildersV3);
+
+  // START prepare buildersV3 for migrations
+  await buildersV3.setBuilderSubnets(builderSubnets);
+  await buildersV3.setPaused();
   // END
 
-  await migrate(buildersV2, builderSubnets, 4, 5);
+  await createSubnets(builderSubnets);
+  // await moveUsersStakes(buildersV3);
 };
 
-const deployBuildersSubnets = async (deployer: Deployer): Promise<BuilderSubnets> => {
+const deployBuildersSubnets = async (deployer: Deployer, buildersV3: BuildersV3): Promise<BuilderSubnets> => {
   const impl = await deployer.deploy(BuilderSubnets__factory);
   const proxy = await deployer.deploy(ERC1967Proxy__factory, [await impl.getAddress(), '0x'], {
     name: 'BuilderSubnets',
   });
   const contract = await deployer.deployed(BuilderSubnets__factory, await proxy.getAddress());
-  await contract.BuilderSubnets_init(stakeToken, feeConfig, treasury, minWithdrawLockPeriodAfterStake);
+  await contract.BuilderSubnets_init(stakeToken, feeConfig, treasury, minWithdrawLockPeriodAfterStake, buildersV3);
   await contract.setMaxStakedShareForBuildersPool(maxShareForNetwork);
-  await contract.setBuildersPoolData(builderPoolData);
+  await contract.setBuildersRewardPoolData(builderPoolData);
   await contract.setRewardCalculationStartsAt(rewardCalculationStartsAt);
 
   return contract;
 };
 
-const deployBuildersV2 = async (deployer: Deployer): Promise<BuildersV2> => {
-  const contract = await deployer.deploy(BuildersV2__factory);
+const deployBuildersV3 = async (deployer: Deployer): Promise<BuildersV3> => {
+  const contract = await deployer.deploy(BuildersV3__factory);
 
   return contract;
 };
@@ -79,8 +81,8 @@ const getBuildersOwner = async (builders: Builders) => {
   return buildersOwner;
 };
 
-const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, from = 0, to = 0) => {
-  const configPath = `deploy/data/subgraph-output.json`;
+const createSubnets = async (builderSubnets: BuilderSubnets, from = 0, to = 0) => {
+  const configPath = `deploy/builders-protocol/data/subnets.json`;
 
   type Subnet = {
     id: string;
@@ -96,6 +98,7 @@ const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, f
     website: string;
   };
   const data = JSON.parse(readFileSync(configPath, 'utf-8')) as Subnet[];
+  to = to === 0 ? data.length : to;
 
   for (let i = from; i < to; i++) {
     const subnet = {
@@ -106,7 +109,8 @@ const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, f
       feeTreasury: data[i].admin,
       startsAt: data[i].startsAt,
       withdrawLockPeriodAfterStake: data[i].withdrawLockPeriodAfterDeposit,
-      maxClaimLockEnd: 1740253394, // TODO: fix it to valid timestamp
+      maxClaimLockEnd:
+        Number(data[i].claimLockEnd) < Number(data[i].startsAt) ? data[i].startsAt : data[i].claimLockEnd,
     };
     const metadata = {
       slug: data[i].description,
@@ -117,12 +121,36 @@ const migrate = async (buildersV2: BuildersV2, builderSubnets: BuilderSubnets, f
 
     await builderSubnets.createSubnet(subnet, metadata);
 
-    const subnetIds = data[i].users.map(() => data[i].id);
-    await buildersV2.migrateUsersStake(subnetIds, data[i].users);
-
-    console.log(`Subnet ${data[i].name} migrated`);
+    console.log(`Subnet ${data[i].name} created, index - ${i}`);
   }
 };
 
-// npx hardhat migrate --only 13
-// npx hardhat migrate --network base --only 13
+const moveUsersStakes = async (buildersV3: BuildersV3, from = 0, to = 0) => {
+  const configPath = `deploy/builders-protocol/data/subnets.json`;
+
+  type Subnet = {
+    id: string;
+    name: string;
+    admin: string;
+    startsAt: number;
+    minimalDeposit: number;
+    claimLockEnd: number;
+    withdrawLockPeriodAfterDeposit: number;
+    totalUsers: number;
+    users: string[];
+    description: string;
+    website: string;
+  };
+  const data = JSON.parse(readFileSync(configPath, 'utf-8')) as Subnet[];
+  to = to === 0 ? data.length : to;
+
+  for (let i = from; i < to; i++) {
+    const subnetIds = data[i].users.map(() => data[i].id);
+    await buildersV3.migrateUsersStake(subnetIds, data[i].users);
+
+    console.log(`Subnet users ${data[i].name} migrated`);
+  }
+};
+
+// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --only 3
+// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network base --only 3
