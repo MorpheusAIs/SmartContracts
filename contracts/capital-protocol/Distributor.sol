@@ -211,16 +211,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             IERC20(aToken_).approve(aavePool, type(uint256).max);
         }
 
-        DepositPool memory depositPool_ = DepositPool(
-            depositPoolAddress_,
-            token_,
-            chainLinkPath_,
-            0,
-            0,
-            0,
-            strategy_,
-            aToken_
-        );
+        DepositPool memory depositPool_ = DepositPool(token_, chainLinkPath_, 0, 0, 0, strategy_, aToken_, true);
 
         depositPoolAddresses[rewardPoolIndex_].push(depositPoolAddress_);
         depositPools[rewardPoolIndex_][depositPoolAddress_] = depositPool_;
@@ -234,10 +225,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _onlyExistedDepositPool(uint256 rewardPoolIndex_, address depositPoolAddress_) private view {
-        require(
-            depositPools[rewardPoolIndex_][depositPoolAddress_].depositPoolAddress != address(0),
-            "DR: deposit pool doesn't exist"
-        );
+        require(depositPools[rewardPoolIndex_][depositPoolAddress_].isExist, "DR: deposit pool doesn't exist");
     }
 
     /**********************************************************************************************/

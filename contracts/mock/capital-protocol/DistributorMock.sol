@@ -27,14 +27,14 @@ contract DistributorMock {
 
     function addDepositPool(address depositPoolAddress_, address depositToken_) external {
         IDistributor.DepositPool memory depositPool_ = IDistributor.DepositPool(
-            depositPoolAddress_,
             depositToken_,
             "",
             0,
             0,
             0,
             IDistributor.Strategy.NONE,
-            address(0)
+            address(0),
+            true
         );
 
         depositPools[depositPoolAddress_] = depositPool_;

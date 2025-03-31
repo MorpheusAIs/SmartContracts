@@ -27,9 +27,10 @@ interface IDistributor is IERC165 {
      * @param lastUnderlyingBalance The last calculate balance after thr yield.
      * @param strategy The `Strategy`.
      * @param aToken The `token` address after the deposit to Aave.
+     * @param isExist The existed flag.
+
      */
     struct DepositPool {
-        address depositPoolAddress;
         address token;
         string chainLinkPath;
         uint256 tokenPrice;
@@ -37,6 +38,7 @@ interface IDistributor is IERC165 {
         uint256 lastUnderlyingBalance;
         Strategy strategy;
         address aToken;
+        bool isExist;
     }
 
     event ChainLinkDataConsumerSet(address chainLinkDataConsumer);

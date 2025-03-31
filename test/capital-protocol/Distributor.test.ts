@@ -338,7 +338,7 @@ describe('Distributor', () => {
         );
 
         const res = await distributor.depositPools(depositPool.rewardPoolId, depositPool.depositPool);
-        expect(res.depositPoolAddress).to.eq(depositPool.depositPool);
+        expect(res.isExist).to.eq(true);
         expect(res.token).to.eq(depositPool.strategy === Strategy.NO_YIELD ? ZERO_ADDR : depositPool.depositToken);
         expect(res.chainLinkPath).to.eq(depositPool.strategy === Strategy.NO_YIELD ? '' : depositPool.chainLinkPath);
         expect(res.tokenPrice).to.eq(depositPool.strategy === Strategy.NO_YIELD ? 0 : wei(i + 1));
