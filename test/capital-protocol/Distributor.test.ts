@@ -490,24 +490,6 @@ describe('Distributor', () => {
       expect(await distributor.distributedRewards(dp0Info.rewardPoolId, dp0Info.depositPool)).to.eq(wei(20));
       expect(await distributor.distributedRewards(dp1Info.rewardPoolId, dp1Info.depositPool)).to.eq(wei(80));
     });
-    it('should revert when min distributed period isn`t end', async () => {
-      // 2*1=1, 4*2=8
-      await imitateYield([wei(2), wei(4)], wei(100), [wei(1, 6), wei(2)]);
-      await setNextTime(oneDay);
-      await distributor.distributeRewards(publicRewardPoolId);
-      expect(await distributor.distributedRewards(dp0Info.rewardPoolId, dp0Info.depositPool)).to.eq(wei(20));
-      expect(await distributor.distributedRewards(dp1Info.rewardPoolId, dp1Info.depositPool)).to.eq(wei(80));
-
-      await imitateYield([wei(1), wei(1)], wei(10), [wei(1, 6), wei(1)]);
-      await distributor.setMinRewardsDistributePeriod(oneDay * 2);
-
-      await expect(distributor.distributeRewards(publicRewardPoolId)).to.be.revertedWith(
-        'DR: calculation period has not yet occurred',
-      );
-
-      expect(await distributor.distributedRewards(dp0Info.rewardPoolId, dp0Info.depositPool)).to.eq(wei(20));
-      expect(await distributor.distributedRewards(dp1Info.rewardPoolId, dp1Info.depositPool)).to.eq(wei(80));
-    });
     it('should not distribute rewards twice in the same block', async () => {
       // 2*1=2, 4*2=8
       await imitateYield([wei(2), wei(4)], wei(100), [wei(1, 6), wei(2)]);

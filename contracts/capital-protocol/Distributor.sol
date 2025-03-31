@@ -318,12 +318,8 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         uint128 lastCalculatedTimestamp_ = rewardPoolLastCalculatedTimestamp[rewardPoolIndex_];
         require(lastCalculatedTimestamp_ != 0, "DR: `rewardPoolLastCalculatedTimestamp` isn't set");
-        require(
-            block.timestamp >= lastCalculatedTimestamp_ + minRewardsDistributePeriod,
-            "DR: calculation period has not yet occurred"
-        );
 
-        if (block.timestamp == lastCalculatedTimestamp_) return;
+        if (block.timestamp <= lastCalculatedTimestamp_ + minRewardsDistributePeriod) return;
         //// End
 
         //// Calculate the reward amount

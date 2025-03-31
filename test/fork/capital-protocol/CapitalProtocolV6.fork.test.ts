@@ -440,7 +440,6 @@ describe('CapitalProtocolV6 Fork', () => {
     await depositPool.setDistributor(distributor);
     await setRewardPoolProtocolDetails(depositPool);
 
-    await stETH.connect(STETH_HOLDER).transfer(distributor, 100);
     await depositPool.migrate(0);
 
     expect(await distributor.undistributedRewards()).to.eq(0);

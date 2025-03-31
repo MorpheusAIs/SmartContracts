@@ -77,6 +77,13 @@ describe('DepositPool', () => {
     });
 
     describe('#_authorizeUpgrade', () => {
+      it('should upgrade to the new version', async () => {
+        const [factory] = await Promise.all([ethers.getContractFactory('FeeConfigV2')]);
+        const contract = await factory.deploy();
+
+        await depositPool.upgradeTo(contract);
+        expect(await depositPool.version()).to.eq(2);
+      });
       it('should revert if caller is not the owner', async () => {
         await expect(depositPool.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
           'Ownable: caller is not the owner',
@@ -137,11 +144,6 @@ describe('DepositPool', () => {
       expect(await depositToken.balanceOf(distributionV5)).to.eq(wei(1));
       expect(await distributionV5.totalDepositedInPublicPools()).to.eq(wei(1));
 
-      await depositToken.mint(distributionV5, wei(2));
-
-      expect(await depositToken.balanceOf(distributionV5)).to.eq(wei(3));
-      expect(await distributionV5.totalDepositedInPublicPools()).to.eq(wei(1));
-
       // Upgrade
       const lib1 = await (await ethers.getContractFactory('ReferrerLib')).deploy();
       const lib2 = await (await ethers.getContractFactory('LockMultiplierMath')).deploy();
@@ -162,11 +164,21 @@ describe('DepositPool', () => {
       await newDepositPool.setDistributor(distributorMock);
       await distributorMock.addDepositPool(newDepositPool, depositToken);
 
+      await expect(newDepositPool.migrate(rewardPoolId)).to.be.revertedWith('DS: yield for token is zero');
+
+      await depositToken.mint(newDepositPool, wei(2));
+      expect(await depositToken.balanceOf(newDepositPool)).to.eq(wei(3));
+      expect(await newDepositPool.totalDepositedInPublicPools()).to.eq(wei(1));
+
       await newDepositPool.migrate(0);
 
       expect(await depositToken.balanceOf(newDepositPool)).to.eq(wei(0));
       expect(await depositToken.balanceOf(distributorMock)).to.eq(wei(3));
       expect(await newDepositPool.totalDepositedInPublicPools()).to.eq(wei(1));
+    });
+    it('should revert when the migration is over', async () => {
+      await depositPool.migrate(rewardPoolId);
+      await expect(depositPool.migrate(rewardPoolId)).to.be.revertedWith('DS: the migration is over');
     });
     it('should revert if caller is not owner', async () => {
       await expect(depositPool.connect(SECOND).migrate(rewardPoolId)).to.be.revertedWith(
@@ -1626,6 +1638,10 @@ describe('DepositPool', () => {
   });
 
   describe('#claim', () => {
+    before(async () => {
+      await expect(depositPool.claim(rewardPoolId, SECOND)).to.be.revertedWith("DS: migration isn't over");
+    });
+
     beforeEach(async () => {
       await depositPool.migrate(rewardPoolId);
     });
@@ -2458,6 +2474,7 @@ describe('DepositPool', () => {
     before(async () => {
       await expect(depositPool.withdraw(rewardPoolId, 1)).to.be.revertedWith("DS: migration isn't over");
     });
+
     beforeEach(async () => {
       await depositPool.migrate(rewardPoolId);
       await depositPool.setRewardPoolProtocolDetails(rewardPoolId, oneDay - 1, 1, 2, wei(0.1));
@@ -2684,6 +2701,10 @@ describe('DepositPool', () => {
     const periodStart = 1721908800;
     const claimLockEnd = periodStart + 300 * oneDay;
 
+    before(async () => {
+      await expect(depositPool.lockClaim(rewardPoolId, claimLockEnd)).to.be.revertedWith("DS: migration isn't over");
+    });
+
     beforeEach(async () => {
       await depositPool.migrate(rewardPoolId);
 
@@ -2872,9 +2893,14 @@ describe('DepositPool', () => {
     });
 
     describe('#claimReferrerTier', () => {
+      before(async () => {
+        await expect(depositPool.claimReferrerTier(rewardPoolId, OWNER)).to.be.revertedWith("DS: migration isn't over");
+      });
+
       beforeEach(async () => {
         await depositPool.editReferrerTiers(rewardPoolId, referrerTiers);
       });
+
       it('should claim referrer tier correctly', async () => {
         await depositPool.connect(SECOND).stake(rewardPoolId, wei(10), 0, OWNER);
 

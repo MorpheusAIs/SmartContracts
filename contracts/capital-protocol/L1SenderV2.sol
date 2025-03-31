@@ -187,38 +187,45 @@ contract L1SenderV2 is IL1SenderV2, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
 
     /**
-     * @dev
-     * https://docs.uniswap.org/contracts/v3/guides/swaps/single-swaps
+     * @dev https://docs.uniswap.org/contracts/v3/guides/swaps/multihop-swaps
+     *
+     * Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence
+     * of token addresses and poolFees that define the pools used in the swaps.
+     * The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where
+     * tokenIn/tokenOut parameter is the shared token across the pools.
+     * Since we are swapping DAI to USDC and then USDC to WETH9 the path encoding is (DAI, 0.3%, USDC, 0.3%, WETH9).
      */
-    function swapExactInputSingle(
-        address tokenIn_,
-        address tokenOut_,
+    function swapExactInputMultihop(
+        address[] calldata tokens_,
+        uint24[] calldata poolsFee_,
         uint256 amountIn_,
-        uint256 amountOutMinimum_,
-        uint24 poolFee_
+        uint256 amountOutMinimum_
     ) external onlyOwner returns (uint256) {
-        require(tokenIn_ != address(0) && tokenIn_ != arbitrumBridgeConfig.wstETH, "L1S: invalid `tokenIn_` address");
-        require(tokenOut_ != address(0), "L1S: invalid `tokenOut_` address");
+        require(tokens_.length >= 2 && tokens_.length == poolsFee_.length + 1, "L1S: invalid array length");
         require(amountIn_ != 0, "L1S: invalid `amountIn_` value");
         require(amountOutMinimum_ != 0, "L1S: invalid `amountOutMinimum_` value");
 
-        TransferHelper.safeApprove(tokenIn_, uniswapSwapRouter, amountIn_);
+        TransferHelper.safeApprove(tokens_[0], uniswapSwapRouter, amountIn_);
 
-        // We set the sqrtPriceLimitx96 to be 0 to ensure we swap our exact input amount.
-        ISwapRouter.ExactInputSingleParams memory params_ = ISwapRouter.ExactInputSingleParams({
-            tokenIn: tokenIn_,
-            tokenOut: tokenOut_,
-            fee: poolFee_,
+        // START create the `path`
+        bytes memory path_;
+        for (uint256 i = 0; i < poolsFee_.length; i++) {
+            path_ = abi.encodePacked(path_, tokens_[i], poolsFee_[i]);
+        }
+        path_ = abi.encodePacked(path_, tokens_[tokens_.length - 1]);
+        // END
+
+        ISwapRouter.ExactInputParams memory params_ = ISwapRouter.ExactInputParams({
+            path: path_,
             recipient: address(this),
             deadline: block.timestamp,
             amountIn: amountIn_,
-            amountOutMinimum: amountOutMinimum_,
-            sqrtPriceLimitX96: 0
+            amountOutMinimum: amountOutMinimum_
         });
 
-        uint256 amountOut_ = ISwapRouter(uniswapSwapRouter).exactInputSingle(params_);
+        uint256 amountOut_ = ISwapRouter(uniswapSwapRouter).exactInput(params_);
 
-        emit TokensSwapped(tokenIn_, tokenOut_, amountIn_, amountOut_);
+        emit TokensSwapped(path_, amountIn_, amountOut_);
 
         return amountOut_;
     }

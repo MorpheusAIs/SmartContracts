@@ -332,7 +332,7 @@ describe('L1SenderV2', () => {
     });
   });
 
-  describe('#swapExactInputSingle', () => {
+  describe('#swapExactInputMultihop', () => {
     it('should swap tokens', async () => {
       const tokenIn = await deployERC20Token();
 
@@ -348,31 +348,10 @@ describe('L1SenderV2', () => {
       await l1Sender.setArbitrumBridgeConfig(config);
 
       await l1Sender.setUniswapSwapRouter(uniswapSwapRouterMock);
-      await l1Sender.swapExactInputSingle(tokenIn, wstETH, wei(90), wei(40), 100);
+      await l1Sender.swapExactInputMultihop([tokenIn, wstETH], [100], wei(90), wei(40));
 
       expect(await tokenIn.balanceOf(l1Sender)).to.eq(wei(0));
       expect(await wstETH.balanceOf(l1Sender)).to.eq(wei(90));
-    });
-    it("should revert when wstETH isn't set", async () => {
-      await expect(l1Sender.swapExactInputSingle(wstETH, ZERO_ADDR, wei(90), wei(40), 100)).to.be.revertedWith(
-        'L1S: invalid `tokenOut_` address',
-      );
-    });
-    it('should revert when invalid `tokenIn_` address', async () => {
-      await l1Sender.setStETh(stETH);
-      const config = {
-        wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
-        receiver: BOB,
-      };
-      await l1Sender.setArbitrumBridgeConfig(config);
-
-      await expect(l1Sender.swapExactInputSingle(ZERO_ADDR, wstETH, wei(90), wei(40), 100)).to.be.revertedWith(
-        'L1S: invalid `tokenIn_` address',
-      );
-      await expect(l1Sender.swapExactInputSingle(wstETH, wstETH, wei(90), wei(40), 100)).to.be.revertedWith(
-        'L1S: invalid `tokenIn_` address',
-      );
     });
     it('should revert when invalid `amountIn_` value', async () => {
       await l1Sender.setStETh(stETH);
@@ -383,7 +362,7 @@ describe('L1SenderV2', () => {
       };
       await l1Sender.setArbitrumBridgeConfig(config);
 
-      await expect(l1Sender.swapExactInputSingle(stETH, wstETH, wei(0), wei(40), 100)).to.be.revertedWith(
+      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(0), wei(40))).to.be.revertedWith(
         'L1S: invalid `amountIn_` value',
       );
     });
@@ -396,13 +375,22 @@ describe('L1SenderV2', () => {
       };
       await l1Sender.setArbitrumBridgeConfig(config);
 
-      await expect(l1Sender.swapExactInputSingle(stETH, wstETH, wei(10), wei(0), 100)).to.be.revertedWith(
+      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(10), wei(0))).to.be.revertedWith(
         'L1S: invalid `amountOutMinimum_` value',
+      );
+    });
+    it('should revert when invalid array length', async () => {
+      await expect(l1Sender.swapExactInputMultihop([stETH], [100], wei(10), wei(0))).to.be.revertedWith(
+        'L1S: invalid array length',
+      );
+
+      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100, 100], wei(10), wei(0))).to.be.revertedWith(
+        'L1S: invalid array length',
       );
     });
     it('should revert if not called by the owner', async () => {
       await expect(
-        l1Sender.connect(BOB).swapExactInputSingle(wstETH, wstETH, wei(90), wei(40), 100),
+        l1Sender.connect(BOB).swapExactInputMultihop([stETH, wstETH], [100], wei(90), wei(40)),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });

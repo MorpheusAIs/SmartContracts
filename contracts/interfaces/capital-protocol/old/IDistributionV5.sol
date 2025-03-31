@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IReferrer} from "./capital-protocol/IReferrer.sol";
+import {IReferrer} from "../../capital-protocol/IReferrer.sol";
 
 /**
  * This is the Distribution contract that stores all the pools and users data.

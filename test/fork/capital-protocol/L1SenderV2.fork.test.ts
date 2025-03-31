@@ -26,8 +26,8 @@ describe('L1SenderV2 Fork', () => {
   const stETHHolder = '0xE53FFF67f9f384d20Ebea36F43b93DC49Ed22753';
   // https://etherscan.io/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
   const usdcAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
-  // https://etherscan.io/address/0x8b862ce66d1e2fe8de5bfcbd01e32dcd2748354d
-  const usdcHolder = '0x8b862ce66d1e2fe8de5bfcbd01e32dcd2748354d';
+  // https://etherscan.io/address/0xA38EE4A24886FEE6F696C65A7b26cE5F42f73f68
+  const usdcHolder = '0xA38EE4A24886FEE6F696C65A7b26cE5F42f73f68';
   // https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
   const wethAddress = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
@@ -111,8 +111,8 @@ describe('L1SenderV2 Fork', () => {
     });
   });
 
-  describe('#swapExactInputSingle', () => {
-    it('should correctly swap tokens, USDC', async () => {
+  describe('#swapExactInputMultihop', () => {
+    it('should correctly swap tokens', async () => {
       const l1SenderV2 = await upgrade();
 
       await OWNER.sendTransaction({ to: USDC_HOLDER, value: wei(1) });
@@ -128,8 +128,8 @@ describe('L1SenderV2 Fork', () => {
       const weth = (await ethers.getContractFactory('ERC20')).attach(wethAddress) as ERC20;
 
       await l1SenderV2.setUniswapSwapRouter('0xE592427A0AEce92De3Edee1F18E0157C05861564');
-      await l1SenderV2.swapExactInputSingle(usdc, weth, wei(1000, 6), wei(0.1), 500);
-      await l1SenderV2.swapExactInputSingle(weth, wstETH, await weth.balanceOf(l1SenderV2), wei(0.1), 100);
+      // await l1SenderV2.swapExactInputMultihop([usdc, weth, wstETH], [500, 100], wei(1000, 6), wei(0.1));
+      await l1SenderV2.swapExactInputMultihop([usdc, weth, wstETH], [500, 100], wei(1000, 6), wei(0.1));
 
       expect(await usdc.balanceOf(l1SenderV2)).to.eq(wei(0, 6));
       expect(await wstETH.balanceOf(l1SenderV2)).to.greaterThan(wei(0.4));
@@ -141,7 +141,7 @@ describe('L1SenderV2 Fork', () => {
       {
         forking: {
           jsonRpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-          blockNumber: 22093000,
+          blockNumber: 22165500,
         },
       },
     ]);

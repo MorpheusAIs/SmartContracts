@@ -7,15 +7,18 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
+import {LinearDistributionIntervalDecrease} from "../../libs/LinearDistributionIntervalDecrease.sol";
 
-import {L1Sender} from "./L1Sender.sol";
-import {IDistributionV2} from "./interfaces/IDistributionV2.sol";
+import {IL1Sender} from "../../interfaces/IL1Sender.sol";
+import {IDistributionV5} from "../../interfaces/capital-protocol/old/IDistributionV5.sol";
 
-import {LogExpMath} from "./libs/LogExpMath.sol";
+import {LogExpMath} from "../../libs/LogExpMath.sol";
+import {ReferrerLib} from "../../libs/ReferrerLib.sol";
 
-contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable {
+contract DistributionV5 is IDistributionV5, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
+    using ReferrerLib for ReferrerData;
+    using ReferrerLib for ReferrerTier[];
 
     uint128 constant DECIMAL = 1e18;
 
@@ -33,6 +36,13 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
     // Total deposited storage
     uint256 public totalDepositedInPublicPools;
+
+    // Pools limits, V4 update
+    mapping(uint256 => PoolLimits) public poolsLimits;
+
+    // Referall storage, V5 update
+    mapping(uint256 => ReferrerTier[]) public referrerTiers;
+    mapping(address => mapping(uint256 => ReferrerData)) public referrersData;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -99,6 +109,38 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         emit PoolEdited(poolId_, pool_);
     }
 
+    function editPoolLimits(uint256 poolId_, PoolLimits calldata poolLimits_) external onlyOwner poolExists(poolId_) {
+        poolsLimits[poolId_] = poolLimits_;
+
+        emit PoolLimitsEdited(poolId_, poolLimits_);
+    }
+
+    function editReferrerTiers(
+        uint256 poolId_,
+        ReferrerTier[] calldata referrerTiers_
+    ) external onlyOwner poolExists(poolId_) {
+        delete referrerTiers[poolId_];
+
+        uint256 lastAmount_;
+        uint256 lastMultiplier_;
+        for (uint256 i = 0; i < referrerTiers_.length; i++) {
+            uint256 amount_ = referrerTiers_[i].amount;
+            uint256 multiplier_ = referrerTiers_[i].multiplier;
+
+            if (i != 0) {
+                require(amount_ > lastAmount_, "DS: invalid referrer tiers (1)");
+                require(multiplier_ > lastMultiplier_, "DS: invalid referrer tiers (2)");
+            }
+
+            referrerTiers[poolId_].push(referrerTiers_[i]);
+
+            lastAmount_ = amount_;
+            lastMultiplier_ = multiplier_;
+        }
+
+        emit ReferrerTiersEdited(poolId_, referrerTiers_);
+    }
+
     function getPeriodReward(uint256 poolId_, uint128 startTime_, uint128 endTime_) public view returns (uint256) {
         if (!_poolExists(poolId_)) {
             return 0;
@@ -128,24 +170,30 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         uint256 poolId_,
         address[] calldata users_,
         uint256[] calldata amounts_,
-        uint128[] calldata claimLockEnds_
+        uint128[] calldata claimLockEnds_,
+        address[] calldata referrers_
     ) external onlyOwner poolExists(poolId_) {
         require(!pools[poolId_].isPublic, "DS: pool is public");
         require(users_.length == amounts_.length, "DS: invalid length");
         require(users_.length == claimLockEnds_.length, "DS: invalid length");
+        require(users_.length == referrers_.length, "DS: invalid length");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
 
         for (uint256 i; i < users_.length; ++i) {
-            address user_ = users_[i];
-            uint256 amount_ = amounts_[i];
+            uint256 deposited_ = usersData[users_[i]][poolId_].deposited;
 
-            uint256 deposited_ = usersData[user_][poolId_].deposited;
-
-            if (deposited_ <= amount_) {
-                _stake(user_, poolId_, amount_ - deposited_, currentPoolRate_, claimLockEnds_[i]);
+            if (deposited_ <= amounts_[i]) {
+                _stake(
+                    users_[i],
+                    poolId_,
+                    amounts_[i] - deposited_,
+                    currentPoolRate_,
+                    claimLockEnds_[i],
+                    referrers_[i]
+                );
             } else {
-                _withdraw(user_, poolId_, deposited_ - amount_, currentPoolRate_);
+                _withdraw(users_[i], poolId_, deposited_ - amounts_[i], currentPoolRate_);
             }
         }
     }
@@ -156,24 +204,39 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     function stake(
         uint256 poolId_,
         uint256 amount_,
-        uint128 claimLockEnd_
+        uint128 claimLockEnd_,
+        address referrer_
     ) external poolExists(poolId_) poolPublic(poolId_) {
-        _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_), claimLockEnd_);
+        _stake(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_), claimLockEnd_, referrer_);
     }
 
     function claim(uint256 poolId_, address receiver_) external payable poolExists(poolId_) {
         address user_ = _msgSender();
 
         Pool storage pool = pools[poolId_];
+        PoolLimits storage poolLimits = poolsLimits[poolId_];
         PoolData storage poolData = poolsData[poolId_];
         UserData storage userData = usersData[user_][poolId_];
 
-        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
+        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked (1)");
+        require(
+            block.timestamp > userData.lastStake + poolLimits.claimLockPeriodAfterStake,
+            "DS: pool claim is locked (S)"
+        );
+        require(
+            block.timestamp > userData.lastClaim + poolLimits.claimLockPeriodAfterClaim,
+            "DS: pool claim is locked (C)"
+        );
         require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
 
         uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
         uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
         require(pendingRewards_ > 0, "DS: nothing to claim");
+
+        uint256 deposited_ = userData.deposited;
+
+        uint256 multiplier_ = _getUserTotalMultiplier(0, 0, userData.referrer);
+        uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
 
         if (userData.virtualDeposited == 0) {
             userData.virtualDeposited = userData.deposited;
@@ -182,29 +245,55 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
         poolData.rate = currentPoolRate_;
-        poolData.totalVirtualDeposited =
-            poolData.totalVirtualDeposited +
-            userData.deposited -
-            userData.virtualDeposited;
+        poolData.totalVirtualDeposited = poolData.totalVirtualDeposited + virtualDeposited_ - userData.virtualDeposited;
 
         // Update user data
         userData.rate = currentPoolRate_;
         userData.pendingRewards = 0;
-        userData.virtualDeposited = userData.deposited;
+        userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = 0;
         userData.claimLockEnd = 0;
+        userData.lastClaim = uint128(block.timestamp);
 
         // Transfer rewards
-        L1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
+        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
 
         emit UserClaimed(poolId_, user_, receiver_, pendingRewards_);
+    }
+
+    function claimReferrerTier(uint256 poolId_, address receiver_) external payable poolExists(poolId_) {
+        address referrer_ = _msgSender();
+
+        uint256 currentPoolRate_ = _getCurrentPoolRate(poolId_);
+
+        Pool storage pool = pools[poolId_];
+        PoolLimits storage poolLimits = poolsLimits[poolId_];
+        ReferrerData storage referrerData = referrersData[referrer_][poolId_];
+
+        require(block.timestamp > pool.payoutStart + pool.claimLockPeriod, "DS: pool claim is locked");
+        require(
+            block.timestamp > referrerData.lastClaim + poolLimits.claimLockPeriodAfterClaim,
+            "DS: pool claim is locked (C)"
+        );
+
+        uint256 pendingRewards_ = referrerData.claimReferrerTier(currentPoolRate_);
+
+        // Update pool data
+        PoolData storage poolData = poolsData[poolId_];
+        poolData.lastUpdate = uint128(block.timestamp);
+        poolData.rate = currentPoolRate_;
+
+        // Transfer rewards
+        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, referrer_);
+
+        emit ReferrerClaimed(poolId_, referrer_, receiver_, pendingRewards_);
     }
 
     function withdraw(uint256 poolId_, uint256 amount_) external poolExists(poolId_) poolPublic(poolId_) {
         _withdraw(_msgSender(), poolId_, amount_, _getCurrentPoolRate(poolId_));
     }
 
-    function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external poolExists(poolId_) poolPublic(poolId_) {
+    function lockClaim(uint256 poolId_, uint128 claimLockEnd_) external poolExists(poolId_) {
         require(claimLockEnd_ > block.timestamp, "DS: invalid lock end value (1)");
 
         address user_ = _msgSender();
@@ -219,7 +308,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
         uint128 claimLockStart_ = userData.claimLockStart > 0 ? userData.claimLockStart : uint128(block.timestamp);
-        uint256 multiplier_ = _getClaimLockPeriodMultiplier(claimLockStart_, claimLockEnd_);
+        uint256 multiplier_ = _getUserTotalMultiplier(claimLockStart_, claimLockEnd_, userData.referrer);
         uint256 virtualDeposited_ = (userData.deposited * multiplier_) / PRECISION;
 
         if (userData.virtualDeposited == 0) {
@@ -251,12 +340,21 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         return _getCurrentUserReward(currentPoolRate_, userData);
     }
 
+    function getCurrentReferrerReward(uint256 poolId_, address user_) public view returns (uint256) {
+        if (!_poolExists(poolId_)) {
+            return 0;
+        }
+
+        return referrersData[user_][poolId_].getCurrentReferrerReward(_getCurrentPoolRate(poolId_));
+    }
+
     function _stake(
         address user_,
         uint256 poolId_,
         uint256 amount_,
         uint256 currentPoolRate_,
-        uint128 claimLockEnd_
+        uint128 claimLockEnd_,
+        address referrer_
     ) private {
         Pool storage pool = pools[poolId_];
         PoolData storage poolData = poolsData[poolId_];
@@ -265,10 +363,14 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         if (claimLockEnd_ == 0) {
             claimLockEnd_ = userData.claimLockEnd > block.timestamp ? userData.claimLockEnd : uint128(block.timestamp);
         }
+        require(claimLockEnd_ >= userData.claimLockEnd, "DS: invalid claim lock end");
+
+        if (referrer_ == address(0)) {
+            referrer_ = userData.referrer;
+        }
 
         if (pool.isPublic) {
             require(amount_ > 0, "DS: nothing to stake");
-            require(claimLockEnd_ >= userData.claimLockEnd, "DS: invalid claim lock end");
 
             // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
             uint256 balanceBefore_ = IERC20(depositToken).balanceOf(address(this));
@@ -285,12 +387,22 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
         uint256 deposited_ = userData.deposited + amount_;
-        uint256 multiplier_ = _getClaimLockPeriodMultiplier(uint128(block.timestamp), claimLockEnd_);
+        uint256 multiplier_ = _getUserTotalMultiplier(uint128(block.timestamp), claimLockEnd_, referrer_);
         uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
 
         if (userData.virtualDeposited == 0) {
             userData.virtualDeposited = userData.deposited;
         }
+
+        _applyReferrerTier(
+            user_,
+            poolId_,
+            currentPoolRate_,
+            userData.deposited,
+            deposited_,
+            userData.referrer,
+            referrer_
+        );
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
@@ -304,6 +416,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
         userData.claimLockEnd = claimLockEnd_;
+        userData.referrer = referrer_;
 
         emit UserStaked(poolId_, user_, amount_);
         emit UserClaimLocked(poolId_, user_, uint128(block.timestamp), claimLockEnd_);
@@ -338,19 +451,36 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
             newDeposited_ = deposited_ - amount_;
 
             require(amount_ > 0, "DS: nothing to withdraw");
-            require(newDeposited_ >= pool.minimalStake || newDeposited_ == 0, "DS: invalid withdraw amount");
+            require(
+                newDeposited_ >= pool.minimalStake || newDeposited_ == 0 || depositTokenContractBalance_ == amount_,
+                "DS: invalid withdraw amount"
+            );
         } else {
             newDeposited_ = deposited_ - amount_;
         }
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
 
-        uint256 multiplier_ = _getClaimLockPeriodMultiplier(uint128(block.timestamp), userData.claimLockEnd);
+        uint256 multiplier_ = _getUserTotalMultiplier(
+            uint128(block.timestamp),
+            userData.claimLockEnd,
+            userData.referrer
+        );
         uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
 
         if (userData.virtualDeposited == 0) {
             userData.virtualDeposited = userData.deposited;
         }
+
+        _applyReferrerTier(
+            user_,
+            poolId_,
+            currentPoolRate_,
+            deposited_,
+            newDeposited_,
+            userData.referrer,
+            userData.referrer
+        );
 
         // Update pool data
         poolData.lastUpdate = uint128(block.timestamp);
@@ -370,6 +500,66 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         }
 
         emit UserWithdrawn(poolId_, user_, amount_);
+    }
+
+    function _applyReferrerTier(
+        address user_,
+        uint256 poolId_,
+        uint256 currentPoolRate_,
+        uint256 oldDeposited_,
+        uint256 newDeposited_,
+        address oldReferrer_,
+        address newReferrer_
+    ) internal {
+        if (newReferrer_ == address(0)) {
+            // we assume that referrer can't be removed, only changed
+            return;
+        }
+
+        ReferrerData storage newReferrerData = referrersData[newReferrer_][poolId_];
+
+        uint256 oldVirtualAmountStaked;
+        uint256 newVirtualAmountStaked;
+
+        if (oldReferrer_ == address(0)) {
+            oldVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+            newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
+            newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+            emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
+        } else {
+            if (oldReferrer_ == newReferrer_) {
+                oldVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+                newReferrerData.applyReferrerTier(
+                    referrerTiers[poolId_],
+                    oldDeposited_,
+                    newDeposited_,
+                    currentPoolRate_
+                );
+                newVirtualAmountStaked = newReferrerData.virtualAmountStaked;
+
+                emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
+            } else {
+                ReferrerData storage oldReferrerData = referrersData[oldReferrer_][poolId_];
+
+                oldVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
+
+                oldReferrerData.applyReferrerTier(referrerTiers[poolId_], oldDeposited_, 0, currentPoolRate_);
+                newReferrerData.applyReferrerTier(referrerTiers[poolId_], 0, newDeposited_, currentPoolRate_);
+                newVirtualAmountStaked = oldReferrerData.virtualAmountStaked + newReferrerData.virtualAmountStaked;
+
+                emit UserReferred(poolId_, user_, oldReferrer_, 0);
+                emit UserReferred(poolId_, user_, newReferrer_, newDeposited_);
+            }
+        }
+
+        PoolData storage poolData = poolsData[poolId_];
+        poolData.totalVirtualDeposited =
+            poolData.totalVirtualDeposited +
+            newVirtualAmountStaked -
+            oldVirtualAmountStaked;
     }
 
     function _getCurrentUserReward(uint256 currentPoolRate_, UserData memory userData_) private pure returns (uint256) {
@@ -419,7 +609,20 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
         UserData storage userData = usersData[user_][poolId_];
 
-        return _getClaimLockPeriodMultiplier(userData.claimLockStart, userData.claimLockEnd);
+        return _getUserTotalMultiplier(userData.claimLockStart, userData.claimLockEnd, userData.referrer);
+    }
+
+    function getReferrerMultiplier(uint256 poolId_, address referrer_) public view returns (uint256) {
+        if (!_poolExists(poolId_)) {
+            return 0;
+        }
+
+        ReferrerData storage referrerData = referrersData[referrer_][poolId_];
+        if (referrerData.amountStaked == 0) {
+            return 0;
+        }
+
+        return (referrerData.virtualAmountStaked * PRECISION) / referrerData.amountStaked;
     }
 
     /**
@@ -459,6 +662,17 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
         return (multiplier_ * PRECISION) / DECIMAL;
     }
 
+    function _getUserTotalMultiplier(
+        uint128 claimLockStart_,
+        uint128 claimLockEnd_,
+        address referrer_
+    ) internal pure returns (uint256) {
+        return
+            _getClaimLockPeriodMultiplier(claimLockStart_, claimLockEnd_) +
+            ReferrerLib.getReferralMultiplier(referrer_) -
+            PRECISION;
+    }
+
     /**********************************************************************************************/
     /*** Bridge                                                                                 ***/
     /**********************************************************************************************/
@@ -482,7 +696,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
 
         IERC20(depositToken).safeTransfer(l1Sender, overplus_);
 
-        bytes memory bridgeMessageId_ = L1Sender(l1Sender).sendDepositToken{value: msg.value}(
+        bytes memory bridgeMessageId_ = IL1Sender(l1Sender).sendDepositToken{value: msg.value}(
             gasLimit_,
             maxFeePerGas_,
             maxSubmissionCost_
@@ -502,7 +716,7 @@ contract DistributionV2 is IDistributionV2, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function version() external pure returns (uint256) {
-        return 2;
+        return 5;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {

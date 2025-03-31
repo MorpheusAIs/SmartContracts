@@ -65,6 +65,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
     /** @dev Contain information about rewards pools needed for this contract. */
     mapping(uint256 => RewardPoolProtocolDetails) public rewardPoolsProtocolDetails;
+
     /** @dev UPGRADE `DepositPool`, v6 end. */
 
     /**********************************************************************************************/
@@ -128,18 +129,24 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function migrate(uint256 rewardPoolIndex_) external onlyOwner {
+        require(!isMigrationOver, "DS: the migration is over");
+        if (totalDepositedInPublicPools == 0) {
+            isMigrationOver = true;
+            emit Migrated(rewardPoolIndex_);
+
+            return;
+        }
+
         IRewardPool rewardPool_ = IRewardPool(IDistributor(distributor).rewardPool());
         rewardPool_.onlyExistedRewardPool(rewardPoolIndex_);
         rewardPool_.onlyPublicRewardPool(rewardPoolIndex_);
 
-        if (totalDepositedInPublicPools > 0) {
-            IDistributor(distributor).supply(rewardPoolIndex_, totalDepositedInPublicPools);
-        }
+        // Transfer yield to prevent the reward loss
+        uint256 remainder_ = IERC20(depositToken).balanceOf(address(this)) - totalDepositedInPublicPools;
+        require(remainder_ > 0, "DS: yield for token is zero");
+        IERC20(depositToken).transfer(distributor, remainder_);
 
-        uint256 remainder_ = IERC20(depositToken).balanceOf(address(this));
-        if (remainder_ > 0) {
-            IERC20(depositToken).transfer(distributor, remainder_);
-        }
+        IDistributor(distributor).supply(rewardPoolIndex_, totalDepositedInPublicPools);
 
         isMigrationOver = true;
 
@@ -220,7 +227,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         rewardPool_.onlyExistedRewardPool(rewardPoolIndex_);
         rewardPool_.onlyPublicRewardPool(rewardPoolIndex_);
 
-        // TODO: should be called o
         IDistributor(distributor).distributeRewards(rewardPoolIndex_);
         (uint256 currentPoolRate_, uint256 rewards_) = _getCurrentPoolRate(rewardPoolIndex_);
 

@@ -8,12 +8,32 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "hardhat/console.sol";
+
 contract UniswapSwapRouterMock {
     address public uniswapSwapRouter;
 
     function exactInputSingle(ISwapRouter.ExactInputSingleParams calldata params_) external returns (uint256) {
         IERC20(params_.tokenIn).transferFrom(msg.sender, address(this), params_.amountIn);
         IERC20(params_.tokenOut).transfer(params_.recipient, params_.amountIn);
+
+        return params_.amountIn;
+    }
+
+    function exactInput(ISwapRouter.ExactInputParams calldata params_) external returns (uint256) {
+        address tokenIn_;
+        address tokenOut_;
+
+        bytes memory path_ = params_.path;
+        uint256 pathLength = params_.path.length;
+
+        assembly {
+            tokenIn_ := mload(add(path_, 20))
+            tokenOut_ := mload(add(add(path_, sub(pathLength, 20)), 20))
+        }
+
+        IERC20(tokenIn_).transferFrom(msg.sender, address(this), params_.amountIn);
+        IERC20(tokenOut_).transfer(params_.recipient, params_.amountIn);
 
         return params_.amountIn;
     }

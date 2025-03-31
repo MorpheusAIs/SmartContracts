@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import {IDistribution, LinearDistributionIntervalDecrease} from "../Distribution.sol";
+import {IDistribution, LinearDistributionIntervalDecrease} from "../capital-protocol/old/Distribution.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {LZEndpointMock} from "@layerzerolabs/solidity-examples/contracts/lzApp/mocks/LZEndpointMock.sol";

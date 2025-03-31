@@ -39,7 +39,7 @@ interface IL1SenderV2 is IERC165 {
     event MintMessageSent(address user, uint256 amount);
     event ArbitrumBridgeConfigSet(ArbitrumBridgeConfig arbitrumBridgeConfig);
     event WstETHSent(uint256 amount, uint256 gasLimit, uint256 maxFeePerGas, uint256 maxSubmissionCost, bytes result);
-    event TokensSwapped(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
+    event TokensSwapped(bytes path, uint256 amountIn, uint256 amountOut);
 
     /**
      * The function to set the stETH address
@@ -94,18 +94,16 @@ interface IL1SenderV2 is IERC165 {
 
     /**
      * The function to swap the tokens on the contract
-     * @param tokenIn_ Token IN
-     * @param tokenOut_ Token OUT
+     * @param tokens_ Token for the swap
+     * @param poolsFee_ Pools fee for the swap
      * @param amountIn_ Amount IN to swap
      * @param amountOutMinimum_ Minimal amount OUT to receive
-     * @param poolFee_ Pool frr
      */
-    function swapExactInputSingle(
-        address tokenIn_,
-        address tokenOut_,
+    function swapExactInputMultihop(
+        address[] calldata tokens_,
+        uint24[] calldata poolsFee_,
         uint256 amountIn_,
-        uint256 amountOutMinimum_,
-        uint24 poolFee_
+        uint256 amountOutMinimum_
     ) external returns (uint256);
 
     /**
