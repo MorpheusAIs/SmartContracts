@@ -141,6 +141,14 @@ interface IDepositPool is IERC165, IReferrer {
     );
 
     /**
+     * The event that is emitted when the address allowed to claim set.
+     * @param holder Address who add allowance.
+     * @param caller Claim caller.
+     * @param isAllowed Allowed or not.
+     */
+    event AddressAllowedToClaimSet(address holder, address caller, bool isAllowed);
+
+    /**
      * The event that is emitted when the user is referred.
      * @param rewardPoolIndex The reward pool index.
      * @param user The user's address.
@@ -201,6 +209,13 @@ interface IDepositPool is IERC165, IReferrer {
     ) external;
 
     /**
+     * The function to set the addresses which can claim for `msg.sender`
+     * @param addresses_  The addresses list
+     * @param isAllowed_ Allowed or not
+     */
+    function setAddressesAllowedToClaim(address[] calldata addresses_, bool[] calldata isAllowed_) external;
+
+    /**
      * The function to stake tokens in the public pool.
      * @param rewardPoolIndex_ The reward poll index.
      * @param amount_ The amount of tokens to stake.
@@ -215,6 +230,29 @@ interface IDepositPool is IERC165, IReferrer {
      * @param receiver_ The receiver's address.
      */
     function claim(uint256 rewardPoolIndex_, address receiver_) external payable;
+
+    /**
+     * The function to claim rewards from the pool for the specified address.
+     * @param poolId_ The pool's id.
+     * @param user_ Specified address.
+     * @param receiver_ The receiver's address.
+     */
+    function claimFor(uint256 poolId_, address user_, address receiver_) external payable;
+
+    /**
+     * The function to claim referrer rewards from the pool.
+     * @param poolId_ The pool's id.
+     * @param receiver_ The receiver's address.
+     */
+    function claimReferrerTier(uint256 poolId_, address receiver_) external payable;
+
+    /**
+     * The function to claim referrer rewards from the pool for the specified address.
+     * @param poolId_ The pool's id.
+     * @param referrer_ Specified address.
+     * @param receiver_ The receiver's address.
+     */
+    function claimReferrerTierFor(uint256 poolId_, address referrer_, address receiver_) external payable;
 
     /**
      * The function to withdraw tokens from the pool.

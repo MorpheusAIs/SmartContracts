@@ -2081,6 +2081,16 @@ describe('DepositPool', () => {
       expect(userData.deposited).to.eq(wei(1));
       expect(userData.pendingRewards).to.eq(0);
     });
+    it('should correctly claim, from allowed address', async () => {
+      await setNextTime(oneHour * 2);
+      await depositPool.connect(SECOND).stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
+      await distributorMock.setDistributedRewardsAnswer(wei(198));
+
+      await depositPool.connect(SECOND).setAddressesAllowedToClaim([OWNER], [true]);
+
+      await setNextTime(oneDay + oneDay * 2);
+      await depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, SECOND, { value: wei(0.5) });
+    });
     describe('with multiplier', () => {
       const periodStart = 1721908800;
       const claimLockEnd = periodStart + 300 * oneDay - 1;
@@ -2183,7 +2193,6 @@ describe('DepositPool', () => {
         expect(userData.pendingRewards).to.eq(0);
       });
     });
-
     describe('with referrer', () => {
       const referrerTiers = getDefaultReferrerTiers();
 
@@ -2422,6 +2431,9 @@ describe('DepositPool', () => {
         expect(referralData.virtualAmountStaked).to.eq(wei(0.04));
         expect(referralData.pendingRewards).to.eq(0);
       });
+    });
+    it('should revert if claim caller is invalid', async () => {
+      await expect(depositPool.claimFor(rewardPoolId, OWNER, OWNER)).to.be.revertedWith('DS: invalid caller');
     });
     it("should revert if `claimLockPeriodAfterStake` didn't pass", async () => {
       await setTime(oneDay + oneDay);
@@ -2921,6 +2933,15 @@ describe('DepositPool', () => {
         expect(referrerData.rate).to.eq(poolData.rate);
         expect(referrerData.pendingRewards).to.eq(0);
       });
+      it('should claim referrer tier correctly', async () => {
+        await depositPool.connect(SECOND).stake(rewardPoolId, wei(10), 0, OWNER);
+
+        await distributorMock.setDistributedRewardsAnswer(wei(100));
+        await depositPool.setAddressesAllowedToClaim([SECOND], [true]);
+
+        await setNextTime(oneDay + oneDay);
+        await depositPool.connect(SECOND).claimReferrerTierFor(rewardPoolId, OWNER, OWNER, { value: wei(0.5) });
+      });
       it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
         await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 0, 60, 4);
 
@@ -2944,6 +2965,11 @@ describe('DepositPool', () => {
         await expect(depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
           'DS: nothing to claim',
         );
+      });
+      it('should revert if nothing to claim', async () => {
+        await expect(
+          depositPool.claimReferrerTierFor(rewardPoolId, OWNER, OWNER, { value: wei(0.5) }),
+        ).to.be.revertedWith('DS: invalid caller');
       });
     });
 

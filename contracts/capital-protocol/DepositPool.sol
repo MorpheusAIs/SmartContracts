@@ -55,8 +55,11 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => mapping(uint256 => ReferrerData)) public referrersData;
     /** @dev UPGRADE `DistributionV5` end. */
 
-    /** @dev UPGRADE `DepositPool`, v6. Storage updates, add few deposit pools. */
+    /** @dev UPGRADE `DistributionV6` storage updates, add addresses allowed to claim for `_msgSender()`. */
+    mapping(address => mapping(address => bool)) public isAddressAllowedToClaim;
+    /** @dev UPGRADE `DistributionV6` end. */
 
+    /** @dev UPGRADE `DepositPool`, v7. Storage updates, add few deposit pools. */
     /** @dev This flag determines whether the migration has been completed. */
     bool public isMigrationOver;
 
@@ -66,7 +69,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     /** @dev Contain information about rewards pools needed for this contract. */
     mapping(uint256 => RewardPoolProtocolDetails) public rewardPoolsProtocolDetails;
 
-    /** @dev UPGRADE `DepositPool`, v6 end. */
+    /** @dev UPGRADE `DepositPool`, v7 end. */
 
     /**********************************************************************************************/
     /*** Init, IERC165                                                                          ***/
@@ -219,8 +222,18 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**********************************************************************************************/
-    /*** Stake, claim, withdraw, lock                                                           ***/
+    /*** Stake, claim, withdraw, lock management                                                ***/
     /**********************************************************************************************/
+
+    function setAddressesAllowedToClaim(address[] calldata addresses_, bool[] calldata isAllowed_) external {
+        require(addresses_.length == isAllowed_.length, "DS: invalid array length");
+
+        for (uint256 i = 0; i < addresses_.length; ++i) {
+            isAddressAllowedToClaim[_msgSender()][addresses_[i]] = isAllowed_[i];
+
+            emit AddressAllowedToClaimSet(_msgSender(), addresses_[i], isAllowed_[i]);
+        }
+    }
 
     function stake(uint256 rewardPoolIndex_, uint256 amount_, uint128 claimLockEnd_, address referrer_) external {
         IRewardPool rewardPool_ = IRewardPool(IDistributor(distributor).rewardPool());
@@ -236,106 +249,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
     }
 
-    function claim(uint256 rewardPoolIndex_, address receiver_) external payable {
-        require(isMigrationOver == true, "DS: migration isn't over");
-        IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
-
-        UserData storage userData = usersData[_msgSender()][rewardPoolIndex_];
-
-        require(
-            block.timestamp >
-                userData.lastStake + rewardPoolsProtocolDetails[rewardPoolIndex_].claimLockPeriodAfterStake,
-            "DS: pool claim is locked (S)"
-        );
-        require(
-            block.timestamp >
-                userData.lastClaim + rewardPoolsProtocolDetails[rewardPoolIndex_].claimLockPeriodAfterClaim,
-            "DS: pool claim is locked (C)"
-        );
-        require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
-
-        IDistributor(distributor).distributeRewards(rewardPoolIndex_);
-
-        (uint256 currentPoolRate_, uint256 rewards_) = _getCurrentPoolRate(rewardPoolIndex_);
-        uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
-        require(pendingRewards_ > 0, "DS: nothing to claim");
-
-        uint256 deposited_ = userData.deposited;
-
-        uint256 multiplier_ = _getUserTotalMultiplier(0, 0, userData.referrer);
-        uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
-
-        if (userData.virtualDeposited == 0) {
-            userData.virtualDeposited = userData.deposited;
-        }
-
-        // Update `rewardPoolData`
-        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolIndex_];
-        rewardPoolData.lastUpdate = uint128(block.timestamp);
-        rewardPoolData.rate = currentPoolRate_;
-        rewardPoolData.totalVirtualDeposited =
-            rewardPoolData.totalVirtualDeposited +
-            virtualDeposited_ -
-            userData.virtualDeposited;
-
-        // Update `userData`
-        userData.rate = currentPoolRate_;
-        userData.pendingRewards = 0;
-        userData.virtualDeposited = virtualDeposited_;
-        userData.claimLockStart = 0;
-        userData.claimLockEnd = 0;
-        userData.lastClaim = uint128(block.timestamp);
-        // Update `rewardPoolsProtocolDetails`
-        rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
-
-        // Transfer rewards
-        IDistributor(distributor).sendMintMessage{value: msg.value}(
-            rewardPoolIndex_,
-            receiver_,
-            pendingRewards_,
-            _msgSender()
-        );
-
-        emit UserClaimed(rewardPoolIndex_, _msgSender(), receiver_, pendingRewards_);
-    }
-
-    function claimReferrerTier(uint256 rewardPoolIndex_, address receiver_) external payable {
-        require(isMigrationOver == true, "DS: migration isn't over");
-
-        IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
-        IDistributor(distributor).distributeRewards(rewardPoolIndex_);
-
-        (uint256 currentPoolRate_, uint256 rewards_) = _getCurrentPoolRate(rewardPoolIndex_);
-
-        RewardPoolProtocolDetails storage rewardPoolProtocolDetails = rewardPoolsProtocolDetails[rewardPoolIndex_];
-        ReferrerData storage referrerData = referrersData[_msgSender()][rewardPoolIndex_];
-
-        require(
-            block.timestamp > referrerData.lastClaim + rewardPoolProtocolDetails.claimLockPeriodAfterClaim,
-            "DS: pool claim is locked (C)"
-        );
-
-        uint256 pendingRewards_ = ReferrerLib.claimReferrerTier(referrerData, currentPoolRate_);
-
-        // Update `rewardPoolData`
-        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolIndex_];
-        rewardPoolData.lastUpdate = uint128(block.timestamp);
-        rewardPoolData.rate = currentPoolRate_;
-
-        // Update `rewardPoolsProtocolDetails`
-        rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
-
-        // Transfer rewards
-        IDistributor(distributor).sendMintMessage{value: msg.value}(
-            rewardPoolIndex_,
-            receiver_,
-            pendingRewards_,
-            _msgSender()
-        );
-
-        emit ReferrerClaimed(rewardPoolIndex_, _msgSender(), receiver_, pendingRewards_);
-    }
-
     function withdraw(uint256 rewardPoolIndex_, uint256 amount_) external {
         IRewardPool rewardPool_ = IRewardPool(IDistributor(distributor).rewardPool());
         rewardPool_.onlyExistedRewardPool(rewardPoolIndex_);
@@ -349,6 +262,24 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
         // Update `rewardPoolsProtocolDetails`
         rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
+    }
+
+    function claim(uint256 poolId_, address receiver_) external payable {
+        _claim(poolId_, _msgSender(), receiver_);
+    }
+
+    function claimFor(uint256 poolId_, address user_, address receiver_) external payable {
+        require(isAddressAllowedToClaim[user_][_msgSender()], "DS: invalid caller");
+        _claim(poolId_, user_, receiver_);
+    }
+
+    function claimReferrerTier(uint256 poolId_, address receiver_) external payable {
+        _claimReferrerTier(poolId_, _msgSender(), receiver_);
+    }
+
+    function claimReferrerTierFor(uint256 poolId_, address referrer_, address receiver_) external payable {
+        require(isAddressAllowedToClaim[referrer_][_msgSender()], "DS: invalid caller");
+        _claimReferrerTier(poolId_, referrer_, receiver_);
     }
 
     function lockClaim(uint256 rewardPoolIndex_, uint128 claimLockEnd_) external {
@@ -562,6 +493,106 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         }
 
         emit UserWithdrawn(rewardPoolIndex_, user_, amount_);
+    }
+
+    function _claim(uint256 rewardPoolIndex_, address user_, address receiver_) private {
+        require(isMigrationOver == true, "DS: migration isn't over");
+        IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
+
+        UserData storage userData = usersData[user_][rewardPoolIndex_];
+
+        require(
+            block.timestamp >
+                userData.lastStake + rewardPoolsProtocolDetails[rewardPoolIndex_].claimLockPeriodAfterStake,
+            "DS: pool claim is locked (S)"
+        );
+        require(
+            block.timestamp >
+                userData.lastClaim + rewardPoolsProtocolDetails[rewardPoolIndex_].claimLockPeriodAfterClaim,
+            "DS: pool claim is locked (C)"
+        );
+        require(block.timestamp > userData.claimLockEnd, "DS: user claim is locked");
+
+        IDistributor(distributor).distributeRewards(rewardPoolIndex_);
+
+        (uint256 currentPoolRate_, uint256 rewards_) = _getCurrentPoolRate(rewardPoolIndex_);
+        uint256 pendingRewards_ = _getCurrentUserReward(currentPoolRate_, userData);
+        require(pendingRewards_ > 0, "DS: nothing to claim");
+
+        uint256 deposited_ = userData.deposited;
+
+        uint256 multiplier_ = _getUserTotalMultiplier(0, 0, userData.referrer);
+        uint256 virtualDeposited_ = (deposited_ * multiplier_) / PRECISION;
+
+        if (userData.virtualDeposited == 0) {
+            userData.virtualDeposited = userData.deposited;
+        }
+
+        // Update `rewardPoolData`
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolIndex_];
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
+        rewardPoolData.totalVirtualDeposited =
+            rewardPoolData.totalVirtualDeposited +
+            virtualDeposited_ -
+            userData.virtualDeposited;
+
+        // Update `userData`
+        userData.rate = currentPoolRate_;
+        userData.pendingRewards = 0;
+        userData.virtualDeposited = virtualDeposited_;
+        userData.claimLockStart = 0;
+        userData.claimLockEnd = 0;
+        userData.lastClaim = uint128(block.timestamp);
+        // Update `rewardPoolsProtocolDetails`
+        rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
+
+        // Transfer rewards
+        IDistributor(distributor).sendMintMessage{value: msg.value}(
+            rewardPoolIndex_,
+            receiver_,
+            pendingRewards_,
+            _msgSender()
+        );
+
+        emit UserClaimed(rewardPoolIndex_, user_, receiver_, pendingRewards_);
+    }
+
+    function _claimReferrerTier(uint256 rewardPoolIndex_, address referrer_, address receiver_) private {
+        require(isMigrationOver == true, "DS: migration isn't over");
+
+        IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
+        IDistributor(distributor).distributeRewards(rewardPoolIndex_);
+
+        (uint256 currentPoolRate_, uint256 rewards_) = _getCurrentPoolRate(rewardPoolIndex_);
+
+        RewardPoolProtocolDetails storage rewardPoolProtocolDetails = rewardPoolsProtocolDetails[rewardPoolIndex_];
+        ReferrerData storage referrerData = referrersData[referrer_][rewardPoolIndex_];
+
+        require(
+            block.timestamp > referrerData.lastClaim + rewardPoolProtocolDetails.claimLockPeriodAfterClaim,
+            "DS: pool claim is locked (C)"
+        );
+
+        uint256 pendingRewards_ = ReferrerLib.claimReferrerTier(referrerData, currentPoolRate_);
+
+        // Update `rewardPoolData`
+        RewardPoolData storage rewardPoolData = rewardPoolsData[rewardPoolIndex_];
+        rewardPoolData.lastUpdate = uint128(block.timestamp);
+        rewardPoolData.rate = currentPoolRate_;
+
+        // Update `rewardPoolsProtocolDetails`
+        rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
+
+        // Transfer rewards
+        IDistributor(distributor).sendMintMessage{value: msg.value}(
+            rewardPoolIndex_,
+            receiver_,
+            pendingRewards_,
+            _msgSender()
+        );
+
+        emit ReferrerClaimed(rewardPoolIndex_, referrer_, receiver_, pendingRewards_);
     }
 
     function _applyReferrerTier(

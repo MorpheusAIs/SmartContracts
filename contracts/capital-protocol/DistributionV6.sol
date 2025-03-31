@@ -278,7 +278,7 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
         userData.lastClaim = uint128(block.timestamp);
 
         // Transfer rewards
-        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, user_);
+        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, _msgSender());
 
         emit UserClaimed(poolId_, user_, receiver_, pendingRewards_);
     }
@@ -318,7 +318,7 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
         poolData.rate = currentPoolRate_;
 
         // Transfer rewards
-        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, referrer_);
+        IL1Sender(l1Sender).sendMintMessage{value: msg.value}(receiver_, pendingRewards_, _msgSender());
 
         emit ReferrerClaimed(poolId_, referrer_, receiver_, pendingRewards_);
     }
