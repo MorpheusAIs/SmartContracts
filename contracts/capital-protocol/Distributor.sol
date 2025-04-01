@@ -238,10 +238,6 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         uint256 length_ = depositPoolAddresses[rewardPoolIndex_].length;
         IChainLinkDataConsumer chainLinkDataConsumer_ = IChainLinkDataConsumer(chainLinkDataConsumer);
 
-        // 203463 - Old
-        // 203336 - Move depositPoolAddresses[rewardPoolIndex_]
-        // 203293 - Move depositPools[rewardPoolIndex_]
-
         address[] storage addressesForIndex = depositPoolAddresses[rewardPoolIndex_];
         mapping(address => DepositPool) storage poolsForIndex = depositPools[rewardPoolIndex_];
 
