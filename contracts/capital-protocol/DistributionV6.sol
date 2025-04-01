@@ -750,7 +750,7 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function version() external pure returns (uint256) {
-        return 5;
+        return 6;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {

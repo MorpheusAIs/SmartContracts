@@ -158,7 +158,7 @@ describe('DepositPool', () => {
 
       const newDepositPool = newDepositPoolImpl.attach(distributionV5) as DepositPool;
 
-      expect(await newDepositPool.version()).to.eq(6);
+      expect(await newDepositPool.version()).to.eq(7);
       expect(await newDepositPool.getAddress()).to.eq(await distributionV5.getAddress());
 
       await newDepositPool.setDistributor(distributorMock);

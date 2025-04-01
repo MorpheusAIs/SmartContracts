@@ -199,7 +199,8 @@ contract L1SenderV2 is IL1SenderV2, OwnableUpgradeable, UUPSUpgradeable {
         address[] calldata tokens_,
         uint24[] calldata poolsFee_,
         uint256 amountIn_,
-        uint256 amountOutMinimum_
+        uint256 amountOutMinimum_,
+        uint256 deadline_
     ) external onlyOwner returns (uint256) {
         require(tokens_.length >= 2 && tokens_.length == poolsFee_.length + 1, "L1S: invalid array length");
         require(amountIn_ != 0, "L1S: invalid `amountIn_` value");
@@ -218,7 +219,7 @@ contract L1SenderV2 is IL1SenderV2, OwnableUpgradeable, UUPSUpgradeable {
         ISwapRouter.ExactInputParams memory params_ = ISwapRouter.ExactInputParams({
             path: path_,
             recipient: address(this),
-            deadline: block.timestamp,
+            deadline: deadline_,
             amountIn: amountIn_,
             amountOutMinimum: amountOutMinimum_
         });

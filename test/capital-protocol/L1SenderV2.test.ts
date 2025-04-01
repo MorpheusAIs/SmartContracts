@@ -348,7 +348,7 @@ describe('L1SenderV2', () => {
       await l1Sender.setArbitrumBridgeConfig(config);
 
       await l1Sender.setUniswapSwapRouter(uniswapSwapRouterMock);
-      await l1Sender.swapExactInputMultihop([tokenIn, wstETH], [100], wei(90), wei(40));
+      await l1Sender.swapExactInputMultihop([tokenIn, wstETH], [100], wei(90), wei(40), 0);
 
       expect(await tokenIn.balanceOf(l1Sender)).to.eq(wei(0));
       expect(await wstETH.balanceOf(l1Sender)).to.eq(wei(90));
@@ -362,7 +362,7 @@ describe('L1SenderV2', () => {
       };
       await l1Sender.setArbitrumBridgeConfig(config);
 
-      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(0), wei(40))).to.be.revertedWith(
+      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(0), wei(40), 0)).to.be.revertedWith(
         'L1S: invalid `amountIn_` value',
       );
     });
@@ -375,22 +375,22 @@ describe('L1SenderV2', () => {
       };
       await l1Sender.setArbitrumBridgeConfig(config);
 
-      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(10), wei(0))).to.be.revertedWith(
+      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(10), wei(0), 0)).to.be.revertedWith(
         'L1S: invalid `amountOutMinimum_` value',
       );
     });
     it('should revert when invalid array length', async () => {
-      await expect(l1Sender.swapExactInputMultihop([stETH], [100], wei(10), wei(0))).to.be.revertedWith(
+      await expect(l1Sender.swapExactInputMultihop([stETH], [100], wei(10), wei(0), 0)).to.be.revertedWith(
         'L1S: invalid array length',
       );
 
-      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100, 100], wei(10), wei(0))).to.be.revertedWith(
+      await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100, 100], wei(10), wei(0), 0)).to.be.revertedWith(
         'L1S: invalid array length',
       );
     });
     it('should revert if not called by the owner', async () => {
       await expect(
-        l1Sender.connect(BOB).swapExactInputMultihop([stETH, wstETH], [100], wei(90), wei(40)),
+        l1Sender.connect(BOB).swapExactInputMultihop([stETH, wstETH], [100], wei(90), wei(40), 0),
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });

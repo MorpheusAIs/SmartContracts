@@ -19,7 +19,6 @@ interface IDistributor is IERC165 {
     }
 
     /**
-     * @param depositPoolAddress The `DepositPool` contract address.
      * @param token The yield token.
      * @param chainLinkPath The path for `ChainLinkDataConsumer`.
      * @param tokenPrice The token price, filled by the contract.
@@ -28,7 +27,6 @@ interface IDistributor is IERC165 {
      * @param strategy The `Strategy`.
      * @param aToken The `token` address after the deposit to Aave.
      * @param isExist The existed flag.
-
      */
     struct DepositPool {
         address token;
@@ -49,6 +47,7 @@ interface IDistributor is IERC165 {
     event MinRewardsDistributePeriodSet(uint256 minRewardsDistributePeriod);
     event RewardPoolLastCalculatedTimestampSet(uint256 rewardPoolIndex_, uint128 rewardPoolLastCalculatedTimestamp);
     event DepositPoolAdded(uint256 rewardPoolIndex, DepositPool depositPool);
+    event TokenPriceSet(string chainLinkPath, uint256 price);
 
     /**
      * The function to return `RewardPool` contract address.

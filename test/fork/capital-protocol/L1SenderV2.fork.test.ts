@@ -7,6 +7,7 @@ import { Reverter } from '../../helpers/reverter';
 import { ERC20, L1Sender, L1SenderV2, StETHMock, WStETHMock } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
+import { getCurrentBlockTime } from '@/test/helpers/block-helper';
 import { deployDistributorMock, deployERC20Token, deployRewardPoolMock } from '@/test/helpers/deployers';
 
 describe('L1SenderV2 Fork', () => {
@@ -128,8 +129,13 @@ describe('L1SenderV2 Fork', () => {
       const weth = (await ethers.getContractFactory('ERC20')).attach(wethAddress) as ERC20;
 
       await l1SenderV2.setUniswapSwapRouter('0xE592427A0AEce92De3Edee1F18E0157C05861564');
-      // await l1SenderV2.swapExactInputMultihop([usdc, weth, wstETH], [500, 100], wei(1000, 6), wei(0.1));
-      await l1SenderV2.swapExactInputMultihop([usdc, weth, wstETH], [500, 100], wei(1000, 6), wei(0.1));
+      await l1SenderV2.swapExactInputMultihop(
+        [usdc, weth, wstETH],
+        [500, 100],
+        wei(1000, 6),
+        wei(0.1),
+        (await getCurrentBlockTime()) + 60,
+      );
 
       expect(await usdc.balanceOf(l1SenderV2)).to.eq(wei(0, 6));
       expect(await wstETH.balanceOf(l1SenderV2)).to.greaterThan(wei(0.4));

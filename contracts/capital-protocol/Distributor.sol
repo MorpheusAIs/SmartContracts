@@ -238,15 +238,24 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         uint256 length_ = depositPoolAddresses[rewardPoolIndex_].length;
         IChainLinkDataConsumer chainLinkDataConsumer_ = IChainLinkDataConsumer(chainLinkDataConsumer);
 
+        // 203463 - Old
+        // 203336 - Move depositPoolAddresses[rewardPoolIndex_]
+        // 203293 - Move depositPools[rewardPoolIndex_]
+
+        address[] storage addressesForIndex = depositPoolAddresses[rewardPoolIndex_];
+        mapping(address => DepositPool) storage poolsForIndex = depositPools[rewardPoolIndex_];
+
         for (uint256 i = 0; i < length_; i++) {
-            address depositPoolAddress_ = depositPoolAddresses[rewardPoolIndex_][i];
-            bytes32 chainLinkPathId_ = chainLinkDataConsumer_.getPathId(
-                depositPools[rewardPoolIndex_][depositPoolAddress_].chainLinkPath
-            );
+            address depositPoolAddress_ = addressesForIndex[i];
+            DepositPool storage depositPool = poolsForIndex[depositPoolAddress_];
+
+            bytes32 chainLinkPathId_ = chainLinkDataConsumer_.getPathId(depositPool.chainLinkPath);
             uint256 price_ = chainLinkDataConsumer_.getChainLinkDataFeedLatestAnswer(chainLinkPathId_);
 
             require(price_ > 0, "DR: price for pair is zero");
-            depositPools[rewardPoolIndex_][depositPoolAddress_].tokenPrice = price_;
+            depositPool.tokenPrice = price_;
+
+            emit TokenPriceSet(depositPool.chainLinkPath, price_);
         }
     }
 

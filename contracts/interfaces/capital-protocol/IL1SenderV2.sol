@@ -93,17 +93,19 @@ interface IL1SenderV2 is IERC165 {
     ) external payable returns (bytes memory);
 
     /**
-     * The function to swap the tokens on the contract
-     * @param tokens_ Token for the swap
-     * @param poolsFee_ Pools fee for the swap
-     * @param amountIn_ Amount IN to swap
-     * @param amountOutMinimum_ Minimal amount OUT to receive
+     * The function to swap the tokens on the contract.
+     * @param tokens_ Token for the swap.
+     * @param poolsFee_ Pools fee for the swap.
+     * @param amountIn_ Amount IN to swap.
+     * @param amountOutMinimum_ Minimal amount OUT to receive.
+     * @param deadline_  The unix time after which a swap will fail, to protect against long-pending transactions and wild swings in prices.
      */
     function swapExactInputMultihop(
         address[] calldata tokens_,
         uint24[] calldata poolsFee_,
         uint256 amountIn_,
-        uint256 amountOutMinimum_
+        uint256 amountOutMinimum_,
+        uint256 deadline_
     ) external returns (uint256);
 
     /**

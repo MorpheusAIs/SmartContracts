@@ -760,7 +760,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function version() external pure returns (uint256) {
-        return 6;
+        return 7;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {

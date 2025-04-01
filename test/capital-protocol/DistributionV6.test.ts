@@ -482,7 +482,7 @@ describe('DistributionV6', () => {
         await setTime(oneDay + oneDay * 3);
         expect(await DistributionV6.getCurrentUserReward(poolId, OWNER.address)).to.closeTo(wei(72), wei(0.01));
         expect((await DistributionV6.poolsData(poolId)).totalVirtualDeposited).to.eq(wei(4));
-        expect(await DistributionV6.version()).to.eq(5);
+        expect(await DistributionV6.version()).to.eq(6);
 
         // Claim after 1 day
         await DistributionV6.connect(SECOND).claim(poolId, SECOND, { value: wei(0.5) });
