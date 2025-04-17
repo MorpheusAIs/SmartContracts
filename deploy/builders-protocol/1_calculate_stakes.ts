@@ -45,36 +45,36 @@ module.exports = async function (deployer: Deployer) {
     totalBuildersVirtualDeposited += buildersVirtualDeposited;
     totalBuildersDeposited += buildersDeposited;
 
-    let userSumForBuilderSubnet = 0n;
-    let userSumVirtualForBuilderSubnet = 0n;
+    // let userSumForBuilderSubnet = 0n;
+    // let userSumVirtualForBuilderSubnet = 0n;
     for (let k = 0; k < subnet.users.length; k++) {
       const userAddress = subnet.users[k];
       const userData = await contract.usersData(userAddress, subnet.id);
 
       const userDeposited = userData[2];
       const userVirtualDeposited = userData[3];
-      userSumForBuilderSubnet += userDeposited;
-      userSumVirtualForBuilderSubnet += userVirtualDeposited;
+      // userSumForBuilderSubnet += userDeposited;
+      // userSumVirtualForBuilderSubnet += userVirtualDeposited;
 
       totalUsersDeposited += userDeposited;
       totalUsersVirtualDeposited += userVirtualDeposited;
     }
 
-    if (buildersVirtualDeposited !== userSumVirtualForBuilderSubnet) {
-      console.log('---- virtual sum');
-      console.log(i);
-      console.log(subnet.name);
-      console.log(buildersVirtualDeposited);
-      console.log(userSumVirtualForBuilderSubnet);
-    }
+    // if (buildersVirtualDeposited !== userSumVirtualForBuilderSubnet) {
+    //   console.log('---- virtual sum');
+    //   console.log(i);
+    //   console.log(subnet.name);
+    //   console.log(buildersVirtualDeposited);
+    //   console.log(userSumVirtualForBuilderSubnet);
+    // }
 
-    if (buildersDeposited !== userSumForBuilderSubnet) {
-      console.log('---- sum');
-      console.log(i);
-      console.log(subnet.name);
-      console.log(buildersDeposited);
-      console.log(userSumForBuilderSubnet);
-    }
+    // if (buildersDeposited !== userSumForBuilderSubnet) {
+    //   console.log('---- sum');
+    //   console.log(i);
+    //   console.log(subnet.name);
+    //   console.log(buildersDeposited);
+    //   console.log(userSumForBuilderSubnet);
+    // }
   }
 
   const totalPoolData = await contract.totalPoolData();
@@ -93,3 +93,4 @@ module.exports = async function (deployer: Deployer) {
 };
 
 // npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network base --only 1
+// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network arbitrum --only 1

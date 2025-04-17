@@ -21,24 +21,47 @@ const builderPoolData = {
   interval: 86400,
 };
 
-// BASE setup
+//// BASE setup
 const buildersAddress = '0x42BB446eAE6dca7723a9eBdb81EA88aFe77eF4B9';
 const feeConfig = '0x845FBB4B3e2207BF03087b8B94D2430AB11088eE';
 const stakeToken = '0x7431aDa8a591C955a994a21710752EF9b882b8e3';
-
 // Setup from Morpheus
-const treasury = '0x19ec1E4b714990620edf41fE28e9a1552953a7F4';
-const minWithdrawLockPeriodAfterStake = 604800;
-const maxShareForNetwork = wei(1, 25);
-const rewardCalculationStartsAt = 1739577600;
+const treasury = '0x19ec1E4b714990620edf41fE28e9a1552953a7F4'; // ???
+const minWithdrawLockPeriodAfterStake = 604800; // ???
+const maxShareForNetwork = wei(0.7, 25);
+const rewardCalculationStartsAt = 1739577600; // ???
+
+//// ARB setup
+// const buildersAddress = '0xC0eD68f163d44B6e9985F0041fDf6f67c6BCFF3f';
+// const feeConfig = '0xc03d87085E254695754a74D2CF76579e167Eb895';
+// const stakeToken = '0x092baadb7def4c3981454dd9c0a0d7ff07bcfc86';
+// // Setup from Morpheus
+// const treasury = ''; // ???
+// const minWithdrawLockPeriodAfterStake = 0; // ???
+// const maxShareForNetwork = wei(0.3, 25);
+// const rewardCalculationStartsAt = 1739577600; // ???
+
+type Subnet = {
+  id: string;
+  name: string;
+  admin: string;
+  startsAt: number;
+  minimalDeposit: number;
+  claimLockEnd: number;
+  withdrawLockPeriodAfterDeposit: number;
+  totalUsers: number;
+  users: string[];
+  description: string;
+  website: string;
+};
 
 module.exports = async function (deployer: Deployer) {
   const builders = await deployer.deployed(Builders__factory, buildersAddress);
-  const buildersV2Impl = await deployBuildersV3(deployer);
+  const buildersV3Impl = await deployBuildersV3(deployer);
 
   // MULTISIG EXECUTION ONLY, added for the tests
   const buildersOwner = await getBuildersOwner(builders);
-  await builders.connect(buildersOwner).upgradeTo(buildersV2Impl);
+  await builders.connect(buildersOwner).upgradeTo(buildersV3Impl);
   const buildersV3 = await deployer.deployed(BuildersV3__factory, buildersAddress);
   await buildersV3.connect(buildersOwner).setMigrationOwner((await deployer.getSigner()).getAddress());
   // END
@@ -46,12 +69,12 @@ module.exports = async function (deployer: Deployer) {
   const builderSubnets = await deployBuildersSubnets(deployer, buildersV3);
 
   // START prepare buildersV3 for migrations
-  await buildersV3.setBuilderSubnets(builderSubnets);
   await buildersV3.setPaused();
+  await buildersV3.setBuilderSubnets(builderSubnets);
   // END
 
-  await createSubnets(builderSubnets);
-  // await moveUsersStakes(buildersV3);
+  await createSubnets(builderSubnets, 0, 20);
+  await moveUsersStakes(buildersV3, 0, 20);
 };
 
 const deployBuildersSubnets = async (deployer: Deployer, buildersV3: BuildersV3): Promise<BuilderSubnets> => {
@@ -84,19 +107,6 @@ const getBuildersOwner = async (builders: Builders) => {
 const createSubnets = async (builderSubnets: BuilderSubnets, from = 0, to = 0) => {
   const configPath = `deploy/builders-protocol/data/subnets.json`;
 
-  type Subnet = {
-    id: string;
-    name: string;
-    admin: string;
-    startsAt: number;
-    minimalDeposit: number;
-    claimLockEnd: number;
-    withdrawLockPeriodAfterDeposit: number;
-    totalUsers: number;
-    users: string[];
-    description: string;
-    website: string;
-  };
   const data = JSON.parse(readFileSync(configPath, 'utf-8')) as Subnet[];
   to = to === 0 ? data.length : to;
 
@@ -128,19 +138,6 @@ const createSubnets = async (builderSubnets: BuilderSubnets, from = 0, to = 0) =
 const moveUsersStakes = async (buildersV3: BuildersV3, from = 0, to = 0) => {
   const configPath = `deploy/builders-protocol/data/subnets.json`;
 
-  type Subnet = {
-    id: string;
-    name: string;
-    admin: string;
-    startsAt: number;
-    minimalDeposit: number;
-    claimLockEnd: number;
-    withdrawLockPeriodAfterDeposit: number;
-    totalUsers: number;
-    users: string[];
-    description: string;
-    website: string;
-  };
   const data = JSON.parse(readFileSync(configPath, 'utf-8')) as Subnet[];
   to = to === 0 ? data.length : to;
 
@@ -153,4 +150,5 @@ const moveUsersStakes = async (buildersV3: BuildersV3, from = 0, to = 0) => {
 };
 
 // npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --only 3
-// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network base --only 3
+// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network base --only 3 --verify
+// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network arbitrum --only 3 --verify

@@ -1,8 +1,9 @@
 import fs from 'fs';
 import fetch from 'node-fetch';
 
-const SUBGRAPH_URL =
-  'https://subgraph.satsuma-prod.com/8675f21b07ed/9iqb9f4qcmhosiruyg763--465704/morpheus-mainnet-base/api';
+const SUBGRAPH_URL = 'https://subgraph.satsuma-prod.com/45db3de29da6/alexs-team--477165/morpheus-mainnet-base-v2/api';
+// const SUBGRAPH_URL =
+//   'https://subgraph.satsuma-prod.com/45db3de29da6/alexs-team--477165/morpheus-mainnet-arbitrum-v2/api';
 
 const BUILDERS_QUERY = `
   {
@@ -55,7 +56,7 @@ type BuilderUsersSubgraphResponse = {
 const formBuilderUsersQuery = (builderProjectId: string) => {
   return `
   {
-    buildersUsers (first: 1000, where: {buildersProject: "${builderProjectId}", staked_gt: 0}) {
+    buildersUsers (first: 1000, where: {buildersProject: "${builderProjectId}"}) {
      address
     }
   }
@@ -87,18 +88,19 @@ async function fetchData() {
     const data: Array<BuilderProject & { users: string[]; description: string; website: string }> = [];
     for (let i = 0; i < builders.data.buildersProjects.length; i++) {
       const builder = builders.data.buildersProjects[i];
-      const query = formBuilderUsersQuery(builder.id);
-      const res = (await callSubgraph(query)) as BuilderUsersSubgraphResponse;
+      // const query = formBuilderUsersQuery(builder.id);
+      // const res = (await callSubgraph(query)) as BuilderUsersSubgraphResponse;
 
-      if (Number(builder.totalUsers) !== res.data.buildersUsers.length) {
-        throw Error(
-          `Builder: ${builder.name}, total users: ${builder.totalUsers}, received users count: ${res.data.buildersUsers.length}`,
-        );
-      }
+      // if (Number(builder.totalUsers) !== res.data.buildersUsers.length) {
+      //   throw Error(
+      //     `Builder: ${builder.name}, total users: ${builder.totalUsers}, received users count: ${res.data.buildersUsers.length}`,
+      //   );
+      // }
 
-      const users = res.data.buildersUsers.map((buildersUsers) => {
-        return buildersUsers.address;
-      });
+      // const users = res.data.buildersUsers.map((buildersUsers) => {
+      //   return buildersUsers.address;
+      // });
+      const users: string[] = [];
 
       data.push({ ...builder, users, description: '', website: '' });
     }
