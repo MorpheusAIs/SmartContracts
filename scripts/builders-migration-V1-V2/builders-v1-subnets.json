@@ -780,6 +780,19 @@
     "website": ""
   },
   {
+    "id": "0xa7fafe0dddaeea5789018c11d0c420b718734b6c36a454c4613befb9b0e0f69d",
+    "name": "Frostbyte",
+    "admin": "0x4375a9cda86ff20ab963fdebd89610d4311d5b28",
+    "startsAt": "1739736000",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739750400",
+    "totalUsers": "1",
+    "users": ["0x9e9cba2844bd75dcf0d07fa273050d8952f40888"],
+    "description": "",
+    "website": ""
+  },
+  {
     "id": "0xaabc7043f8d1616d55ecae080430fb180ece49b4c269377d6f9c830854acabfc",
     "name": "Tales & Conquest",
     "admin": "0x55d6c73306a7af0e68c004147f86a98f16130b3b",

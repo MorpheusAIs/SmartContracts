@@ -47,3 +47,22 @@ export const getDefaultSwapParams = (tokenIn: string, tokenOut: string): IL2Toke
     sqrtPriceLimitX96: 0,
   };
 };
+
+export const getDefaultRewardsPools = () => {
+  return [
+    {
+      payoutStart: oneDay,
+      decreaseInterval: oneDay,
+      initialReward: wei(100),
+      rewardDecrease: wei(2),
+      lastCalculatedTimestamp: oneDay,
+    },
+    {
+      payoutStart: oneDay * 10,
+      decreaseInterval: oneDay * 2,
+      initialReward: wei(1000),
+      rewardDecrease: wei(4),
+      lastCalculatedTimestamp: oneDay * 10,
+    },
+  ];
+};

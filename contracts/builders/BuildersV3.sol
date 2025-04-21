@@ -248,7 +248,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
 
         uint256 pendingRewards_ = _getCurrentBuilderReward(currentRate_, builderPoolData);
 
-        uint256 multiplier_ = LockMultiplierMath._getLockPeriodMultiplier(
+        uint256 multiplier_ = LockMultiplierMath.getLockPeriodMultiplier(
             uint128(block.timestamp),
             builderPool.claimLockEnd
         );
@@ -294,7 +294,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
             return PRECISION;
         }
 
-        return LockMultiplierMath._getLockPeriodMultiplier(userData.claimLockStart, builderPool.claimLockEnd);
+        return LockMultiplierMath.getLockPeriodMultiplier(userData.claimLockStart, builderPool.claimLockEnd);
     }
 
     function getCurrentBuilderReward(bytes32 builderPoolId_) external view returns (uint256) {
@@ -308,7 +308,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function getLockPeriodMultiplier(uint128 lockStart_, uint128 lockEnd_) public pure returns (uint256) {
-        return LockMultiplierMath._getLockPeriodMultiplier(lockStart_, lockEnd_);
+        return LockMultiplierMath.getLockPeriodMultiplier(lockStart_, lockEnd_);
     }
 
     function _validateBuilderPool(BuilderPool calldata builderPool_) internal view {

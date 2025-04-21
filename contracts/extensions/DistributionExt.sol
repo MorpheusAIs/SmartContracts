@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {IDistribution} from "../interfaces/IDistribution.sol";
+import {IDistribution} from "../interfaces/capital-protocol/old/IDistribution.sol";
 import {IDistributionExt} from "../interfaces/extensions/IDistributionExt.sol";
 
 contract DistributionExt is IDistributionExt, OwnableUpgradeable, UUPSUpgradeable {

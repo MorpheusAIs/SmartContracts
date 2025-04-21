@@ -63,17 +63,21 @@ describe('BuilderSubnets', () => {
         await expect(builders.BuilderSubnets_init(token, feeConfig, TREASURY, 1, ZERO_ADDR)).to.be.rejectedWith(reason);
       });
       it('should revert if try to call init function twice', async () => {
-        const libFactory = await ethers.getContractFactory('LinearDistributionIntervalDecrease');
-        const lib = await libFactory.deploy();
+        const [lib1Factory, lib2Factory, proxyFactory] = await Promise.all([
+          ethers.getContractFactory('LinearDistributionIntervalDecrease'),
+          ethers.getContractFactory('LockMultiplierMath'),
+          ethers.getContractFactory('ERC1967Proxy'),
+        ]);
 
-        const [implFactory, proxyFactory] = await Promise.all([
+        const [lib1, lib2] = await Promise.all([await lib1Factory.deploy(), await lib2Factory.deploy()]);
+
+        const [implFactory] = await Promise.all([
           ethers.getContractFactory('BuilderSubnets', {
             libraries: {
-              LinearDistributionIntervalDecrease: await lib.getAddress(),
+              LinearDistributionIntervalDecrease: await lib1.getAddress(),
+              LockMultiplierMath: await lib2.getAddress(),
             },
           }),
-          ethers.getContractFactory('ERC1967Proxy'),
-          ethers.getContractFactory('LinearDistributionIntervalDecrease'),
         ]);
 
         const impl = await implFactory.deploy();
@@ -90,12 +94,12 @@ describe('BuilderSubnets', () => {
 
     describe('#_authorizeUpgrade', () => {
       it('should correctly upgrade', async () => {
-        const BuildersV2Mock = await ethers.getContractFactory('BuildersV2Mock');
-        const buildersV2Mock = await BuildersV2Mock.deploy();
+        const implFactory = await ethers.getContractFactory('L1SenderMock');
+        const impl = await implFactory.deploy();
 
         expect(await builders.version()).to.eq(1);
-        await builders.upgradeTo(buildersV2Mock);
-        expect(await builders.version()).to.eq(999);
+        await builders.upgradeTo(impl);
+        expect(await builders.version()).to.eq(666);
       });
       it('should revert if caller is not the owner', async () => {
         await expect(builders.connect(BOB).upgradeTo(ZERO_ADDR)).to.be.revertedWith('Ownable: caller is not the owner');

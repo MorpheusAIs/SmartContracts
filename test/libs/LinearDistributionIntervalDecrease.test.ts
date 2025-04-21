@@ -3,7 +3,7 @@ import { ethers } from 'hardhat';
 
 import { DistributionV2Mock, IDistribution } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
-import { getDefaultPool, oneDay, oneHour } from '@/test/helpers/distribution-helper';
+import { getDefaultPool, oneHour } from '@/test/helpers/distribution-helper';
 import { Reverter } from '@/test/helpers/reverter';
 
 describe('LinearDistributionIntervalDecrease', () => {
@@ -265,14 +265,6 @@ describe('LinearDistributionIntervalDecrease', () => {
 
 const _testRewardsCalculation = async (distribution: DistributionV2Mock, poolId: number, payoutStart: number) => {
   let reward;
-
-  console.log(
-    ethers.formatEther(await distribution.getPeriodReward(poolId, payoutStart + 0, payoutStart + 8 * oneHour)),
-  );
-
-  console.log(await distribution.getPeriodReward(poolId, payoutStart + 0 * oneHour, payoutStart + 2 * oneHour));
-
-  console.log(await distribution.getPeriodReward(poolId, payoutStart + 2 * oneHour, payoutStart + 4 * oneHour));
 
   // Range in one interval, first interval
   reward = await distribution.getPeriodReward(poolId, payoutStart + 0 * oneHour, payoutStart + 2 * oneHour);

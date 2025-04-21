@@ -19,7 +19,14 @@ describe('LockMultiplierMath', () => {
   let builders: BuildersV2;
 
   before(async () => {
-    const buildersFactory = await ethers.getContractFactory('BuildersV2');
+    const [lib2Factory] = await Promise.all([ethers.getContractFactory('LockMultiplierMath')]);
+    const [lib2] = await Promise.all([await lib2Factory.deploy()]);
+
+    const buildersFactory = await ethers.getContractFactory('BuildersV2', {
+      libraries: {
+        LockMultiplierMath: await lib2.getAddress(),
+      },
+    });
 
     builders = await buildersFactory.deploy();
 

@@ -30,6 +30,9 @@ describe('BuildersTreasury', () => {
   before(async () => {
     [OWNER, SECOND, MINTER, DELEGATE, LZ_ENDPOINT_OWNER] = await ethers.getSigners();
 
+    const [lib2Factory] = await Promise.all([ethers.getContractFactory('LockMultiplierMath')]);
+    const [lib2] = await Promise.all([await lib2Factory.deploy()]);
+
     const [
       buildersFactory,
       buildersTreasuryFactory,
@@ -38,7 +41,11 @@ describe('BuildersTreasury', () => {
       ERC1967ProxyFactory,
       feeConfigFactory,
     ] = await Promise.all([
-      ethers.getContractFactory('Builders'),
+      ethers.getContractFactory('Builders', {
+        libraries: {
+          LockMultiplierMath: await lib2.getAddress(),
+        },
+      }),
       ethers.getContractFactory('BuildersTreasury'),
       ethers.getContractFactory('MOROFT'),
       ethers.getContractFactory('LayerZeroEndpointV2Mock'),
@@ -115,7 +122,7 @@ describe('BuildersTreasury', () => {
 
     describe('#_authorizeUpgrade', () => {
       it('should correctly upgrade', async () => {
-        const BuildersV2Mock = await ethers.getContractFactory('BuildersV2');
+        const BuildersV2Mock = await ethers.getContractFactory('L1SenderMock');
         const buildersV2Mock = await BuildersV2Mock.deploy();
 
         await buildersTreasury.upgradeTo(buildersV2Mock);
@@ -141,7 +148,14 @@ describe('BuildersTreasury', () => {
     it('should set the builders', async () => {
       expect(await buildersTreasury.builders()).to.be.equal(await builders.getAddress());
 
-      const buildersFactory = await ethers.getContractFactory('Builders');
+      const [lib2Factory] = await Promise.all([ethers.getContractFactory('LockMultiplierMath')]);
+      const [lib2] = await Promise.all([await lib2Factory.deploy()]);
+
+      const buildersFactory = await ethers.getContractFactory('Builders', {
+        libraries: {
+          LockMultiplierMath: await lib2.getAddress(),
+        },
+      });
       const buildersImpl = await buildersFactory.deploy();
 
       await buildersTreasury.setBuilders(buildersImpl);
@@ -234,3 +248,6 @@ describe('BuildersTreasury', () => {
     });
   });
 });
+
+// npx hardhat test "test/builders/BuildersTreasury.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builders/BuildersTreasury.test.ts"

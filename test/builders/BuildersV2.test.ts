@@ -8,7 +8,7 @@ import { getDefaultBuilderPool } from '../helpers/builders-helper';
 import { oneDay, oneHour } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
-import { Builders, BuildersTreasury, FeeConfig, IBuilders, MOROFT } from '@/generated-types/ethers';
+import { BuildersTreasury, BuildersV2, FeeConfig, IBuilders, MOROFT } from '@/generated-types/ethers';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 
@@ -31,7 +31,7 @@ describe('BuildersV2', () => {
   let DELEGATE: SignerWithAddress;
   let LZ_ENDPOINT_OWNER: SignerWithAddress;
 
-  let builders: Builders;
+  let builders: BuildersV2;
 
   let buildersTreasury: BuildersTreasury;
   let feeConfig: FeeConfig;
@@ -40,8 +40,15 @@ describe('BuildersV2', () => {
   before(async () => {
     [OWNER, SECOND, FEE_TREASURY, MINTER, DELEGATE, LZ_ENDPOINT_OWNER] = await ethers.getSigners();
 
+    const [lib2Factory] = await Promise.all([ethers.getContractFactory('LockMultiplierMath')]);
+    const [lib2] = await Promise.all([await lib2Factory.deploy()]);
+
     const [Builders, Mor, FeeConfig, BuildersTreasury, LZEndpointMock, ERC1967Proxy] = await Promise.all([
-      ethers.getContractFactory('BuildersV2'),
+      ethers.getContractFactory('BuildersV2', {
+        libraries: {
+          LockMultiplierMath: await lib2.getAddress(),
+        },
+      }),
       ethers.getContractFactory('MOROFT'),
       ethers.getContractFactory('FeeConfig'),
       ethers.getContractFactory('BuildersTreasury'),
@@ -65,8 +72,8 @@ describe('BuildersV2', () => {
     buildersTreasury = BuildersTreasury.attach(buildersTreasuryProxy) as BuildersTreasury;
     feeConfig = FeeConfig.attach(feeConfigProxy) as FeeConfig;
     await feeConfig.FeeConfig_init(FEE_TREASURY, 1);
-    builders = Builders.attach(buildersProxy) as Builders;
-    await builders.Builders_init(
+    builders = Builders.attach(buildersProxy) as BuildersV2;
+    await builders.BuildersV2_init(
       depositToken,
       feeConfig,
       buildersTreasury,
@@ -92,12 +99,8 @@ describe('BuildersV2', () => {
     describe('#constructor', () => {
       it('should disable initialize function', async () => {
         const reason = 'Initializable: contract is already initialized';
-
-        const Builders = await ethers.getContractFactory('Builders');
-        const builders = await Builders.deploy();
-
         await expect(
-          builders.Builders_init(
+          builders.BuildersV2_init(
             depositToken,
             feeConfig,
             buildersTreasury,
@@ -120,7 +123,7 @@ describe('BuildersV2', () => {
         const reason = 'Initializable: contract is already initialized';
 
         await expect(
-          builders.Builders_init(
+          builders.BuildersV2_init(
             depositToken,
             feeConfig,
             buildersTreasury,
@@ -133,7 +136,7 @@ describe('BuildersV2', () => {
 
     describe('#_authorizeUpgrade', () => {
       it('should correctly upgrade', async () => {
-        const BuildersV2Mock = await ethers.getContractFactory('BuildersV2');
+        const BuildersV2Mock = await ethers.getContractFactory('L1Sender');
         const buildersV2Mock = await BuildersV2Mock.deploy();
 
         await builders.upgradeTo(buildersV2Mock);

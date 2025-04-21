@@ -268,7 +268,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0xa4b427af1952374b3527cebcfdcc9d063dfe802c",
@@ -539,7 +539,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x99204c9b0c263e5ef1bbcd3cfc250f8a5928d263"
@@ -555,7 +555,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x99204c9b0c263e5ef1bbcd3cfc250f8a5928d263",
@@ -1169,6 +1169,19 @@
     "website": ""
   },
   {
+    "id": "0xa7fafe0dddaeea5789018c11d0c420b718734b6c36a454c4613befb9b0e0f69d",
+    "name": "Frostbyte",
+    "admin": "0x4375a9cda86ff20ab963fdebd89610d4311d5b28",
+    "startsAt": "1739736000",
+    "minimalDeposit": "1000000000000000",
+    "withdrawLockPeriodAfterDeposit": "2592000",
+    "claimLockEnd": "1739750400",
+    "totalUsers": "1",
+    "users": ["0x9e9cba2844bd75dcf0d07fa273050d8952f40888"],
+    "description": "",
+    "website": ""
+  },
+  {
     "id": "0xaabc7043f8d1616d55ecae080430fb180ece49b4c269377d6f9c830854acabfc",
     "name": "Tales & Conquest",
     "admin": "0x55d6c73306a7af0e68c004147f86a98f16130b3b",
@@ -1216,7 +1229,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x99204c9b0c263e5ef1bbcd3cfc250f8a5928d263"
@@ -1274,7 +1287,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x298a247d7a265bf9e904545209254e4777e531c3",
       "0xb0032e86487ec45e200b84cc41d81f7293a95452",
@@ -1304,7 +1317,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "4",
+    "totalUsers": "3",
     "users": [
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x9e9cba2844bd75dcf0d07fa273050d8952f40888",
@@ -1591,7 +1604,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "2",
+    "totalUsers": "1",
     "users": [
       "0x5789d242a2f72f8509ed7344d1bc9dc4a3daa9a9",
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd"
@@ -1656,7 +1669,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x2523008f1efd00551ab288f342efc481286132db",
       "0x76405775eb54767f1f95a9fd1ea5492b0204d87a",
@@ -1688,6 +1701,7 @@
     "claimLockEnd": "1739577600",
     "totalUsers": "84",
     "users": [
+      "0x05f200ad90e70750110e02e73e17caa81383ebc8",
       "0x0819f0d0230c5a0fbf9acfe5d1655aca21108b24",
       "0x11cf7b9623cca5f6556b8c699071e1d7fe60444c",
       "0x127dbdc26456824b8288f4fad71e4d0cad33f90a",
@@ -1831,7 +1845,7 @@
     "minimalDeposit": "1000000000000000",
     "withdrawLockPeriodAfterDeposit": "2592000",
     "claimLockEnd": "1739577600",
-    "totalUsers": "3",
+    "totalUsers": "2",
     "users": [
       "0x5ae426d938fde32ac9268d253f1fe3bb6ab9d5dd",
       "0x64174450c49242535b4184e3988cc4145b80526c",

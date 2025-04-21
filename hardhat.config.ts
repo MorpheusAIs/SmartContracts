@@ -8,6 +8,7 @@ import '@typechain/hardhat';
 import * as dotenv from 'dotenv';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
+import 'hardhat-storage-layout';
 import { HardhatUserConfig } from 'hardhat/config';
 import 'solidity-coverage';
 import 'tsconfig-paths/register';
