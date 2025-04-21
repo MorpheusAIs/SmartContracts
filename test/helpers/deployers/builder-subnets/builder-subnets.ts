@@ -22,7 +22,6 @@ export const deployBuilderSubnets = async (
     ethers.getContractFactory('BuilderSubnets', {
       libraries: {
         LinearDistributionIntervalDecrease: await lib1.getAddress(),
-        LockMultiplierMath: await lib2.getAddress(),
       },
     }),
   ]);

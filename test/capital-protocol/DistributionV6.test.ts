@@ -22,7 +22,7 @@ import {
   UniswapSwapRouterMock,
   WStETHMock,
 } from '@/generated-types/ethers';
-import { IReferrer } from '@/generated-types/ethers/contracts/DistributionV5';
+import { IReferrer } from '@/generated-types/ethers/contracts/capital-protocol/DistributionV6';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { getCurrentBlockTime, setNextTime, setTime } from '@/test/helpers/block-helper';
@@ -1706,6 +1706,51 @@ describe('DistributionV6', () => {
     });
   });
 
+  describe('#setClaimSender', () => {
+    const poolId = 0;
+
+    beforeEach(async () => {
+      const pool = getDefaultPool();
+      await distribution.createPool(pool);
+    });
+
+    it('should correctly set and skip the claim sender', async () => {
+      expect(await distribution.claimSender(poolId, OWNER, SECOND)).to.be.eq(false);
+      await distribution.setClaimSender(poolId, [SECOND], [true]);
+      expect(await distribution.claimSender(poolId, OWNER, SECOND)).to.be.eq(true);
+      await distribution.setClaimSender(poolId, [SECOND], [false]);
+      expect(await distribution.claimSender(poolId, OWNER, SECOND)).to.be.eq(false);
+    });
+    it('should revert if invalid array length', async () => {
+      await expect(distribution.setClaimSender(poolId, [SECOND], [true, false])).to.be.revertedWith(
+        'DS: invalid array length',
+      );
+    });
+    it("should revert if pool doesn't exist", async () => {
+      await expect(distribution.setClaimSender(1, [SECOND], [true])).to.be.revertedWith("DS: pool doesn't exist");
+    });
+  });
+
+  describe('#setClaimReceiver', () => {
+    const poolId = 0;
+
+    beforeEach(async () => {
+      const pool = getDefaultPool();
+      await distribution.createPool(pool);
+    });
+
+    it('should correctly set and skip the claim receiver', async () => {
+      expect(await distribution.claimReceiver(poolId, OWNER)).to.be.eq(ZERO_ADDR);
+      await distribution.setClaimReceiver(poolId, SECOND);
+      expect(await distribution.claimReceiver(poolId, OWNER)).to.be.eq(SECOND);
+      await distribution.setClaimReceiver(poolId, ZERO_ADDR);
+      expect(await distribution.claimReceiver(poolId, OWNER)).to.be.eq(ZERO_ADDR);
+    });
+    it("should revert if pool doesn't exist", async () => {
+      await expect(distribution.setClaimReceiver(1, OWNER)).to.be.revertedWith("DS: pool doesn't exist");
+    });
+  });
+
   describe('#stake', () => {
     const poolId = 0;
 
@@ -2509,19 +2554,6 @@ describe('DistributionV6', () => {
       expect(userData.deposited).to.eq(wei(1));
       expect(userData.pendingRewards).to.eq(0);
     });
-    it('should correctly claim for receiver', async () => {
-      await setNextTime(oneHour * 2);
-      await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
-
-      await setNextTime(oneDay + oneDay * 2);
-      await distribution.connect(SECOND).claim(poolId, OWNER, { value: wei(0.5) });
-
-      expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(198));
-      expect(await rewardToken.balanceOf(SECOND.address)).to.eq(0);
-      const userData = await distribution.usersData(SECOND.address, poolId);
-      expect(userData.deposited).to.eq(wei(1));
-      expect(userData.pendingRewards).to.eq(0);
-    });
     it('should not save reward to pending reward if cannot mint reward token', async () => {
       const amountToMintMaximum = BigInt((await rewardToken.cap()) - (await rewardToken.totalSupply()));
 
@@ -2543,7 +2575,64 @@ describe('DistributionV6', () => {
       userData = await distribution.usersData(OWNER, poolId);
       expect(userData.pendingRewards).to.equal(wei(0));
     });
+    it('should correctly claim for the another receiver', async () => {
+      await setNextTime(oneHour * 2);
+      await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
 
+      await setNextTime(oneDay + oneDay * 2);
+      await distribution.connect(SECOND).claim(poolId, OWNER, { value: wei(0.5) });
+
+      expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(198));
+      expect(await rewardToken.balanceOf(SECOND.address)).to.eq(0);
+      const userData = await distribution.usersData(SECOND.address, poolId);
+      expect(userData.deposited).to.eq(wei(1));
+      expect(userData.pendingRewards).to.eq(0);
+    });
+    describe('#claimFor', () => {
+      beforeEach(async () => {
+        await setNextTime(oneHour * 2);
+        await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
+
+        // Deposit 1 day after the start of reward payment
+        await setNextTime(oneDay + oneDay);
+        await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
+      });
+      it('should correctly claim, with `claimSender` without `claimReceiver`', async () => {
+        await distribution.connect(SECOND).setClaimSender(poolId, [OWNER], [true]);
+        // Claim after 1.5 days
+        await setNextTime(oneDay + oneDay * 1.5);
+        await distribution.connect(OWNER).claimFor(poolId, SECOND, SECOND, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(149));
+        const userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.deposited).to.eq(wei(2));
+        expect(userData.virtualDeposited).to.eq(wei(2));
+        expect(userData.pendingRewards).to.eq(0);
+      });
+      it('should correctly claim, without `claimSender` and with `claimReceiver`', async () => {
+        await distribution.connect(SECOND).setClaimReceiver(poolId, REFERRER_1);
+
+        // Claim after 1.5 days
+        await setNextTime(oneDay + oneDay * 1.5);
+        await distribution.connect(OWNER).claimFor(poolId, SECOND, ZERO_ADDR, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(REFERRER_1.address)).to.eq(wei(149));
+        const userData = await distribution.usersData(SECOND.address, poolId);
+        expect(userData.deposited).to.eq(wei(2));
+        expect(userData.virtualDeposited).to.eq(wei(2));
+        expect(userData.pendingRewards).to.eq(0);
+      });
+      it('should revert if invalid caller', async () => {
+        await expect(
+          distribution.connect(OWNER).claimFor(poolId, SECOND, OWNER, { value: wei(0.5) }),
+        ).to.be.revertedWith('DS: invalid caller');
+      });
+      it("should revert when pool doesn't exist", async () => {
+        await expect(distribution.connect(OWNER).claimFor(111, SECOND, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+          "DS: pool doesn't exist",
+        );
+      });
+    });
     describe('with multiplier', () => {
       const poolId = 0;
       const payoutStart = 1707393600;
@@ -2653,7 +2742,6 @@ describe('DistributionV6', () => {
         expect(userData.pendingRewards).to.eq(0);
       });
     });
-
     describe('with referrer', () => {
       const referrerTiers = getDefaultReferrerTiers();
 
@@ -2876,25 +2964,6 @@ describe('DistributionV6', () => {
         expect(referralData.virtualAmountStaked).to.eq(wei(0.04));
         expect(referralData.pendingRewards).to.eq(0);
       });
-    });
-    it('should correctly claim, from the allowed address', async () => {
-      await setNextTime(oneHour * 2);
-      await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
-
-      // Deposit 1 day after the start of reward payment
-      await setNextTime(oneDay + oneDay);
-      await distribution.connect(SECOND).stake(poolId, wei(1), 0, ZERO_ADDR);
-
-      await distribution.connect(SECOND).setAddressesAllowedToClaim([OWNER], [true]);
-      // Claim after 1.5 days
-      await setNextTime(oneDay + oneDay * 1.5);
-      await distribution.connect(OWNER).claimFor(poolId, SECOND, SECOND, { value: wei(0.5) });
-
-      expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(149));
-      const userData = await distribution.usersData(SECOND.address, poolId);
-      expect(userData.deposited).to.eq(wei(2));
-      expect(userData.virtualDeposited).to.eq(wei(2));
-      expect(userData.pendingRewards).to.eq(0);
     });
     it("should revert if pool doesn't exist", async () => {
       await expect(distribution.connect(SECOND).claim(1, SECOND)).to.be.revertedWith("DS: pool doesn't exist");
@@ -3455,13 +3524,25 @@ describe('DistributionV6', () => {
         expect(referrerData.rate).to.eq(poolData.rate);
         expect(referrerData.pendingRewards).to.eq(0);
       });
-      it('should claim referrer tier correctly, from the allowed address', async () => {
-        await distribution.connect(SECOND).stake(poolId, wei(10), 0, OWNER);
+      describe('#claimReferrerTierFor', () => {
+        it('should claim referrer tier correctly, with `claimSender`', async () => {
+          await distribution.connect(SECOND).stake(poolId, wei(10), 0, OWNER);
 
-        await setNextTime(oneDay + oneDay);
+          await setNextTime(oneDay + oneDay);
 
-        await distribution.setAddressesAllowedToClaim([SECOND], [true]);
-        await distribution.connect(SECOND).claimReferrerTierFor(poolId, OWNER, OWNER, { value: wei(0.5) });
+          await distribution.setClaimSender(poolId, [SECOND], [true]);
+          await distribution.connect(SECOND).claimReferrerTierFor(poolId, OWNER, OWNER, { value: wei(0.5) });
+        });
+        it('should revert if invalid caller', async () => {
+          await expect(
+            distribution.connect(OWNER).claimReferrerTierFor(poolId, SECOND, OWNER, { value: wei(0.5) }),
+          ).to.be.revertedWith('DS: invalid caller');
+        });
+        it("should revert when pool doesn't exist", async () => {
+          await expect(
+            distribution.connect(OWNER).claimReferrerTierFor(111, SECOND, OWNER, { value: wei(0.5) }),
+          ).to.be.revertedWith("DS: pool doesn't exist");
+        });
       });
       it('should revert if claimLockPeriod is not passed', async () => {
         await expect(distribution.claimReferrerTier(poolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(

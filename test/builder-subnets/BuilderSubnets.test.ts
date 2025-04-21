@@ -63,19 +63,17 @@ describe('BuilderSubnets', () => {
         await expect(builders.BuilderSubnets_init(token, feeConfig, TREASURY, 1, ZERO_ADDR)).to.be.rejectedWith(reason);
       });
       it('should revert if try to call init function twice', async () => {
-        const [lib1Factory, lib2Factory, proxyFactory] = await Promise.all([
+        const [lib1Factory, proxyFactory] = await Promise.all([
           ethers.getContractFactory('LinearDistributionIntervalDecrease'),
-          ethers.getContractFactory('LockMultiplierMath'),
           ethers.getContractFactory('ERC1967Proxy'),
         ]);
 
-        const [lib1, lib2] = await Promise.all([await lib1Factory.deploy(), await lib2Factory.deploy()]);
+        const [lib1] = await Promise.all([await lib1Factory.deploy()]);
 
         const [implFactory] = await Promise.all([
           ethers.getContractFactory('BuilderSubnets', {
             libraries: {
               LinearDistributionIntervalDecrease: await lib1.getAddress(),
-              LockMultiplierMath: await lib2.getAddress(),
             },
           }),
         ]);

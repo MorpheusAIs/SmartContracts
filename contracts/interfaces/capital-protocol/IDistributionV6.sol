@@ -8,14 +8,23 @@ import {IDistributionV5} from "../capital-protocol/old/IDistributionV5.sol";
  * It is used to calculate the user's rewards and operate with overpluses.
  */
 interface IDistributionV6 is IDistributionV5 {
-    event AddressAllowedToClaimSet(address holder, address caller, bool isAllowed);
+    event ClaimSenderSet(uint256 poolId, address staker, address sender, bool isAllowed);
+    event ClaimReceiverSet(uint256 poolId, address staker, address receiver);
 
     /**
      * The function to set the addresses which can claim for `msg.sender`
-     * @param addresses_  The addresses list
+     * @param poolId_  The pool ID
+     * @param senders_  The addresses list
      * @param isAllowed_ Allowed or not
      */
-    function setAddressesAllowedToClaim(address[] calldata addresses_, bool[] calldata isAllowed_) external;
+    function setClaimSender(uint256 poolId_, address[] calldata senders_, bool[] calldata isAllowed_) external;
+
+    /**
+     * The function to set the addresses to receive rewards when call is from any `msg.sender`
+     * @param poolId_  The pool ID
+     * @param receiver_  The receiver address
+     */
+    function setClaimReceiver(uint256 poolId_, address receiver_) external;
 
     /**
      * The function to claim rewards from the pool for the specified address.

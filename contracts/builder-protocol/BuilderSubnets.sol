@@ -9,8 +9,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
-import {IBuilderSubnets, IERC165} from "../interfaces/builder-subnets/IBuilderSubnets.sol";
-import {IBuildersV3} from "../interfaces/builders/IBuildersV3.sol";
+import {IBuilderSubnets, IERC165} from "../interfaces/builder-protocol/IBuilderSubnets.sol";
+import {IBuildersV3} from "../interfaces/builder-protocol/IBuildersV3.sol";
 
 import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionIntervalDecrease.sol";
 

@@ -8,12 +8,12 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
-import {IBuilders, IERC165} from "../interfaces/builders/IBuilders.sol";
-import {IBuildersTreasury} from "../interfaces/builders/IBuildersTreasury.sol";
+import {IBuilders, IERC165} from "../interfaces/builder-protocol/IBuilders.sol";
+import {IBuildersTreasury} from "../interfaces/builder-protocol/IBuildersTreasury.sol";
 
 import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
 
-contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
+contract BuildersV2 is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     address public feeConfig;
@@ -42,7 +42,7 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function Builders_init(
+    function BuildersV2_init(
         address depositToken_,
         address feeConfig_,
         address buildersTreasury_,
@@ -233,6 +233,9 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
             builderPool.claimLockEnd
         );
         uint256 virtualDeposited_ = (newDeposited_ * multiplier_) / PRECISION;
+        uint256 oldVirtualDeposited_ = builderPoolData.virtualDeposited == builderPoolData.deposited
+            ? userData.deposited
+            : userData.virtualDeposited;
 
         // Update pool data
         totalPoolData.distributedRewards += newPoolRewards_;
@@ -241,16 +244,13 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
         totalPoolData.totalVirtualDeposited =
             totalPoolData.totalVirtualDeposited +
             virtualDeposited_ -
-            userData.virtualDeposited;
+            oldVirtualDeposited_;
 
         // Update builder data
         builderPoolData.rate = currentRate_;
         builderPoolData.pendingRewards = pendingRewards_;
         builderPoolData.deposited = builderPoolData.deposited + newDeposited_ - userData.deposited;
-        builderPoolData.virtualDeposited =
-            builderPoolData.virtualDeposited +
-            virtualDeposited_ -
-            userData.virtualDeposited;
+        builderPoolData.virtualDeposited = builderPoolData.virtualDeposited + virtualDeposited_ - oldVirtualDeposited_;
 
         // Update user data
         userData.deposited = newDeposited_;
@@ -337,4 +337,12 @@ contract Builders is IBuilders, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}
+
+    /**********************************************************************************************/
+    /*** V2 updates, functionality                                                              ***/
+    /**********************************************************************************************/
+
+    function version() external pure returns (uint256) {
+        return 2;
+    }
 }

@@ -45,7 +45,10 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
     mapping(address => mapping(uint256 => ReferrerData)) public referrersData;
 
     // Claim whitelist, V6 update
-    mapping(address => mapping(address => bool)) public isAddressAllowedToClaim;
+    // Pool ID => Staker address => Claimer address => Is Allowed
+    mapping(uint256 => mapping(address => mapping(address => bool))) public claimSender;
+    // Pool ID => Staker address => Claim receiver address
+    mapping(uint256 => mapping(address => address)) public claimReceiver;
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -85,7 +88,7 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     /**********************************************************************************************/
-    /*** Pool managment and data retrieval                                                      ***/
+    /*** Pool management and data retrieval                                                      ***/
     /**********************************************************************************************/
     function createPool(Pool calldata pool_) public onlyOwner {
         require(pool_.payoutStart > block.timestamp, "DS: invalid payout start value");
@@ -205,14 +208,24 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
     /*** Stake, claim, withdraw                                                                 ***/
     /**********************************************************************************************/
 
-    function setAddressesAllowedToClaim(address[] calldata addresses_, bool[] calldata isAllowed_) external {
-        require(addresses_.length == isAllowed_.length, "DS: invalid array length");
+    function setClaimSender(
+        uint256 poolId_,
+        address[] calldata senders_,
+        bool[] calldata isAllowed_
+    ) external poolExists(poolId_) {
+        require(senders_.length == isAllowed_.length, "DS: invalid array length");
 
-        for (uint256 i = 0; i < addresses_.length; ++i) {
-            isAddressAllowedToClaim[_msgSender()][addresses_[i]] = isAllowed_[i];
+        for (uint256 i = 0; i < senders_.length; ++i) {
+            claimSender[poolId_][_msgSender()][senders_[i]] = isAllowed_[i];
 
-            emit AddressAllowedToClaimSet(_msgSender(), addresses_[i], isAllowed_[i]);
+            emit ClaimSenderSet(poolId_, _msgSender(), senders_[i], isAllowed_[i]);
         }
+    }
+
+    function setClaimReceiver(uint256 poolId_, address receiver_) external poolExists(poolId_) {
+        claimReceiver[poolId_][_msgSender()] = receiver_;
+
+        emit ClaimReceiverSet(poolId_, _msgSender(), receiver_);
     }
 
     function stake(
@@ -229,7 +242,14 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     function claimFor(uint256 poolId_, address user_, address receiver_) external payable poolExists(poolId_) {
-        require(isAddressAllowedToClaim[user_][_msgSender()], "DS: invalid caller");
+        bool isClaimReceiverSet = claimReceiver[poolId_][user_] != address(0);
+        if (isClaimReceiverSet) {
+            receiver_ = claimReceiver[poolId_][user_];
+        }
+
+        if (!isClaimReceiverSet) {
+            require(claimSender[poolId_][user_][_msgSender()], "DS: invalid caller");
+        }
 
         _claim(poolId_, user_, receiver_);
     }
@@ -292,7 +312,7 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
         address referrer_,
         address receiver_
     ) external payable poolExists(poolId_) {
-        require(isAddressAllowedToClaim[referrer_][_msgSender()], "DS: invalid caller");
+        require(claimSender[poolId_][referrer_][_msgSender()], "DS: invalid caller");
 
         _claimReferrerTier(poolId_, referrer_, receiver_);
     }

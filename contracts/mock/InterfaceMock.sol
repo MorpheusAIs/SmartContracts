@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IBuilderSubnets, IERC165} from "../interfaces/builder-subnets/IBuilderSubnets.sol";
+import {IBuilderSubnets, IERC165} from "../interfaces/builder-protocol/IBuilderSubnets.sol";
 import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
 import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
