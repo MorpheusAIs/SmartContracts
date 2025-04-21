@@ -40,7 +40,10 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
 
     address public migrationOwner;
     address public builderSubnets;
+
     bool public isPaused;
+    bool public isPausedForMigration;
+
     uint256 public totalDepositsMigrated;
     mapping(bytes32 builderPoolId => mapping(address user => bool)) public isBuilderPoolUserMigrate;
 
@@ -158,7 +161,10 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         emit UserDeposited(builderPoolId_, user_, amount_);
     }
 
-    function withdraw(bytes32 builderPoolId_, uint256 amount_) external poolExists(builderPoolId_) whenNotPaused {
+    function withdraw(
+        bytes32 builderPoolId_,
+        uint256 amount_
+    ) external poolExists(builderPoolId_) whenNotPausedForMigration {
         address user_ = _msgSender();
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
@@ -191,7 +197,10 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         emit FeePaid(user_, FEE_WITHDRAW_OPERATION, fee_, treasuryAddress_);
     }
 
-    function claim(bytes32 builderPoolId_, address receiver_) external poolExists(builderPoolId_) whenNotPaused {
+    function claim(
+        bytes32 builderPoolId_,
+        address receiver_
+    ) external poolExists(builderPoolId_) whenNotPausedForMigration {
         address user_ = _msgSender();
 
         BuilderPool storage builderPool = builderPools[builderPoolId_];
@@ -376,6 +385,16 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
 
+    modifier whenNotPausedForMigration() {
+        require(!isPausedForMigration, "BU: paused");
+        _;
+    }
+
+    modifier whenPausedForMigration() {
+        require(isPausedForMigration, "BU: not paused");
+        _;
+    }
+
     function _onlyMigrationOwner() private view {
         require(migrationOwner == _msgSender(), "BU: caller is not the migration owner");
     }
@@ -399,23 +418,31 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         emit BuilderSubnetsSet(value_);
     }
 
-    function setPaused() external onlyMigrationOwner {
+    function pause() external onlyOwner {
         isPaused = true;
 
         emit IsPausedSet(true);
     }
 
+    function pauseForMigration() external onlyMigrationOwner {
+        require(isPaused, "BU: not paused");
+
+        isPausedForMigration = true;
+
+        emit IsPausedForMigrationSet(true);
+    }
+
     function migrateUsersStake(
         bytes32[] calldata builderPoolIds_,
         address[] calldata users_
-    ) external onlyMigrationOwner whenPaused {
+    ) external onlyMigrationOwner whenPausedForMigration {
         require(builderPoolIds_.length == users_.length, "BU: invalid array length");
         for (uint256 i = 0; i < users_.length; i++) {
             _migrateUserStake(builderPoolIds_[i], users_[i]);
         }
     }
 
-    function migrateUserStake(bytes32 builderPoolId_) public whenPaused {
+    function migrateUserStake(bytes32 builderPoolId_) public whenPausedForMigration {
         _migrateUserStake(builderPoolId_, _msgSender());
     }
 
@@ -423,7 +450,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         require(!isBuilderPoolUserMigrate[builderPoolId_][user_], "BU: user already migrate");
         UserData storage userData = usersData[user_][builderPoolId_];
 
-        IBuilderSubnets(builderSubnets).stake(builderPoolId_, user_, userData.deposited, 0);
+        IBuilderSubnets(builderSubnets).stake(builderPoolId_, user_, userData.deposited);
 
         isBuilderPoolUserMigrate[builderPoolId_][user_] = true;
         totalDepositsMigrated += userData.deposited;

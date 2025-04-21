@@ -12,8 +12,9 @@ import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
 import {IBuilderSubnets, IERC165} from "../interfaces/builder-subnets/IBuilderSubnets.sol";
 import {IBuildersV3} from "../interfaces/builders/IBuildersV3.sol";
 
-import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
 import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionIntervalDecrease.sol";
+
+import "hardhat/console.sol";
 
 contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable {
     using Math for *;
@@ -145,14 +146,6 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit RewardCalculationStartsAtSet(rewardCalculationStartsAt_);
     }
 
-    function setMaxStakedShareForBuildersPool(uint256 maxStakedShareForBuildersPool_) external onlyOwner {
-        require(maxStakedShareForBuildersPool_ <= PRECISION, "BS: invalid percent");
-
-        maxStakedShareForBuildersPool = maxStakedShareForBuildersPool_;
-
-        emit MaxStakedShareForBuildersPoolSet(maxStakedShareForBuildersPool_);
-    }
-
     function setMinWithdrawLockPeriodAfterStake(uint256 minWithdrawLockPeriodAfterStake_) public onlyOwner {
         minWithdrawLockPeriodAfterStake = minWithdrawLockPeriodAfterStake_;
 
@@ -194,7 +187,6 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             subnet_.withdrawLockPeriodAfterStake >= minWithdrawLockPeriodAfterStake,
             "BS: invalid withdraw lock period"
         );
-        require(subnet_.maxClaimLockEnd >= subnet_.startsAt, "BS: invalid max claim lock end timestamp");
         require(subnet_.fee <= PRECISION, "BS: invalid fee percent");
         require(subnet_.feeTreasury != address(0), "BS: invalid fee treasury");
         if (isMigrationOver && _msgSender() != owner()) {
@@ -241,6 +233,16 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetMinStakeSet(subnetId_, oldValue_, newValue_);
     }
 
+    function setSubnetFee(bytes32 subnetId_, uint256 newValue_) external onlySubnetOwner(subnetId_) {
+        Subnet storage subnet = subnets[subnetId_];
+        uint256 oldValue_ = subnet.fee;
+
+        require(newValue_ < oldValue_, "BS: invalid fee");
+        subnet.fee = newValue_;
+
+        emit SubnetFeeSet(subnetId_, oldValue_, newValue_);
+    }
+
     function setSubnetFeeTreasury(bytes32 subnetId_, address newValue_) external onlySubnetOwner(subnetId_) {
         Subnet storage subnet = subnets[subnetId_];
         address oldValue_ = subnet.feeTreasury;
@@ -251,17 +253,6 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         emit SubnetFeeTreasurySet(subnetId_, oldValue_, newValue_);
     }
 
-    function setSubnetMaxClaimLockEnd(bytes32 subnetId_, uint128 newValue_) external onlySubnetOwner(subnetId_) {
-        Subnet storage subnet = subnets[subnetId_];
-        uint128 oldValue_ = subnet.maxClaimLockEnd;
-
-        require(newValue_ > oldValue_, "BS: claim lock end too low");
-
-        subnet.maxClaimLockEnd = newValue_;
-
-        emit SubnetMaxClaimLockEndSet(subnetId_, oldValue_, newValue_);
-    }
-
     function getSubnetId(string memory name_) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(name_));
     }
@@ -270,12 +261,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /*** Functionality for the users (Stakers)                                                  ***/
     /**********************************************************************************************/
 
-    function stake(
-        bytes32 subnetId_,
-        address stakerAddress_,
-        uint256 amount_,
-        uint128 claimLockEnd_
-    ) external onlyExistedSubnet(subnetId_) {
+    function stake(bytes32 subnetId_, address stakerAddress_, uint256 amount_) external onlyExistedSubnet(subnetId_) {
         if (isMigrationOver) {
             require(stakerAddress_ == _msgSender(), "BS: invalid sender (1)");
         } else {
@@ -293,11 +279,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
 
         IERC20(token).safeTransferFrom(_msgSender(), address(this), amount_);
 
-        claimLockEnd_ = uint128(
-            (claimLockEnd_.max(staker.claimLockEnd).max(block.timestamp)).min(subnet.maxClaimLockEnd)
-        );
-
-        _updateStorage(subnetId_, stakerAddress_, staked_, claimLockEnd_);
+        _updateStorage(subnetId_, stakerAddress_, staked_);
         staker.lastStake = uint128(block.timestamp);
 
         emit Staked(subnetId_, stakerAddress_, staker);
@@ -318,7 +300,7 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         uint256 staked_ = staker.staked - amount_;
         require(staked_ >= subnet.minStake || staked_ == 0, "BS: min stake reached");
 
-        _updateStorage(subnetId_, stakerAddress_, staked_, staker.claimLockEnd);
+        _updateStorage(subnetId_, stakerAddress_, staked_);
 
         (uint256 fee_, address treasuryAddress_) = _getProtocolFee(amount_, FEE_WITHDRAW_OPERATION);
         if (fee_ > 0) {
@@ -335,9 +317,8 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
 
     function claim(bytes32 subnetId_, address stakerAddress_) external onlyExistedSubnet(subnetId_) {
         Staker storage staker = stakers[subnetId_][stakerAddress_];
-        require(block.timestamp > staker.claimLockEnd, "BS: claim is locked");
 
-        _updateStorage(subnetId_, stakerAddress_, staker.staked, staker.claimLockEnd);
+        _updateStorage(subnetId_, stakerAddress_, staker.staked);
         uint256 toClaim_ = staker.pendingRewards;
         staker.pendingRewards = 0;
 
@@ -376,103 +357,37 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
         require(to_ > allSubnetsData.lastCalculatedTimestamp, "BS: `to_` is too low");
         to_ = to_ > block.timestamp ? uint128(block.timestamp) : to_;
 
-        uint256 rewards_ = getPeriodRewardForStake(
-            allSubnetsData.virtualStaked,
-            allSubnetsData.lastCalculatedTimestamp,
-            to_
-        );
+        (uint256 rate_, uint256 undistributedRewards_) = _getCurrentRewardRate(to_);
 
-        if (allSubnetsData.virtualStaked == 0) {
-            allSubnetsData.lastCalculatedTimestamp = uint128(block.timestamp);
-
-            emit RewardsNotDistributed(rewards_);
-
-            return;
-        }
-
-        allSubnetsData.rate += (rewards_ * PRECISION) / allSubnetsData.virtualStaked;
+        allSubnetsData.rate = rate_;
         allSubnetsData.lastCalculatedTimestamp = to_;
+        allSubnetsData.undistributedRewards += undistributedRewards_;
 
         emit RewardsCollected(to_);
     }
 
-    function resetPowerFactor(bytes32[] calldata subnetIds_, address[] calldata stakerAddresses_) external {
-        require(subnetIds_.length == stakerAddresses_.length, "BS: invalid arrays length");
-
-        for (uint256 i = 0; i < subnetIds_.length; i++) {
-            Staker storage staker = stakers[subnetIds_[i]][stakerAddresses_[i]];
-            require(staker.staked > 0, "BS: stake without stakes");
-            require(staker.claimLockEnd < block.timestamp, "BS: claim is still locked");
-
-            _updateStorage(subnetIds_[i], stakerAddresses_[i], staker.staked, staker.claimLockEnd);
-
-            emit PowerFactorReset(subnetIds_[i], stakerAddresses_[i]);
-        }
-    }
-
-    function getMaxTotalVirtualStaked(uint128 to_) public view returns (uint256) {
-        return (maxStakedShareForBuildersPool * getPeriodRewardForBuildersPool(0, to_)) / PRECISION;
-    }
-
-    function _updateStorage(
-        bytes32 subnetId_,
-        address stakerAddress_,
-        uint256 newStaked_,
-        uint128 claimLockEnd_
-    ) internal {
+    function _updateStorage(bytes32 subnetId_, address stakerAddress_, uint256 newStaked_) internal {
         Staker storage staker = stakers[subnetId_][stakerAddress_];
         SubnetData storage subnetData = subnetsData[subnetId_];
 
-        (uint256 currentRate_, uint256 rewards_) = _getCurrentRewardRate();
-        uint256 pendingRewards_ = _getStakerRewards(currentRate_, staker);
-
-        if (allSubnetsData.virtualStaked == 0) {
-            emit RewardsNotDistributed(rewards_);
-        }
-
         uint128 now_ = uint128(block.timestamp);
-        uint256 multiplier_ = getPowerFactor(now_, claimLockEnd_);
-        uint256 newVirtualStaked_ = (newStaked_ * multiplier_) / PRECISION;
+
+        (uint256 rate_, uint256 undistributedRewards_) = _getCurrentRewardRate(now_);
+        uint256 pendingRewards_ = _getStakerRewards(rate_, staker);
 
         // Update data for all subnets
         allSubnetsData.lastCalculatedTimestamp = now_;
-        allSubnetsData.rate = currentRate_;
+        allSubnetsData.rate = rate_;
         allSubnetsData.staked = allSubnetsData.staked + newStaked_ - staker.staked;
-        allSubnetsData.virtualStaked = allSubnetsData.virtualStaked + newVirtualStaked_ - staker.virtualStaked;
-
-        require(
-            allSubnetsData.virtualStaked <= getMaxTotalVirtualStaked(now_),
-            "BS: the amount of stakes exceeded the amount of rewards"
-        );
+        allSubnetsData.undistributedRewards += undistributedRewards_;
 
         // Update Subnet data
         subnetData.staked = subnetData.staked + newStaked_ - staker.staked;
-        subnetData.virtualStaked = subnetData.virtualStaked + newVirtualStaked_ - staker.virtualStaked;
 
         // Update data for the Staker
         staker.staked = newStaked_;
-        staker.virtualStaked = newVirtualStaked_;
-        staker.rate = currentRate_;
-        staker.claimLockEnd = claimLockEnd_;
+        staker.rate = rate_;
         staker.pendingRewards = pendingRewards_;
-    }
-
-    /**********************************************************************************************/
-    /*** Functionality for the Power Factor                                                     ***/
-    /**********************************************************************************************/
-
-    function getStakerPowerFactor(bytes32 subnetId_, address stakerAddress_) external view returns (uint256) {
-        if (!_subnetExists(subnetId_)) {
-            return PRECISION;
-        }
-
-        Staker storage staker = stakers[subnetId_][stakerAddress_];
-
-        return (staker.virtualStaked * PRECISION) / staker.staked;
-    }
-
-    function getPowerFactor(uint128 from_, uint128 to_) public pure returns (uint256) {
-        return LockMultiplierMath._getLockPeriodMultiplier(from_, to_);
     }
 
     /**********************************************************************************************/
@@ -480,57 +395,54 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     /**********************************************************************************************/
 
     function getStakerRewards(bytes32 subnetId_, address stakerAddress_) external view returns (uint256) {
-        (uint256 currentRate_, ) = _getCurrentRewardRate();
+        (uint256 rate_, ) = _getCurrentRewardRate(uint128(block.timestamp));
 
-        return _getStakerRewards(currentRate_, stakers[subnetId_][stakerAddress_]);
+        return _getStakerRewards(rate_, stakers[subnetId_][stakerAddress_]);
     }
 
     /**
      * @dev Rewards are calculated in computation periods that are less than or equal to one day from the last
      * calculated timestamp. For example, if the stake was 2 days 3 hours, there will be 3 calculation periods,
      * 2 for 1 day and 1 for 3 hours.
-     *
-     * `emissionToPeriodEnd` - Emission from pool start to the end of period. Ethereum network, main Builders pool.
-     * `emissionFromPeriodStartToPeriodEnd` - Emission from the period start to the period end. Ethereum network, main Builders pool.
-     * `virtualStaked` - Staker stake * Power Factor
-     *
-     * `shareForPeriod` = `virtualStaked` / `emissionToPeriodEnd`
-     * `rewardForPeriod` = `shareForPeriod` * `emissionFromPeriodStartToPeriodEnd`
-     * `reward` = Σ(`rewardForPeriod`)
      */
-    function getPeriodRewardForStake(uint256 virtualStaked_, uint128 from_, uint128 to_) public view returns (uint256) {
-        from_ = from_ < rewardCalculationStartsAt ? rewardCalculationStartsAt : from_;
+    function collectRewardRate(uint256 staked_, uint128 from_, uint128 to_) public view returns (uint256, uint256) {
+        uint256 rate_ = allSubnetsData.rate;
 
-        if (to_ <= from_ || virtualStaked_ == 0) {
-            return 0;
+        from_ = from_ < rewardCalculationStartsAt ? rewardCalculationStartsAt : from_;
+        if (to_ <= from_) {
+            return (rate_, 0);
         }
+
+        uint256 distributedRewards_ = 0;
+
         uint128 period_ = 1 days;
         uint256 periods_ = (to_ - from_) / period_;
 
-        uint256 rewards_ = 0;
         for (uint256 i = 0; i <= periods_; i++) {
             uint128 toForPeriod_ = from_ + period_;
             if (toForPeriod_ > to_) {
                 toForPeriod_ = to_;
             }
 
-            uint256 emissionToPeriodEnd_ = getPeriodRewardForBuildersPool(0, toForPeriod_);
+            uint256 emissionToPeriodEnd_ = getBuildersPoolEmission(0, toForPeriod_);
             if (emissionToPeriodEnd_ == 0) {
                 from_ = toForPeriod_;
-
                 continue;
             }
 
-            uint256 emissionFromPeriodStartToPeriodEnd_ = getPeriodRewardForBuildersPool(from_, toForPeriod_);
+            uint256 rewardsToPeriodEnd_ = getBuildersPoolEmission(from_, toForPeriod_);
+            uint256 periodRate_ = (rewardsToPeriodEnd_ * PRECISION) / emissionToPeriodEnd_;
 
-            rewards_ += (virtualStaked_ * emissionFromPeriodStartToPeriodEnd_) / emissionToPeriodEnd_;
+            distributedRewards_ += (periodRate_ * staked_) / PRECISION;
+            rate_ += periodRate_;
+
             from_ = toForPeriod_;
         }
 
-        return rewards_;
+        return (rate_, distributedRewards_);
     }
 
-    function getPeriodRewardForBuildersPool(uint128 from_, uint128 to_) public view returns (uint256) {
+    function getBuildersPoolEmission(uint128 from_, uint128 to_) public view returns (uint256) {
         return
             LinearDistributionIntervalDecrease.getPeriodReward(
                 buildersRewardPoolData.initialAmount,
@@ -542,24 +454,38 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
             );
     }
 
-    function _getCurrentRewardRate() private view returns (uint256, uint256) {
-        uint256 currentRewards_ = getPeriodRewardForStake(
-            allSubnetsData.virtualStaked,
-            allSubnetsData.lastCalculatedTimestamp,
-            uint128(block.timestamp)
-        );
-
-        if (allSubnetsData.virtualStaked == 0) {
-            return (allSubnetsData.rate, currentRewards_);
+    function _getCurrentRewardRate(uint128 to_) private view returns (uint256 rate_, uint256 undistributedRewards_) {
+        if (block.timestamp < rewardCalculationStartsAt) {
+            return (allSubnetsData.rate, 0);
         }
 
-        uint256 rate_ = allSubnetsData.rate + (currentRewards_ * PRECISION) / allSubnetsData.virtualStaked;
+        uint128 lastCalculatedTimestamp_ = allSubnetsData.lastCalculatedTimestamp;
+        uint128 from_ = lastCalculatedTimestamp_ < rewardCalculationStartsAt
+            ? rewardCalculationStartsAt
+            : lastCalculatedTimestamp_;
 
-        return (rate_, currentRewards_);
+        undistributedRewards_ = getBuildersPoolEmission(from_, to_);
+        uint256 staked_ = allSubnetsData.staked;
+        if (staked_ == 0) {
+            return (allSubnetsData.rate, undistributedRewards_);
+        }
+
+        uint256 totalEmission_ = getBuildersPoolEmission(0, to_);
+        if (totalEmission_ < staked_) {
+            rate_ = allSubnetsData.rate + (undistributedRewards_ * PRECISION) / staked_;
+            undistributedRewards_ = 0;
+
+            return (rate_, undistributedRewards_);
+        }
+
+        uint256 distributedRewards_ = 0;
+        (rate_, distributedRewards_) = collectRewardRate(staked_, from_, to_);
+
+        undistributedRewards_ -= distributedRewards_;
     }
 
     function _getStakerRewards(uint256 currentRewardRate_, Staker storage staker) private view returns (uint256) {
-        uint256 rewards_ = ((currentRewardRate_ - staker.rate) * staker.virtualStaked) / PRECISION;
+        uint256 rewards_ = ((currentRewardRate_ - staker.rate) * staker.staked) / PRECISION;
 
         return staker.pendingRewards + rewards_;
     }

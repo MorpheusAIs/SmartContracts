@@ -15,7 +15,6 @@ interface IBuilderSubnets is IERC165 {
         address feeTreasury;
         uint128 startsAt;
         uint128 withdrawLockPeriodAfterStake;
-        uint128 maxClaimLockEnd;
     }
 
     struct SubnetMetadata {
@@ -27,23 +26,20 @@ interface IBuilderSubnets is IERC165 {
 
     struct SubnetData {
         uint256 staked;
-        uint256 virtualStaked;
     }
 
     struct AllSubnetsData {
         uint256 staked;
-        uint256 virtualStaked;
         uint256 rate;
+        uint256 undistributedRewards;
         uint128 lastCalculatedTimestamp;
     }
 
     struct Staker {
         uint256 staked;
-        uint256 virtualStaked;
         uint256 pendingRewards;
         uint256 rate;
         uint128 lastStake;
-        uint128 claimLockEnd;
     }
 
     struct BuildersRewardPoolData {
@@ -70,20 +66,20 @@ interface IBuilderSubnets is IERC165 {
     event SubnetMinStakeSet(bytes32 subnetId, uint256 oldValue, uint256 newValue);
 
     /**
+     * The event that is emitted when the Subnet fee changed.
+     * @param subnetId The Subnet ID.
+     * @param oldValue The old Subnet fee.
+     * @param newValue The new Subnet fee.
+     */
+    event SubnetFeeSet(bytes32 subnetId, uint256 oldValue, uint256 newValue);
+
+    /**
      * The event that is emitted when the Subnet fee treasury changed.
      * @param subnetId The Subnet ID.
      * @param oldValue The old Subnet fee treasury.
      * @param newValue The new Subnet fee treasury.
      */
     event SubnetFeeTreasurySet(bytes32 subnetId, address oldValue, address newValue);
-
-    /**
-     * The event that is emitted when the Subnet max claim lock end changed.
-     * @param subnetId The Subnet ID.
-     * @param oldValue The old Subnet max claim lock end value.
-     * @param newValue The new Subnet max claim lock end value.
-     */
-    event SubnetMaxClaimLockEndSet(bytes32 subnetId, uint128 oldValue, uint128 newValue);
 
     /**
      * The event that is emitted when the FeeConfig contract address is set.
@@ -141,13 +137,6 @@ interface IBuilderSubnets is IERC165 {
     event RewardsCollected(uint128 to);
 
     /**
-     * The event that is emitted when the power factor for Staker in the Subnet reset.
-     * @param subnetId The Subnet ID.
-     * @param stakerAddress The Staker address.
-     */
-    event PowerFactorReset(bytes32 subnetId, address stakerAddress);
-
-    /**
      * The event that is emitted when the Subnet created or edited.
      * @param subnetId The Subnet ID.
      * @param subnet The Subnet data.
@@ -197,12 +186,6 @@ interface IBuilderSubnets is IERC165 {
     event Claimed(bytes32 indexed subnetId, address stakerAddress, Staker staker, uint256 amount);
 
     /**
-     * The event that is emitted when the rewards not distribute between Stakers.
-     * @param rewards The reward amount.
-     */
-    event RewardsNotDistributed(uint256 rewards);
-
-    /**
      * The function to set the FeeConfig contract address.
      * @param feeConfig_ The address of the new FeeConfig.
      */
@@ -232,18 +215,6 @@ interface IBuilderSubnets is IERC165 {
     function setRewardCalculationStartsAt(uint128 rewardCalculationStartsAt_) external;
 
     /**
-     * The function to set `setMaxStakedShareForBuildersPool` variable
-     * @dev This variable is required for maxStakedShareForBuildersPool_, sets the percent for the
-     * current smart contract to the total reward pool. Since the current contract
-     * can be deployed on multiple networks and the reward pool is shared, we can
-     * define the share of the reward pool for the current contract (e.g. 20% for
-     * a contract on Arbitrum and 80% on Base). The amount of stakes into this contract
-     * cannot exceed the share of the total reward pool for this contract.
-     * @param maxStakedShareForBuildersPool_ The new value.
-     */
-    function setMaxStakedShareForBuildersPool(uint256 maxStakedShareForBuildersPool_) external;
-
-    /**
      * The function to set `minWithdrawLockPeriodAfterStake` variable
      * @dev Staker tokens locked for this period (at least) after the stake.
      * @param minWithdrawLockPeriodAfterStake_ The new value.
@@ -253,8 +224,6 @@ interface IBuilderSubnets is IERC165 {
     /**
      * The function to disable `isAllowStakesFromOtherAccounts` variable
      * @dev This parameter is needed to migrate tokens from V1.
-     * It should be turned off after the migration is complete, because a restake from
-     * other accounts will update the power factor, which may not be desirable.
      * @param value_ New value
      */
     function setIsMigrationOver(bool value_) external;
@@ -288,6 +257,20 @@ interface IBuilderSubnets is IERC165 {
     function setSubnetMinStake(bytes32 subnetId_, uint256 newValue_) external;
 
     /**
+     * The function to change the Subnet `fee`.
+     * @param subnetId_ The Subnet ID.
+     * @param newValue_ The newfee value.
+     */
+    function setSubnetFee(bytes32 subnetId_, uint256 newValue_) external;
+
+    /**
+     * The function to change the Subnet `feeTreasury`.
+     * @param subnetId_ The Subnet ID.
+     * @param newValue_ The new fee treasury value.
+     */
+    function setSubnetFeeTreasury(bytes32 subnetId_, address newValue_) external;
+
+    /**
      * The function to get the Subnet ID.
      * @param name_ The Subnet name.
      */
@@ -298,9 +281,8 @@ interface IBuilderSubnets is IERC165 {
      * @param subnetId_ The Subnet ID.
      * @param stakerAddress_ The Staker address.
      * @param amount_ The staked amount, wei.
-     * @param claimLockEnd_ The claim lock end timestamp.
      */
-    function stake(bytes32 subnetId_, address stakerAddress_, uint256 amount_, uint128 claimLockEnd_) external;
+    function stake(bytes32 subnetId_, address stakerAddress_, uint256 amount_) external;
 
     /**
      * The function to withdraw tokens from the Subnet.
@@ -317,27 +299,6 @@ interface IBuilderSubnets is IERC165 {
     function claim(bytes32 subnetId_, address stakerAddress_) external;
 
     /**
-     * The function to receive the max total virtual stake for the current contract and network.
-     * Used when Staker stake or withdraw, total stake can't exceed this result.
-     * @param to_ To calculated timestamp
-     */
-    function getMaxTotalVirtualStaked(uint128 to_) external view returns (uint256);
-
-    /**
-     * The function to receive the Staker power factor.
-     * @param subnetId_ The Subnet ID.
-     * @param stakerAddress_ The staker address.
-     */
-    function getStakerPowerFactor(bytes32 subnetId_, address stakerAddress_) external view returns (uint256);
-
-    /**
-     * The function to receive power factor.
-     * @param from_ The timestamp.
-     * @param to_ The timestamp.
-     */
-    function getPowerFactor(uint128 from_, uint128 to_) external pure returns (uint256);
-
-    /**
      * The function to receive the Staker rewards amount.
      * @param subnetId_ The Subnet ID.
      * @param stakerAddress_ The staker address.
@@ -345,21 +306,9 @@ interface IBuilderSubnets is IERC165 {
     function getStakerRewards(bytes32 subnetId_, address stakerAddress_) external view returns (uint256);
 
     /**
-     * The function to calculate rewards for the period.
-     * @param virtualStaked_ The staked amount * power factor.
-     * @param from_ The timestamp.
-     * @param to_ The timestamp.
-     */
-    function getPeriodRewardForStake(
-        uint256 virtualStaked_,
-        uint128 from_,
-        uint128 to_
-    ) external view returns (uint256);
-
-    /**
      * The function to calculate Builder rewards from the Builder pool.
      * @param from_ The timestamp.
      * @param to_ The timestamp.
      */
-    function getPeriodRewardForBuildersPool(uint128 from_, uint128 to_) external view returns (uint256);
+    function getBuildersPoolEmission(uint128 from_, uint128 to_) external view returns (uint256);
 }

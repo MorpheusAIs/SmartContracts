@@ -166,6 +166,12 @@ interface IBuildersV3 is IERC165 {
     event IsPausedSet(bool isPaused);
 
     /**
+     * The event that is emitted when the `isPausedForMigration` set.
+     * @param isPausedForMigration The new value.
+     */
+    event IsPausedForMigrationSet(bool isPausedForMigration);
+
+    /**
      * The function to set the fee config address.
      * @param feeConfig_ The address of the fee config.
      */
@@ -262,7 +268,12 @@ interface IBuildersV3 is IERC165 {
     /**
      * The function to set the new pause value.
      */
-    function setPaused() external;
+    function pause() external;
+
+    /**
+     * The function to set the new pause value for migration process.
+     */
+    function pauseForMigration() external;
 
     /**
      * The function to migrate user's stakes to the new contract.
