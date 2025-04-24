@@ -424,9 +424,7 @@ contract BuildersV3 is IBuildersV3, UUPSUpgradeable, OwnableUpgradeable {
         emit IsPausedSet(true);
     }
 
-    function pauseForMigration() external onlyMigrationOwner {
-        require(isPaused, "BU: not paused");
-
+    function pauseForMigration() external whenPaused onlyMigrationOwner {
         isPausedForMigration = true;
 
         emit IsPausedForMigrationSet(true);

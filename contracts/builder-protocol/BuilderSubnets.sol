@@ -14,8 +14,6 @@ import {IBuildersV3} from "../interfaces/builder-protocol/IBuildersV3.sol";
 
 import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionIntervalDecrease.sol";
 
-import "hardhat/console.sol";
-
 contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable {
     using Math for *;
     using SafeERC20 for IERC20;
@@ -58,9 +56,6 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
      */
     bool public isMigrationOver;
     address public buildersV3;
-
-    // uint256 public totalStaked;
-    // uint256 public totalVirtualStaked;
 
     BuildersRewardPoolData public buildersRewardPoolData;
     AllSubnetsData public allSubnetsData;

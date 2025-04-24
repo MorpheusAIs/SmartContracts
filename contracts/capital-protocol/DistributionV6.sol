@@ -241,17 +241,17 @@ contract DistributionV6 is IDistributionV6, OwnableUpgradeable, UUPSUpgradeable 
         _claim(poolId_, _msgSender(), receiver_);
     }
 
-    function claimFor(uint256 poolId_, address user_, address receiver_) external payable poolExists(poolId_) {
-        bool isClaimReceiverSet = claimReceiver[poolId_][user_] != address(0);
+    function claimFor(uint256 poolId_, address staker_, address receiver_) external payable poolExists(poolId_) {
+        bool isClaimReceiverSet = claimReceiver[poolId_][staker_] != address(0);
         if (isClaimReceiverSet) {
-            receiver_ = claimReceiver[poolId_][user_];
+            receiver_ = claimReceiver[poolId_][staker_];
         }
 
         if (!isClaimReceiverSet) {
-            require(claimSender[poolId_][user_][_msgSender()], "DS: invalid caller");
+            require(claimSender[poolId_][staker_][_msgSender()], "DS: invalid caller");
         }
 
-        _claim(poolId_, user_, receiver_);
+        _claim(poolId_, staker_, receiver_);
     }
 
     function _claim(uint256 poolId_, address user_, address receiver_) private {
