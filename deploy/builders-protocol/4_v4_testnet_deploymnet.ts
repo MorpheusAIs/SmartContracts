@@ -14,14 +14,12 @@ import { wei } from '@/scripts/utils/utils';
 
 const config = {
   feeConfig: {
-    feeTreasury: '0x19ec1E4b714990620edf41fE28e9a1552953a7F4',
-    baseFee: wei(0.0325, 25),
+    address: '0x926993CF1FFE3978500d95Db591AC7a58D33c772',
   },
-  mor: '0x34a285a1b1c166420df5b6630132542923b5b27e',
+  mor: '0x5C80Ddd187054E1E4aBBfFCD750498e81d34FfA3',
   builders: {
     treasury: '0x19ec1E4b714990620edf41fE28e9a1552953a7F4',
     minWithdrawLockPeriodAfterStake: 300,
-    maxShareForNetwork: wei(0.8, 25),
     subnetCreationFee: {
       amount: wei(0.123456789),
       treasury: '0xe3E8B64331636c04a0272eB831A856029Af7816c',
@@ -39,7 +37,7 @@ const config = {
 module.exports = async function (deployer: Deployer) {
   const signer = await deployer.getSigner();
 
-  // const feeConfig = await deployFeeConfig(deployer);
+  // const feeConfig = await deployer.deployed(FeeConfig__factory, config.feeConfig.address);
   // const builderSubnets = await deployBuildersSubnets(deployer, await feeConfig.getAddress());
 
   // await feeConfig.setFeeForOperation(
@@ -48,14 +46,10 @@ module.exports = async function (deployer: Deployer) {
   //   config.builders.feeClaimOperation,
   // );
 
-  // Reporter.reportContracts(
-  //   ['FeeConfig', await feeConfig.getAddress()],
-  //   ['BuilderSubnets', await builderSubnets.getAddress()],
-  // );
+  // Reporter.reportContracts(['BuilderSubnets', await builderSubnets.getAddress()]);
 
   // PART 2
-
-  const builderSubnets = await deployer.deployed(BuilderSubnets__factory, '0x5271B2FE76303ca7DDCB8Fb6fA77906E2B4f03C7');
+  const builderSubnets = await deployer.deployed(BuilderSubnets__factory, '0x5C80Ddd187054E1E4aBBfFCD750498e81d34FfA3');
   await createSubnetAndStake(deployer, await signer.getAddress(), builderSubnets);
 };
 
@@ -81,8 +75,6 @@ const deployBuildersSubnets = async (deployer: Deployer, feeConfigAddress: strin
   const creationFee = config.builders.subnetCreationFee;
   await contract.setSubnetCreationFee(creationFee.amount, creationFee.treasury);
 
-  await contract.setMaxStakedShareForBuildersPool(config.builders.maxShareForNetwork);
-
   return contract;
 };
 
@@ -94,16 +86,6 @@ const deployBuildersV3 = async (deployer: Deployer): Promise<BuildersV3> => {
   const contract = await deployer.deployed(BuildersV3__factory, await proxy.getAddress());
 
   return contract;
-};
-
-const deployFeeConfig = async (deployer: Deployer): Promise<FeeConfig> => {
-  const impl = await deployer.deploy(FeeConfig__factory);
-  const proxy = await deployer.deploy(ERC1967Proxy__factory, [await impl.getAddress(), '0x']);
-  const feeConfig = await deployer.deployed(FeeConfig__factory, await proxy.getAddress());
-
-  await feeConfig.FeeConfig_init(config.feeConfig.feeTreasury, config.feeConfig.baseFee);
-
-  return feeConfig;
 };
 
 const createSubnetAndStake = async (deployer: Deployer, signerAddress: string, builderSubnets: BuilderSubnets) => {
@@ -119,7 +101,6 @@ const createSubnetAndStake = async (deployer: Deployer, signerAddress: string, b
       feeTreasury: signerAddress,
       startsAt: Math.floor(Date.now() / 1000) - 100,
       withdrawLockPeriodAfterStake: config.builders.minWithdrawLockPeriodAfterStake,
-      maxClaimLockEnd: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 200,
     },
     {
       slug: 'Initiative being developed in collaboration between faculty and students from UCLA and other leading universities worldwide.',
@@ -132,14 +113,8 @@ const createSubnetAndStake = async (deployer: Deployer, signerAddress: string, b
   );
 
   await builderSubnets.setIsMigrationOver(true);
-
-  await builderSubnets.stake(
-    await builderSubnets.getSubnetId('OF Builder #1'),
-    signerAddress,
-    wei(0.2345678),
-    Math.floor(Date.now() / 1000) + 300,
-  );
+  await builderSubnets.stake(await builderSubnets.getSubnetId('OF Builder #1'), signerAddress, wei(0.2345678));
 };
 
 // npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --only 4
-// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network arbitrum_sepolia --only 4 --verify
+// npx hardhat migrate --path-to-migrations ./deploy/builders-protocol --network base_sepolia --only 4 --verify

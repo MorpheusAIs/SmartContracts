@@ -59,6 +59,9 @@ const config: HardhatUserConfig = {
       //   url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
       // forking: {
+      //   url: `https://sepolia.base.org`,
+      // },
+      // forking: {
       //   url: `https://base-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       //   // blockNumber: 25936700,
       // },
