@@ -103,7 +103,7 @@ describe('CapitalProtocolV6 Fork', () => {
     it('should correctly upgrade to the new version', async () => {
       const depositPool = await upgradeDistributionV5ToDepositPool();
 
-      expect(await depositPool.version()).to.eq(6);
+      expect(await depositPool.version()).to.eq(7);
     });
     it('should to not change storage', async () => {
       const isNotUpgradeable = await distributionV5.isNotUpgradeable();

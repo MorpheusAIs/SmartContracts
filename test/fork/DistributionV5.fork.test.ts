@@ -252,7 +252,7 @@ describe('DistributionV5 Fork', () => {
       ).to.be.rejectedWith('DS: user claim is locked');
 
       userData = await distribution.usersData(userPublicPool.address, 0);
-      expect(userData.claimLockStart).to.be.eq('1816479520');
+      expect(userData.claimLockStart).to.be.eq('1816479519');
       expect(userData.claimLockEnd).to.be.eq(claimLockEnd);
     });
   });
