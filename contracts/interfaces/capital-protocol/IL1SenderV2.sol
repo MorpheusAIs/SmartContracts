@@ -3,9 +3,22 @@ pragma solidity ^0.8.20;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
+/**
+ * @title IL1SenderV2
+ * @notice Defines the basic interface for the L1SenderV2
+ */
 interface IL1SenderV2 is IERC165 {
+    event stETHSet(address stETH);
+    event DistributorSet(address distributor);
+    event UniswapSwapRouterSet(address uniswapSwapRouter);
+    event LayerZeroConfigSet(LayerZeroConfig layerZeroConfig);
+    event MintMessageSent(address user, uint256 amount);
+    event ArbitrumBridgeConfigSet(ArbitrumBridgeConfig arbitrumBridgeConfig);
+    event WstETHSent(uint256 amount, uint256 gasLimit, uint256 maxFeePerGas, uint256 maxSubmissionCost, bytes result);
+    event TokensSwapped(bytes path, uint256 amountIn, uint256 amountOut);
+
     /**
-     * The structure that stores the deposit token's data.
+     * @notice The structure that stores the deposit token's (stETH) data.
      * @param wstETH The address of wrapped deposit token.
      * @param gateway The address of token's gateway.
      * @param receiver The address of wrapped token's receiver on L2.
@@ -17,7 +30,7 @@ interface IL1SenderV2 is IERC165 {
     }
 
     /**
-     * The structure that stores the reward token's data.
+     * @notice The structure that stores the reward token's (MOR) data.
      * @param gateway The address of token's gateway.
      * @param receiver The address of token's receiver on L2.
      * @param receiverChainId The chain id of receiver.
@@ -32,55 +45,69 @@ interface IL1SenderV2 is IERC165 {
         bytes adapterParams;
     }
 
-    event stETHSet(address stETH);
-    event DistributorSet(address distributor);
-    event UniswapSwapRouterSet(address uniswapSwapRouter);
-    event LayerZeroConfigSet(LayerZeroConfig layerZeroConfig);
-    event MintMessageSent(address user, uint256 amount);
-    event ArbitrumBridgeConfigSet(ArbitrumBridgeConfig arbitrumBridgeConfig);
-    event WstETHSent(uint256 amount, uint256 gasLimit, uint256 maxFeePerGas, uint256 maxSubmissionCost, bytes result);
-    event TokensSwapped(bytes path, uint256 amountIn, uint256 amountOut);
+    /**
+     * @notice The function to receive the stETH contract address.
+     * @return The stETH contract address.
+     */
+    function stETH() external view returns (address);
 
     /**
-     * The function to set the stETH address
+     * @notice The function to receive the `Distributor` contract address.
+     * @return The `Distributor` contract address.
+     */
+    function distributor() external view returns (address);
+
+    /**
+     * @notice The function to receive the Uniswap `SwapRouter` contract address.
+     * @return The Uniswap `SwapRouter` contract address.
+     */
+    function uniswapSwapRouter() external view returns (address);
+
+    /**
+     * @notice The function to set the stETH address
+     * @dev Only for the contract `owner()`.
      * @param value_ stETH contract address
      */
     function setStETh(address value_) external;
 
     /**
-     * The function to set the `distributor` value
+     * @notice The function to set the `distributor` value
+     * @dev Only for the contract `owner()`.
      * @param value_ stETH contract address
      */
     function setDistributor(address value_) external;
 
     /**
-     * The function to set the `uniswapSwapRouter` value
+     * @notice The function to set the `uniswapSwapRouter` value
+     * @dev Only for the contract `owner()`.
      * @param value_ `uniswapSwapRouter` contract address
      */
     function setUniswapSwapRouter(address value_) external;
 
     /**
-     * The function to set the LayerZero config
+     * @notice The function to set the LayerZero config
+     * @dev Only for the contract `owner()`.
      * @param layerZeroConfig_ Config
      */
     function setLayerZeroConfig(LayerZeroConfig calldata layerZeroConfig_) external;
 
     /**
-     * The function to send the message of mint of reward token to the L2.
-     * @param user_ The user's address to mint reward tokens.
-     * @param amount_ The amount of reward tokens to mint.
+     * @notice The function to send the reward token mint message to the `L1SenderV2`.
+     * @param user_ The user's address receiver .
+     * @param amount_ The amount of reward token to mint.
      * @param refundTo_ The address to refund the overpaid gas.
      */
     function sendMintMessage(address user_, uint256 amount_, address refundTo_) external payable;
 
     /**
-     * The function to set the Arbitrum Bridge config
+     * @notice The function to set the Arbitrum Bridge config
+     * @dev Only for the contract `owner()`.
      * @param newConfig_ Config
      */
     function setArbitrumBridgeConfig(ArbitrumBridgeConfig calldata newConfig_) external;
 
     /**
-     * The function to send all current balance of the deposit token to the L2.
+     * @notice The function to send all current balance of the deposit token to the L2.
      * @param gasLimit_ The gas limit for the L2 transaction.
      * @param maxFeePerGas_ The max fee per gas for the L2 transaction.
      * @param maxSubmissionCost_ The max submission cost for the L2 transaction.
@@ -93,7 +120,7 @@ interface IL1SenderV2 is IERC165 {
     ) external payable returns (bytes memory);
 
     /**
-     * The function to swap the tokens on the contract.
+     * @notice The function to swap the tokens on the contract.
      * @param tokens_ Token for the swap.
      * @param poolsFee_ Pools fee for the swap.
      * @param amountIn_ Amount IN to swap.
@@ -109,7 +136,8 @@ interface IL1SenderV2 is IERC165 {
     ) external returns (uint256);
 
     /**
-     * The function to get the contract version.
+     * @notice The function to get the contract version.
+     * @return The current contract version
      */
     function version() external pure returns (uint256);
 }

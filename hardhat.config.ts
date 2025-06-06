@@ -51,7 +51,8 @@ const config: HardhatUserConfig = {
       //   url: `https://arb-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
       // forking: {
-      //   url: `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      //   url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+      //   // blockNumber: 8310175,
       // },
       // forking: {
       //   url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
@@ -70,6 +71,12 @@ const config: HardhatUserConfig = {
       //   url: `https://base.llamarpc.com`,
       //   blockNumber: 25164000,
       // },
+      // accounts: [
+      //   {
+      //     privateKey: `${process.env.PRIVATE_KEY}`,
+      //     balance: '1000000000000000000000',
+      //   },
+      // ],
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
@@ -83,7 +90,7 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
     },
     sepolia: {
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.1,
     },
