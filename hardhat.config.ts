@@ -10,6 +10,7 @@ import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import { HardhatUserConfig } from 'hardhat/config';
 import 'solidity-coverage';
+import 'solidity-docgen';
 import 'tsconfig-paths/register';
 
 dotenv.config();
@@ -222,6 +223,10 @@ const config: HardhatUserConfig = {
     alwaysGenerateOverloads: true,
     discriminateTypes: true,
     dontOverrideCompile: forceTypechain(),
+  },
+  docgen: {
+    pages: 'files',
+    exclude: ['@layerzerolabs', 'interfaces', 'extensions', 'mock'],
   },
 };
 
