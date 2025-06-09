@@ -3,15 +3,27 @@
 Smart Contracts For The Morpheus Network
 
 This repository contains following smart contracts for the Morpheus Network.
-* **MOR** - The Morpheus Network Token.
-* **MOR OFT** - The Morpheus Network Token with integrated LayerZero OFT (Omnichain Fungible Token) standard. 
-* **LinearDistributionIntervalDecrease** - A library for calculating linear distribution intervals with a plenty of options.
-* **Distribution** - The contract that distributes the MOR tokens to the stakers and the team members.
-* **L1Sender** - A contract that allows to communicate between L1 and L2. It is used to send a minting request to the L2 using the Layer Zero. It is also used to transfer deposited tokens from the L1 to the L2.
-* **L2MessageReceiver** - A contract that receives messages from the L1Sender contract.
-* **L2TokenReceiver** - A contract that receives tokens from the L1Sender contract. It is used to Uniswap market making.
-* **L2TokenReceiverV2** - A contract that receives tokens from the L1Sender contract and used for Uniswap market making with extended functionality.
 
+### Token
+* `MOR OFT` - The Morpheus Network Token with integrated LayerZero OFT (Omnichain Fungible Token) standard. 
+
+### Capital Protocol
+#### L1
+* `DistributionV6` - the basis of the previous version of the protocol (`Distribution V5`). Contains logic with the extension of the possibility of claiming instead of the initial staker.
+
+* `DepositPool` - the basis of the previous version of the protocol (`Distribution V6`). Adds the ability to stake multiple tokens, changes the mechanism for calculating rewards and yield. Each stake token has its own `DepositPool`
+* `ChainLinkDataConsumer` - realizes integration with ChainLink, used for receiving the price feeds.
+* `L1SenderV2` - takes all protocol yields from `DepositPool`s, converts to wstETH, and forwards to L2.
+* `RewardPool` - the MOR reward calculation curve is in this contract. Allows to create reward pools, set curves and calculate the required number of rewards.
+* `Distributor` -  brings all the contracts together in one place for L1. Calculates rewards for users, calculates protocol yield.
+
+#### L2
+* `L2TokenReceiverV2` - A contract that receives tokens from the L1Sender contract. It is used to Uniswap market making.
+* `L2MessageReceiver` - A contract that receives messages from the L1Sender contract.
+
+### Builders Protocol
+* `BuilderSubnets` - The main contract for builders, accepts user stakes, calculates rewards and gives them out.
+* `FeeConfig` - The contract is responsible for the fees of the protocol.
 
 [**Documentation**](https://github.com/MorpheusAIs/Docs/blob/main/Smart%20Contracts/Overview.md)
 

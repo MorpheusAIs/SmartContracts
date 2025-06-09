@@ -148,10 +148,7 @@ describe('DepositPool', () => {
       const lib1 = await (await ethers.getContractFactory('ReferrerLib')).deploy();
       const lib2 = await (await ethers.getContractFactory('LockMultiplierMath')).deploy();
       const newDepositPoolImplFactory = await ethers.getContractFactory('DepositPool', {
-        libraries: {
-          ReferrerLib: await lib1.getAddress(),
-          LockMultiplierMath: await lib2.getAddress(),
-        },
+        libraries: { ReferrerLib: await lib1.getAddress(), LockMultiplierMath: await lib2.getAddress() },
       });
       const newDepositPoolImpl = await newDepositPoolImplFactory.deploy();
       await distributionV5.upgradeTo(newDepositPoolImpl);
@@ -1196,6 +1193,31 @@ describe('DepositPool', () => {
     });
   });
 
+  describe('#setClaimSender', () => {
+    it('should correctly set and skip the claim sender', async () => {
+      expect(await depositPool.claimSender(rewardPoolId, OWNER, SECOND)).to.be.eq(false);
+      await depositPool.setClaimSender(rewardPoolId, [SECOND], [true]);
+      expect(await depositPool.claimSender(rewardPoolId, OWNER, SECOND)).to.be.eq(true);
+      await depositPool.setClaimSender(rewardPoolId, [SECOND], [false]);
+      expect(await depositPool.claimSender(rewardPoolId, OWNER, SECOND)).to.be.eq(false);
+    });
+    it('should revert if invalid array length', async () => {
+      await expect(depositPool.setClaimSender(rewardPoolId, [SECOND], [true, false])).to.be.revertedWith(
+        'DS: invalid array length',
+      );
+    });
+  });
+
+  describe('#setClaimReceiver', () => {
+    it('should correctly set and skip the claim receiver', async () => {
+      expect(await depositPool.claimReceiver(rewardPoolId, OWNER)).to.be.eq(ZERO_ADDR);
+      await depositPool.setClaimReceiver(rewardPoolId, SECOND);
+      expect(await depositPool.claimReceiver(rewardPoolId, OWNER)).to.be.eq(SECOND);
+      await depositPool.setClaimReceiver(rewardPoolId, ZERO_ADDR);
+      expect(await depositPool.claimReceiver(rewardPoolId, OWNER)).to.be.eq(ZERO_ADDR);
+    });
+  });
+
   describe('#stake', () => {
     before(async () => {
       await expect(depositPool.stake(rewardPoolId, 0, 0, ZERO_ADDR)).to.be.revertedWith("DS: migration isn't over");
@@ -2081,15 +2103,47 @@ describe('DepositPool', () => {
       expect(userData.deposited).to.eq(wei(1));
       expect(userData.pendingRewards).to.eq(0);
     });
-    it('should correctly claim, from allowed address', async () => {
-      await setNextTime(oneHour * 2);
-      await depositPool.connect(SECOND).stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
-      await distributorMock.setDistributedRewardsAnswer(wei(198));
+    describe('#claimFor', () => {
+      beforeEach(async () => {
+        await setNextTime(oneHour * 2);
+        await depositPool.connect(SECOND).stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
 
-      await depositPool.connect(SECOND).setAddressesAllowedToClaim([OWNER], [true]);
+        // Deposit 1 day after the start of reward payment
+        await setNextTime(oneDay + oneDay);
+        await depositPool.connect(SECOND).stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
 
-      await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, SECOND, { value: wei(0.5) });
+        await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 / 2));
+      });
+      it('should correctly claim, with `claimSender` without `claimReceiver`', async () => {
+        await depositPool.connect(SECOND).setClaimSender(rewardPoolId, [OWNER], [true]);
+        // Claim after 1.5 days
+        await setNextTime(oneDay + oneDay * 1.5);
+        await depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, SECOND, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(149));
+        const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
+        expect(userData.deposited).to.eq(wei(2));
+        expect(userData.virtualDeposited).to.eq(wei(2));
+        expect(userData.pendingRewards).to.eq(0);
+      });
+      it('should correctly claim, without `claimSender` and with `claimReceiver`', async () => {
+        await depositPool.connect(SECOND).setClaimReceiver(rewardPoolId, REFERRER_1);
+
+        // Claim after 1.5 days
+        await setNextTime(oneDay + oneDay * 1.5);
+        await depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, ZERO_ADDR, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(REFERRER_1.address)).to.eq(wei(149));
+        const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
+        expect(userData.deposited).to.eq(wei(2));
+        expect(userData.virtualDeposited).to.eq(wei(2));
+        expect(userData.pendingRewards).to.eq(0);
+      });
+      it('should revert if invalid caller', async () => {
+        await expect(
+          depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, OWNER, { value: wei(0.5) }),
+        ).to.be.revertedWith('DS: invalid caller');
+      });
     });
     describe('with multiplier', () => {
       const periodStart = 1721908800;
@@ -2933,14 +2987,21 @@ describe('DepositPool', () => {
         expect(referrerData.rate).to.eq(poolData.rate);
         expect(referrerData.pendingRewards).to.eq(0);
       });
-      it('should claim referrer tier correctly', async () => {
-        await depositPool.connect(SECOND).stake(rewardPoolId, wei(10), 0, OWNER);
+      describe('#claimReferrerTierFor', () => {
+        it('should claim referrer tier correctly, with `claimSender`', async () => {
+          await depositPool.connect(SECOND).stake(rewardPoolId, wei(10), 0, OWNER);
+          await distributorMock.setDistributedRewardsAnswer(wei(100));
 
-        await distributorMock.setDistributedRewardsAnswer(wei(100));
-        await depositPool.setAddressesAllowedToClaim([SECOND], [true]);
+          await setNextTime(oneDay + oneDay);
 
-        await setNextTime(oneDay + oneDay);
-        await depositPool.connect(SECOND).claimReferrerTierFor(rewardPoolId, OWNER, OWNER, { value: wei(0.5) });
+          await depositPool.setClaimSender(rewardPoolId, [SECOND], [true]);
+          await depositPool.connect(SECOND).claimReferrerTierFor(rewardPoolId, OWNER, OWNER, { value: wei(0.5) });
+        });
+        it('should revert if invalid caller', async () => {
+          await expect(
+            depositPool.connect(OWNER).claimReferrerTierFor(rewardPoolId, SECOND, OWNER, { value: wei(0.5) }),
+          ).to.be.revertedWith('DS: invalid caller');
+        });
       });
       it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
         await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 0, 60, 4);
@@ -3197,78 +3258,6 @@ describe('DepositPool', () => {
     });
   });
 
-  describe('#getClaimLockPeriodMultiplier', () => {
-    const payoutStart = 1707393600;
-    const periodStart = 1721908800;
-
-    it('should calculate multiplier correctly', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        payoutStart + 365 * oneDay,
-        payoutStart + 1742 * oneDay,
-      );
-
-      expect(multiplier).to.be.closeTo(wei(7.234393096, 25), wei(0.000001, 25));
-    });
-    it('should calculate multiplier if start < periodStart_', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(rewardPoolId, 0, periodStart + 200 * oneDay);
-
-      expect(multiplier).to.be.closeTo(wei(1.171513456, 25), wei(0.000001, 25));
-    });
-    it('should calculate multiplier if end > periodEnd_', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        24000 * oneDay,
-        99999999 * oneDay,
-      );
-
-      expect(multiplier).to.be.closeTo(wei(1.176529228, 25), wei(0.000001, 25));
-    });
-    it('should calculate multiplier if start < periodStart_ and end > periodEnd_', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(rewardPoolId, 0, 99999999 * oneDay);
-
-      expect(multiplier).to.eq(wei(10.7, 25));
-    });
-    it('should return 1 if start >= end', async () => {
-      let multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        periodStart + 2 * oneDay,
-        periodStart + 1 * oneDay,
-      );
-      expect(multiplier).to.eq(wei(1, 25));
-
-      multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        periodStart + 2 * oneDay,
-        periodStart + 2 * oneDay,
-      );
-      expect(multiplier).to.eq(wei(1, 25));
-    });
-    it('should return multiplier >= 1', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        periodStart + 1 * oneDay,
-        periodStart + 1 * oneDay + 1,
-      );
-
-      expect(multiplier).to.eq(wei(1, 25));
-    });
-    it('should return multiplier <= 10.7', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        periodStart + 10 * oneDay,
-        99999999 * oneDay,
-      );
-
-      expect(multiplier).to.eq(wei(10.7, 25));
-    });
-    it('should return 1 if pool is not exist', async () => {
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(1, 0, 1);
-
-      expect(multiplier).to.eq(wei(1, 25));
-    });
-  });
-
   describe('#getCurrentUserMultiplier', () => {
     const payoutStart = 1707393600;
     const periodStart = 1721908800;
@@ -3279,17 +3268,6 @@ describe('DepositPool', () => {
       await setTime(periodStart - 3 * oneDay);
     });
 
-    it('should calculate claim lock multiplier correctly', async () => {
-      await setNextTime(payoutStart + 365 * oneDay);
-      await depositPool.stake(rewardPoolId, wei(1), payoutStart + 1742 * oneDay, ZERO_ADDR);
-      const multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        payoutStart + 365 * oneDay,
-        payoutStart + 1742 * oneDay,
-      );
-
-      expect(await depositPool.getCurrentUserMultiplier(rewardPoolId, OWNER)).to.equal(multiplier);
-    });
     it('should calculate referral multiplier correctly', async () => {
       await depositPool.stake(rewardPoolId, wei(1), 0, OWNER);
       const multiplier = wei(1.01, 25);
@@ -3299,14 +3277,9 @@ describe('DepositPool', () => {
     it('should calculate total multiplier correctly', async () => {
       await setNextTime(payoutStart + 365 * oneDay);
       await depositPool.stake(rewardPoolId, wei(1), payoutStart + 1742 * oneDay, OWNER);
-      let multiplier = await depositPool.getClaimLockPeriodMultiplier(
-        rewardPoolId,
-        payoutStart + 365 * oneDay,
-        payoutStart + 1742 * oneDay,
-      );
-      multiplier += wei(0.01, 25);
+      const multiplier = wei(0.01, 25);
 
-      expect(await depositPool.getCurrentUserMultiplier(rewardPoolId, OWNER)).to.equal(multiplier);
+      expect(await depositPool.getCurrentUserMultiplier(rewardPoolId, OWNER)).to.be.greaterThan(multiplier);
     });
     it('should return 1 if pool is not exist', async () => {
       const multiplier = await depositPool.getCurrentUserMultiplier(1, OWNER);

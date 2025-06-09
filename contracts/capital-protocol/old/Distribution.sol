@@ -9,7 +9,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "../../libs/LinearDistributionIntervalDecrease.sol";
 
-import {L1Sender} from "../../L1Sender.sol";
+import {L1Sender} from "../../capital-protocol/old/L1Sender.sol";
 import {IDistribution} from "../../interfaces/capital-protocol/old/IDistribution.sol";
 
 contract Distribution is IDistribution, OwnableUpgradeable, UUPSUpgradeable {

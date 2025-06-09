@@ -9,7 +9,7 @@ interface IReferrer {
     /**
      * @notice The structure that stores the information about referrer tier.
      * @param amount The minimal token amount for the tier.
-     * @param multiplier The multiplier for the tier.
+     * @param multiplier The multiplier for the tier, where 1% = 0.01 * 10^25.
      */
     struct ReferrerTier {
         uint256 amount;

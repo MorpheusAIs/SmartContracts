@@ -55,8 +55,9 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => mapping(uint256 => ReferrerData)) public referrersData;
     /** @dev UPGRADE `DistributionV5` end. */
 
-    /** @dev UPGRADE `DistributionV6` storage updates, add addresses allowed to claim for `_msgSender()`. */
-    mapping(address => mapping(address => bool)) public isAddressAllowedToClaim;
+    /** @dev UPGRADE `DistributionV6` storage updates, add addresses allowed to claim. Add whitelisted claim receivers. */
+    mapping(uint256 => mapping(address => mapping(address => bool))) public claimSender;
+    mapping(uint256 => mapping(address => address)) public claimReceiver;
     /** @dev UPGRADE `DistributionV6` end. */
 
     /** @dev UPGRADE `DepositPool`, v7. Storage updates, add few deposit pools. */
@@ -68,7 +69,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
     /** @dev Contain information about rewards pools needed for this contract. */
     mapping(uint256 => RewardPoolProtocolDetails) public rewardPoolsProtocolDetails;
-
     /** @dev UPGRADE `DepositPool`, v7 end. */
 
     /**********************************************************************************************/
@@ -225,14 +225,27 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     /*** Stake, claim, withdraw, lock management                                                ***/
     /**********************************************************************************************/
 
-    function setAddressesAllowedToClaim(address[] calldata addresses_, bool[] calldata isAllowed_) external {
-        require(addresses_.length == isAllowed_.length, "DS: invalid array length");
+    function setClaimSender(
+        uint256 rewardPoolIndex_,
+        address[] calldata senders_,
+        bool[] calldata isAllowed_
+    ) external {
+        IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
+        require(senders_.length == isAllowed_.length, "DS: invalid array length");
 
-        for (uint256 i = 0; i < addresses_.length; ++i) {
-            isAddressAllowedToClaim[_msgSender()][addresses_[i]] = isAllowed_[i];
+        for (uint256 i = 0; i < senders_.length; ++i) {
+            claimSender[rewardPoolIndex_][_msgSender()][senders_[i]] = isAllowed_[i];
 
-            emit AddressAllowedToClaimSet(_msgSender(), addresses_[i], isAllowed_[i]);
+            emit ClaimSenderSet(rewardPoolIndex_, _msgSender(), senders_[i], isAllowed_[i]);
         }
+    }
+
+    function setClaimReceiver(uint256 rewardPoolIndex_, address receiver_) external {
+        IRewardPool(IDistributor(distributor).rewardPool()).onlyExistedRewardPool(rewardPoolIndex_);
+
+        claimReceiver[rewardPoolIndex_][_msgSender()] = receiver_;
+
+        emit ClaimReceiverSet(rewardPoolIndex_, _msgSender(), receiver_);
     }
 
     function stake(uint256 rewardPoolIndex_, uint256 amount_, uint128 claimLockEnd_, address referrer_) external {
@@ -264,22 +277,28 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         rewardPoolsProtocolDetails[rewardPoolIndex_].distributedRewards += rewards_;
     }
 
-    function claim(uint256 poolId_, address receiver_) external payable {
-        _claim(poolId_, _msgSender(), receiver_);
+    function claim(uint256 rewardPoolIndex_, address receiver_) external payable {
+        _claim(rewardPoolIndex_, _msgSender(), receiver_);
     }
 
-    function claimFor(uint256 poolId_, address user_, address receiver_) external payable {
-        require(isAddressAllowedToClaim[user_][_msgSender()], "DS: invalid caller");
-        _claim(poolId_, user_, receiver_);
+    function claimFor(uint256 rewardPoolIndex_, address staker_, address receiver_) external payable {
+        if (claimReceiver[rewardPoolIndex_][staker_] != address(0)) {
+            receiver_ = claimReceiver[rewardPoolIndex_][staker_];
+        } else {
+            require(claimSender[rewardPoolIndex_][staker_][_msgSender()], "DS: invalid caller");
+        }
+
+        _claim(rewardPoolIndex_, staker_, receiver_);
     }
 
-    function claimReferrerTier(uint256 poolId_, address receiver_) external payable {
-        _claimReferrerTier(poolId_, _msgSender(), receiver_);
+    function claimReferrerTier(uint256 rewardPoolIndex_, address receiver_) external payable {
+        _claimReferrerTier(rewardPoolIndex_, _msgSender(), receiver_);
     }
 
-    function claimReferrerTierFor(uint256 poolId_, address referrer_, address receiver_) external payable {
-        require(isAddressAllowedToClaim[referrer_][_msgSender()], "DS: invalid caller");
-        _claimReferrerTier(poolId_, referrer_, receiver_);
+    function claimReferrerTierFor(uint256 rewardPoolIndex_, address referrer_, address receiver_) external payable {
+        require(claimSender[rewardPoolIndex_][referrer_][_msgSender()], "DS: invalid caller");
+
+        _claimReferrerTier(rewardPoolIndex_, referrer_, receiver_);
     }
 
     function lockClaim(uint256 rewardPoolIndex_, uint128 claimLockEnd_) external {
@@ -704,18 +723,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
     /*** Functionality for multipliers, getters                                                 ***/
     /**********************************************************************************************/
-
-    function getClaimLockPeriodMultiplier(
-        uint256 rewardPoolIndex_,
-        uint128 claimLockStart_,
-        uint128 claimLockEnd_
-    ) public view returns (uint256) {
-        if (!IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolExist(rewardPoolIndex_)) {
-            return PRECISION;
-        }
-
-        return LockMultiplierMath.getLockPeriodMultiplier(claimLockStart_, claimLockEnd_);
-    }
 
     function getCurrentUserMultiplier(uint256 rewardPoolIndex_, address user_) public view returns (uint256) {
         if (!IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolExist(rewardPoolIndex_)) {

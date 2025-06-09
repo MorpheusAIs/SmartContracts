@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import {
-  GatewayRouterMock,
+  ArbitrumBridgeGatewayRouterMock,
   IL1Sender,
   L1Sender,
   L1SenderMock,

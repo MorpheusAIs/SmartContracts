@@ -12,7 +12,7 @@ interface IDepositPool is IERC165, IReferrer {
     /**
      * @notice The structure that stores the reward pool rate data.
      * @param lastUpdate The timestamp when the pool was last updated.
-     * @param rate The current reward rate.
+     * @param rate The current reward rate. Variable used for internal calculations.
      * @param totalVirtualDeposited The total amount of tokens deposited in the pool with the users power factor.
      */
     struct RewardPoolData {
@@ -165,6 +165,23 @@ interface IDepositPool is IERC165, IReferrer {
     event UserReferred(uint256 indexed rewardPoolIndex, address indexed user, address indexed referrer, uint256 amount);
 
     /**
+     * @notice The event that is emitted when the claim sender set.
+     * @param rewardPoolIndex The reward pool index.
+     * @param staker The staker's address.
+     * @param sender The `_msgSender()` address.
+     * @param isAllowed True - when `sender` can claim against `staker`.
+     */
+    event ClaimSenderSet(uint256 rewardPoolIndex, address staker, address sender, bool isAllowed);
+
+    /**
+     * @notice The event that is emitted when the claim receiver set.
+     * @param rewardPoolIndex The reward pool index.
+     * @param staker The staker's address.
+     * @param receiver The L2 receiver address.
+     */
+    event ClaimReceiverSet(uint256 rewardPoolIndex, address staker, address receiver);
+
+    /**
      * @notice The function to receive the possibility to upgrade the contract.
      * @return The `false` when contract can be upgraded.
      */
@@ -189,14 +206,6 @@ interface IDepositPool is IERC165, IReferrer {
     function totalDepositedInPublicPools() external view returns (uint256);
 
     /**
-     * @notice The function to receive the user allowance for the function `claimFor()`.
-     * @param sender_ The potential tx sender.
-     * @param for_ The user who hold the rewards, claim token for the `for_` user.
-     * @return The user allowance for the function `claimFor()`.
-     */
-    function isAddressAllowedToClaim(address sender_, address for_) external view returns (bool);
-
-    /**
      * @notice The function to receive the migration end flag.
      * @return The `true`, when end.
      */
@@ -210,7 +219,7 @@ interface IDepositPool is IERC165, IReferrer {
 
     /**
      * @notice The function to initialize the contract.
-     * @dev Used by admins, once.
+
      * @param depositToken_ The address of the deposit token. Users stake this token.
      * @param distributor_ The `Distributor` contract address.
      */
@@ -273,11 +282,19 @@ interface IDepositPool is IERC165, IReferrer {
     ) external;
 
     /**
-     * @notice The function to set the addresses which can claim instead of `msg.sender`.
-     * @param addresses_  The list with whitelisted addresses.
-     * @param isAllowed_ The list with allowed status (true or false) for the each address in the `addresses_` array.
+     * @notice The function to set the addresses which can claim against initial staker.
+     * @param rewardPoolIndex_ The reward poll index.
+     * @param senders_  The addresses list
+     * @param isAllowed_ Allowed or not
      */
-    function setAddressesAllowedToClaim(address[] calldata addresses_, bool[] calldata isAllowed_) external;
+    function setClaimSender(uint256 rewardPoolIndex_, address[] calldata senders_, bool[] calldata isAllowed_) external;
+
+    /**
+     * @notice The function to set the addresses to receive rewards when call is from any `_msgSender()`.
+     * @param rewardPoolIndex_ The reward poll index.
+     * @param receiver_  The receiver address
+     */
+    function setClaimReceiver(uint256 rewardPoolIndex_, address receiver_) external;
 
     /**
      * @notice The function to stake the `depositToken` tokens in the public pool.
@@ -349,19 +366,6 @@ interface IDepositPool is IERC165, IReferrer {
      * @return The amount of latest referrer's rewards.
      */
     function getLatestReferrerReward(uint256 rewardPoolIndex_, address user_) external view returns (uint256);
-
-    /**
-     * @notice The function to get the potential claim lock period power factor.
-     * @param rewardPoolIndex_ The reward poll index.
-     * @param claimLockStart_ Claim lock start timestamp.
-     * @param claimLockEnd_ Claim lock end timestamp.
-     * @return The multiplier.
-     */
-    function getClaimLockPeriodMultiplier(
-        uint256 rewardPoolIndex_,
-        uint128 claimLockStart_,
-        uint128 claimLockEnd_
-    ) external view returns (uint256);
 
     /**
      * @notice The function to get the current user power factor.

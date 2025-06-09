@@ -9,7 +9,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {LinearDistributionIntervalDecrease} from "../../libs/LinearDistributionIntervalDecrease.sol";
 
-import {L1Sender} from "../../L1Sender.sol";
+import {L1Sender} from "../../capital-protocol/old/L1Sender.sol";
 import {IDistributionV4} from "../../interfaces/capital-protocol/old/IDistributionV4.sol";
 
 import {LogExpMath} from "../../libs/LogExpMath.sol";

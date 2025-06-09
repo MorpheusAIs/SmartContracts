@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IFeeConfig, IERC165} from "./interfaces/IFeeConfig.sol";
+import {IFeeConfig, IERC165} from "../interfaces/builder-protocol/IFeeConfig.sol";
 
 contract FeeConfig is IFeeConfig, OwnableUpgradeable, UUPSUpgradeable {
     address private _treasury;

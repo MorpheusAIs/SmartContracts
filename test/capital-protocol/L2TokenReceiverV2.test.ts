@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { getDefaultSwapParams } from './helpers/distribution-helper';
-import { Reverter } from './helpers/reverter';
+import { getDefaultSwapParams } from '../helpers/distribution-helper';
+import { Reverter } from '../helpers/reverter';
 
 import {
   IL2TokenReceiverV2,
@@ -11,7 +11,7 @@ import {
   MOR,
   NonfungiblePositionManagerMock,
   StETHMock,
-  SwapRouterMock,
+  UniswapSwapRouterMock,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';

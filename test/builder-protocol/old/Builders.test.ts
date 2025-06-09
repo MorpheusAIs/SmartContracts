@@ -3,10 +3,10 @@ import { expect } from 'chai';
 import { encodeBytes32String } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { getCurrentBlockTime, setNextTime, setTime } from '../helpers/block-helper';
-import { getDefaultBuilderPool } from '../helpers/builders-helper';
-import { oneDay, oneHour } from '../helpers/distribution-helper';
-import { Reverter } from '../helpers/reverter';
+import { getCurrentBlockTime, setNextTime, setTime } from '../../helpers/block-helper';
+import { getDefaultBuilderPool } from '../../helpers/builders-helper';
+import { oneDay, oneHour } from '../../helpers/distribution-helper';
+import { Reverter } from '../../helpers/reverter';
 
 import { Builders, BuildersTreasury, FeeConfig, IBuilders, MOROFT } from '@/generated-types/ethers';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';

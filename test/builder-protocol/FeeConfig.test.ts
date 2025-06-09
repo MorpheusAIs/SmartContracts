@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { encodeBytes32String } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { Reverter } from './helpers/reverter';
+import { Reverter } from '../helpers/reverter';
 
 import { FeeConfig, FeeConfigV2 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';

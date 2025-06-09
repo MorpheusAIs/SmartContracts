@@ -115,6 +115,7 @@ describe('BuildersV3', () => {
     });
     it('should revert if caller is not the migration owner', async () => {
       const buildersV3 = await upgradeToV3(builders);
+      await buildersV3.connect(OWNER).pause();
 
       await expect(buildersV3.pauseForMigration()).to.be.revertedWith('BU: caller is not the migration owner');
     });

@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { ethers, expect } from 'hardhat';
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
 
 import { LayerZeroEndpointV2Mock, MOROFT } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';

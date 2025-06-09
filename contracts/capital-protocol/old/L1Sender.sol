@@ -9,8 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {IL1Sender, IERC165} from "./interfaces/IL1Sender.sol";
-import {IWStETH} from "./interfaces/tokens/IWStETH.sol";
+import {IL1Sender, IERC165} from "../../interfaces/capital-protocol/old/IL1Sender.sol";
+import {IWStETH} from "../../interfaces/tokens/IWStETH.sol";
 
 contract L1Sender is IL1Sender, OwnableUpgradeable, UUPSUpgradeable {
     address public unwrappedDepositToken;

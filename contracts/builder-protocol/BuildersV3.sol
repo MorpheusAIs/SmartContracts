@@ -7,7 +7,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
+import {IFeeConfig} from "../interfaces/builder-protocol/IFeeConfig.sol";
 import {IBuildersV3, IERC165} from "../interfaces/builder-protocol/IBuildersV3.sol";
 import {IBuildersTreasury} from "../interfaces/builder-protocol/IBuildersTreasury.sol";
 import {IBuilderSubnets} from "../interfaces/builder-protocol/IBuilderSubnets.sol";

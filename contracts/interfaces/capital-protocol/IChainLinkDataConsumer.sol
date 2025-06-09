@@ -17,7 +17,6 @@ interface IChainLinkDataConsumer is IERC165 {
 
     /**
      * @notice The function to initialize the contract.
-     * @dev Used by admins, once.
      */
     function ChainLinkDataConsumer_init() external;
 

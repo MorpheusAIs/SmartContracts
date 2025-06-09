@@ -8,7 +8,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IFeeConfig} from "../interfaces/IFeeConfig.sol";
+import {IFeeConfig} from "../interfaces/builder-protocol/IFeeConfig.sol";
 import {IBuilderSubnets, IERC165} from "../interfaces/builder-protocol/IBuilderSubnets.sol";
 import {IBuildersV3} from "../interfaces/builder-protocol/IBuildersV3.sol";
 
@@ -18,43 +18,38 @@ contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable 
     using Math for *;
     using SafeERC20 for IERC20;
 
-    /** @dev Contract that support IFeeConfig interface */
+    /** @notice The contract address that support `IFeeConfig` interface */
     address public feeConfig;
 
-    /** @dev Stake and reward token */
+    /** @notice Stake and reward token (MOR) */
     address public token;
 
-    /** @dev Rewards are taken from this address */
+    /** @notice The rewards on `claim()` are taken from this address */
     address public treasury;
 
-    /** @dev Staker tokens locked for this period (at least) after the stake */
+    /** @notice The staker tokens locked for withdraw for this period (at least) after the stake */
     uint256 public minWithdrawLockPeriodAfterStake;
 
-    /** @dev `subnetCreationFeeAmount` is taken from the Builder when the Subnet is created and sent to the `subnetCreationFeeTreasury` */
+    /** @notice `subnetCreationFeeAmount` is taken from the Builder when the Subnet is created and sent to the `subnetCreationFeeTreasury` */
     uint256 public subnetCreationFeeAmount;
     address public subnetCreationFeeTreasury;
 
-    /** @dev This variable is required for calculations, it sets the time at which
+    /**
+     * @notice This variable is required for calculations, it sets the time at which
      * the calculation of rewards will start. That is, before this time the rewards
      * will not be calculated.
      */
     uint128 public rewardCalculationStartsAt;
 
-    /** @dev This variable is required for calculations, sets the percent for the
-     * current smart contract to the total reward pool. Since the current contract
-     * can be deployed on multiple networks and the reward pool is shared, we can
-     * define the share of the reward pool for the current contract (e.g. 20% for
-     * a contract on Arbitrum and 80% on Base). The amount of stakes into this contract
-     * cannot exceed the share of the total reward pool for this contract.
-     */
-    uint256 public maxStakedShareForBuildersPool;
-
-    /** @dev This parameter is needed to migrate stakes from V1.
+    /**
+     * @notice This parameter is needed to migrate stakes from V1.
      * It should be turned off after the migration is complete, because a restake from
      * other accounts will update the power factor, which may not be desirable. Also,
      * subnet creation can't be in the past.
      */
     bool public isMigrationOver;
+
+    /** @notice The `BuildersV3` contract address */
     address public buildersV3;
 
     BuildersRewardPoolData public buildersRewardPoolData;

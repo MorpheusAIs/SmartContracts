@@ -1,6 +1,6 @@
 import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-ethers';
-import '@nomiclabs/hardhat-truffle5';
 import '@nomiclabs/hardhat-web3';
 import '@solarity/hardhat-markup';
 import '@solarity/hardhat-migrate';
@@ -8,7 +8,6 @@ import '@typechain/hardhat';
 import * as dotenv from 'dotenv';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
-import 'hardhat-storage-layout';
 import { HardhatUserConfig } from 'hardhat/config';
 import 'solidity-coverage';
 import 'solidity-docgen';
@@ -100,11 +99,7 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
       timeout: 60000,
     },
-    mumbai: {
-      url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
-      accounts: privateKey(),
-      gasMultiplier: 1.1,
-    },
+    mumbai: { url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`, accounts: privateKey(), gasMultiplier: 1.1 },
     polygonAmoy: {
       url: `https://polygon-amoy.blockpi.network/v1/rpc/public`,
       accounts: privateKey(),
@@ -115,21 +110,13 @@ const config: HardhatUserConfig = {
       accounts: privateKey(),
       gasMultiplier: 1.2,
     },
-    bsc: {
-      url: 'https://bsc-dataseed.binance.org/',
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
+    bsc: { url: 'https://bsc-dataseed.binance.org/', accounts: privateKey(), gasMultiplier: 1.2 },
     ethereum: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.2,
     },
-    polygon: {
-      url: `https://matic-mainnet.chainstacklabs.com`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
+    polygon: { url: `https://matic-mainnet.chainstacklabs.com`, accounts: privateKey(), gasMultiplier: 1.2 },
     avalanche: {
       url: `https://api.avax.network/ext/bc/C/rpc`,
       accounts: privateKey(),
@@ -151,27 +138,14 @@ const config: HardhatUserConfig = {
       accounts: privateKey(),
       gasMultiplier: 1.1,
     },
-    base_sepolia: {
-      url: `https://sepolia.base.org`,
-      accounts: privateKey(),
-      gasMultiplier: 1.1,
-    },
+    base_sepolia: { url: `https://sepolia.base.org`, accounts: privateKey(), gasMultiplier: 1.1 },
     base: {
       url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.1,
     },
   },
-  solidity: {
-    version: '0.8.20',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-      evmVersion: 'paris',
-    },
-  },
+  solidity: { version: '0.8.20', settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: 'paris' } },
   etherscan: {
     apiKey: {
       goerli: `${process.env.ETHERSCAN_KEY}`,
@@ -194,26 +168,17 @@ const config: HardhatUserConfig = {
       {
         network: 'arbitrum_sepolia',
         chainId: 421614,
-        urls: {
-          apiURL: 'https://api-sepolia.arbiscan.io/api',
-          browserURL: 'https://sepolia.arbiscan.io/',
-        },
+        urls: { apiURL: 'https://api-sepolia.arbiscan.io/api', browserURL: 'https://sepolia.arbiscan.io/' },
       },
       {
         network: 'base_sepolia',
         chainId: 84532,
-        urls: {
-          apiURL: 'https://api-sepolia.basescan.org/api',
-          browserURL: 'https://sepolia.base.io/',
-        },
+        urls: { apiURL: 'https://api-sepolia.basescan.org/api', browserURL: 'https://sepolia.base.io/' },
       },
       {
         network: 'polygonAmoy',
         chainId: 80002,
-        urls: {
-          apiURL: 'https://api-amoy.polygonscan.com/api',
-          browserURL: 'https://amoy.polygonscan.com',
-        },
+        urls: { apiURL: 'https://api-amoy.polygonscan.com/api', browserURL: 'https://amoy.polygonscan.com' },
       },
     ],
   },
@@ -221,21 +186,9 @@ const config: HardhatUserConfig = {
     pathToMigrations: './deploy/',
     // only: 1,
   },
-  mocha: {
-    timeout: 1000000,
-  },
-  contractSizer: {
-    alphaSort: false,
-    disambiguatePaths: false,
-    runOnCompile: false,
-    strict: false,
-  },
-  gasReporter: {
-    currency: 'USD',
-    gasPrice: 50,
-    enabled: false,
-    coinmarketcap: `${process.env.COINMARKETCAP_KEY}`,
-  },
+  mocha: { timeout: 1000000 },
+  contractSizer: { alphaSort: false, disambiguatePaths: false, runOnCompile: true, strict: false },
+  gasReporter: { currency: 'USD', gasPrice: 50, enabled: false, coinmarketcap: `${process.env.COINMARKETCAP_KEY}` },
   typechain: {
     outDir: `generated-types/${typechainTarget().split('-')[0]}`,
     target: typechainTarget(),
@@ -245,7 +198,16 @@ const config: HardhatUserConfig = {
   },
   docgen: {
     pages: 'files',
-    exclude: ['@layerzerolabs', 'interfaces', 'extensions', 'mock'],
+    exclude: [
+      '@layerzerolabs',
+      'interfaces',
+      'extensions',
+      'libs',
+      'mock',
+      'old',
+      'builder-protocol/old',
+      'capital-protocol/old',
+    ],
   },
 };
 
