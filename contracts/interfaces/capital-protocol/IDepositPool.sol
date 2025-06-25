@@ -194,12 +194,6 @@ interface IDepositPool is IERC165, IReferrer {
     function depositToken() external view returns (address);
 
     /**
-     * @notice The function to receive the `L1SenderV2` contract address.
-     * @return The `L1SenderV2` contract address.
-     */
-    function l1Sender() external view returns (address);
-
-    /**
      * @notice The function to receive the total deposited in public pool amount of deposit token.
      * @return The total deposited in public pool amount.
      */

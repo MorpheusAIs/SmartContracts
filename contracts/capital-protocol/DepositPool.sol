@@ -26,8 +26,11 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     /** @dev Main stake token for the contract */
     address public depositToken;
 
-    /** @dev `L1SenderV2` contract address */
-    address public l1Sender;
+    /**
+     * @dev `L1SenderV2` contract address
+     * v7 update, moved to the `Distributor` contract.
+     */
+    address public unusedStorage0;
 
     /**
      * @dev Contain information about reward pools. Removed in `DepositPool`,
