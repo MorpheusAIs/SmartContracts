@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IBuilderSubnets, IERC165} from "../interfaces/builder-protocol/IBuilderSubnets.sol";
+import {IBuilderSubnets, IERC165} from "../interfaces/builder-protocol/old/IBuilderSubnets.sol";
+import {IBuildersV4} from "../interfaces/builder-protocol/IBuildersV4.sol";
+import {IBuildersTreasuryV2} from "../interfaces/builder-protocol/IBuildersTreasuryV2.sol";
 import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
-import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
+import {IRewardPool} from "../interfaces/IRewardPool.sol";
 import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
 import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
 import {IL1SenderV2} from "../interfaces/capital-protocol/IL1SenderV2.sol";
@@ -11,6 +13,14 @@ import {IL1SenderV2} from "../interfaces/capital-protocol/IL1SenderV2.sol";
 contract InterfaceMock {
     function getIBuilderSubnetsInterfaceId() public pure returns (bytes4) {
         return type(IBuilderSubnets).interfaceId;
+    }
+
+    function getIBuildersTreasuryV2() public pure returns (bytes4) {
+        return type(IBuildersTreasuryV2).interfaceId;
+    }
+
+    function getIBuildersV4() public pure returns (bytes4) {
+        return type(IBuildersV4).interfaceId;
     }
 
     function getIDepositPoolInterfaceId() public pure returns (bytes4) {

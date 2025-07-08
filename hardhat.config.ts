@@ -187,7 +187,7 @@ const config: HardhatUserConfig = {
     // only: 1,
   },
   mocha: { timeout: 1000000 },
-  contractSizer: { alphaSort: false, disambiguatePaths: false, runOnCompile: true, strict: false },
+  contractSizer: { alphaSort: false, disambiguatePaths: false, runOnCompile: false, strict: false },
   gasReporter: { currency: 'USD', gasPrice: 50, enabled: false, coinmarketcap: `${process.env.COINMARKETCAP_KEY}` },
   typechain: {
     outDir: `generated-types/${typechainTarget().split('-')[0]}`,

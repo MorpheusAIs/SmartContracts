@@ -4,9 +4,9 @@ pragma solidity ^0.8.20;
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionIntervalDecrease.sol";
+import {LinearDistributionIntervalDecrease} from "./libs/LinearDistributionIntervalDecrease.sol";
 
-import {IRewardPool, IERC165} from "../interfaces/capital-protocol/IRewardPool.sol";
+import {IRewardPool, IERC165} from "./interfaces/IRewardPool.sol";
 
 contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
     RewardPool[] public rewardPools;

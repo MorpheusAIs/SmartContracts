@@ -8,11 +8,11 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IFeeConfig} from "../interfaces/builder-protocol/IFeeConfig.sol";
-import {IBuilderSubnets, IERC165} from "../interfaces/builder-protocol/IBuilderSubnets.sol";
-import {IBuildersV3} from "../interfaces/builder-protocol/IBuildersV3.sol";
+import {IFeeConfig} from "../../interfaces/builder-protocol/IFeeConfig.sol";
+import {IBuilderSubnets, IERC165} from "../../interfaces/builder-protocol/old/IBuilderSubnets.sol";
+import {IBuildersV3} from "../../interfaces/builder-protocol/old/IBuildersV3.sol";
 
-import {LinearDistributionIntervalDecrease} from "../libs/LinearDistributionIntervalDecrease.sol";
+import {LinearDistributionIntervalDecrease} from "../../libs/LinearDistributionIntervalDecrease.sol";
 
 contract BuilderSubnets is IBuilderSubnets, UUPSUpgradeable, OwnableUpgradeable {
     using Math for *;

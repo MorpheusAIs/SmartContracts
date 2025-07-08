@@ -8,7 +8,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IDepositPool, IERC165} from "../interfaces/capital-protocol/IDepositPool.sol";
-import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
+import {IRewardPool} from "../interfaces/IRewardPool.sol";
 import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
 
 import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
