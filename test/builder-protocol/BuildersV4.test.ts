@@ -501,6 +501,9 @@ describe('BuildersV4', () => {
         "BU: the Subnet doesn't exist",
       );
     });
+    it("should revert if the Subnet doesn't exist", async () => {
+      await expect(builders.deposit(subnetId1, 0)).to.be.revertedWith('BU: amount must be greater than zero');
+    });
     it('should revert if amount is less than minimal deposit', async () => {
       await expect(builders.deposit(subnetId1, 1)).to.be.revertedWith('BU: amount too low');
     });

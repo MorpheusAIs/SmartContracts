@@ -280,6 +280,7 @@ contract BuildersV4 is IBuildersV4, UUPSUpgradeable, OwnableUpgradeable {
     /**********************************************************************************************/
 
     function deposit(bytes32 subnetId_, uint256 amount_) external onlyExistedSubnet(subnetId_) {
+        require(amount_ > 0, "BU: amount must be greater than zero");
         address user_ = _msgSender();
 
         Subnet storage subnet = subnets[subnetId_];
@@ -395,7 +396,12 @@ contract BuildersV4 is IBuildersV4, UUPSUpgradeable, OwnableUpgradeable {
         if (from_ == 0) {
             from_ = uint128(block.timestamp);
         }
-        uint256 rewardForSubnetsRaw_ = IRewardPool(rewardPool).getPeriodRewards(3, from_, uint128(block.timestamp));
+        uint256 rewardPoolId = 3; // The ID for the Builder bucket in the `RewardPool` contract.
+        uint256 rewardForSubnetsRaw_ = IRewardPool(rewardPool).getPeriodRewards(
+            rewardPoolId,
+            from_,
+            uint128(block.timestamp)
+        );
         uint256 rewardForSubnets_ = rewardForSubnetsRaw_.mulDiv(networkShare, PRECISION, Math.Rounding.Down);
 
         if (allSubnetsData.totalDeposited == 0) {
