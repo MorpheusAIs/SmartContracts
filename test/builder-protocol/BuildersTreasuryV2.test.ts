@@ -132,6 +132,9 @@ describe('BuildersTreasuryV2', () => {
         'Ownable: caller is not the owner',
       );
     });
+    it('should revert if caller is not the builders', async () => {
+      await expect(buildersTreasury.withdraw(ZERO_ADDR, 1)).to.be.revertedWith('BT: invalid receiver address');
+    });
   });
 
   describe('#sendRewards', async () => {
@@ -150,6 +153,7 @@ describe('BuildersTreasuryV2', () => {
       await builders.connect(BOB).deposit(subnetId, wei(20));
       await rewardPoolMock.setPeriodRewardAnswer(wei(999));
       await setNextTime(1010);
+      await expect(builders.claim(subnetId, ZERO_ADDR)).to.be.revertedWith('BT: invalid receiver address');
       await builders.claim(subnetId, NETWORK_SHARE_OWNER);
 
       expect(await token.balanceOf(buildersTreasury)).to.eq(wei(10000 - 999));
