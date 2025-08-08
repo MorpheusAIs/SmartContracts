@@ -18,6 +18,9 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
 
     mapping(bytes32 => address[]) public dataFeeds;
 
+    /** @notice The maximum allowed delay in seconds for the price update between ChainLink and now. */
+    uint64 public allowedPriceUpdateDelay;
+
     /**********************************************************************************************/
     /*** Init, IERC165                                                                          ***/
     /**********************************************************************************************/
@@ -33,6 +36,14 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
         return interfaceId_ == type(IChainLinkDataConsumer).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+    }
+
+    /**********************************************************************************************/
+    /*** Functionality for the contract `owner()`                                               ***/
+    /**********************************************************************************************/
+
+    function setAllowedPriceUpdateDelay(uint64 allowedPriceUpdateDelay_) external onlyOwner {
+        allowedPriceUpdateDelay = allowedPriceUpdateDelay_;
     }
 
     /**********************************************************************************************/
@@ -72,8 +83,12 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
         for (uint256 i = 0; i < dataFeeds_.length; i++) {
             AggregatorV3Interface aggregator_ = AggregatorV3Interface(dataFeeds_[i]);
 
-            try aggregator_.latestRoundData() returns (uint80, int256 answer_, uint256, uint256, uint80) {
+            try aggregator_.latestRoundData() returns (uint80, int256 answer_, uint256, uint256 updatedAt_, uint80) {
                 if (answer_ <= 0) {
+                    return 0;
+                }
+
+                if (block.timestamp < updatedAt_ || block.timestamp - updatedAt_ > allowedPriceUpdateDelay) {
                     return 0;
                 }
 

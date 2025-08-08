@@ -6,6 +6,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 contract ChainLinkAggregatorV3Mock is AggregatorV3Interface {
     int256 public answerResult;
     uint8 public decimals;
+    uint256 public updated;
 
     constructor(uint8 decimals_) {
         decimals = decimals_;
@@ -24,13 +25,13 @@ contract ChainLinkAggregatorV3Mock is AggregatorV3Interface {
     }
 
     function getRoundData(
-        uint80 _roundId
+        uint80 roundId_
     )
         external
         pure
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
-        return (_roundId, 1, 1, 1, 1);
+        return (roundId_, 1, 1, 1, 1);
     }
 
     function latestRoundData()
@@ -38,10 +39,14 @@ contract ChainLinkAggregatorV3Mock is AggregatorV3Interface {
         view
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
-        return (roundId, answerResult, 1, 1, 1);
+        return (roundId, answerResult, 1, updated == 0 ? block.timestamp : updated, 1);
     }
 
-    function setAnswerResult(int256 _answerResult) external {
-        answerResult = _answerResult;
+    function setAnswerResult(int256 answerResult_) external {
+        answerResult = answerResult_;
+    }
+
+    function setUpdated(uint256 updatedAt_) external {
+        updated = updatedAt_;
     }
 }
