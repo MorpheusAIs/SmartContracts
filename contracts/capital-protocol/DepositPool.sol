@@ -452,18 +452,11 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
                 "DS: pool withdraw is locked"
             );
 
-            uint256 depositTokenContractBalance_ = IERC20(depositToken).balanceOf(distributor);
-            if (amount_ > depositTokenContractBalance_) {
-                amount_ = depositTokenContractBalance_;
-            }
-
             newDeposited_ = deposited_ - amount_;
 
             require(amount_ > 0, "DS: nothing to withdraw");
             require(
-                newDeposited_ >= rewardPoolProtocolDetails.minimalStake ||
-                    newDeposited_ == 0 ||
-                    depositTokenContractBalance_ == amount_,
+                newDeposited_ >= rewardPoolProtocolDetails.minimalStake || newDeposited_ == 0,
                 "DS: invalid withdraw amount"
             );
         } else {
