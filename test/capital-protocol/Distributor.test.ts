@@ -511,7 +511,7 @@ describe('Distributor', () => {
         "DR: `rewardPoolLastCalculatedTimestamp` isn't set",
       );
     });
-    it('should distribute rewards when the reward pool is public', async () => {
+    it('should distribute rewards when the reward pool is not public', async () => {
       await distributor.setRewardPoolLastCalculatedTimestamp(privateRewardPoolId, 1);
 
       await rewardPoolMock.setPeriodRewardAnswer(wei(100));
@@ -521,6 +521,24 @@ describe('Distributor', () => {
       await rewardPoolMock.setPeriodRewardAnswer(wei(1.123));
       await distributor.distributeRewards(privateRewardPoolId);
       expect(await distributor.getDistributedRewards(privateRewardPoolId, dp2Info.depositPool)).to.eq(wei(100 + 1.123));
+    });
+    it('should distribute rewards when the reward pool is public, validate `minRewardsDistributePeriod`', async () => {
+      await distributor.setMinRewardsDistributePeriod(60);
+
+      await imitateYield([wei(2), wei(4)], wei(100), [wei(1, 6), wei(2)]);
+      await setNextTime(1000);
+      await distributor.distributeRewards(publicRewardPoolId);
+      expect(await distributor.distributedRewards(dp0Info.rewardPoolId, dp0Info.depositPool)).to.eq(wei(20));
+      expect(await distributor.distributedRewards(dp1Info.rewardPoolId, dp1Info.depositPool)).to.eq(wei(80));
+
+      await setNextTime(1000 + 31);
+      await distributor.distributeRewards(publicRewardPoolId);
+
+      await imitateYield([wei(2), wei(1)], wei(50), [wei(45, 6), wei(10)]);
+      await setNextTime(1000 + 61);
+      await distributor.distributeRewards(publicRewardPoolId);
+      expect(await distributor.distributedRewards(dp0Info.rewardPoolId, dp0Info.depositPool)).to.eq(wei(20 + 45));
+      expect(await distributor.distributedRewards(dp1Info.rewardPoolId, dp1Info.depositPool)).to.eq(wei(80 + 5));
     });
   });
 

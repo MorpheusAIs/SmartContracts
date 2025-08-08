@@ -319,7 +319,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             lastCalculatedTimestamp_,
             uint128(block.timestamp)
         );
-        rewardPoolLastCalculatedTimestamp[rewardPoolIndex_] = uint128(block.timestamp);
+
         if (rewards_ == 0) return;
         //// End
 
@@ -328,11 +328,14 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             _onlyExistedDepositPool(rewardPoolIndex_, depositPoolAddresses[rewardPoolIndex_][0]);
             distributedRewards[rewardPoolIndex_][depositPoolAddresses[rewardPoolIndex_][0]] += rewards_;
 
+            rewardPoolLastCalculatedTimestamp[rewardPoolIndex_] = uint128(block.timestamp);
+
             return;
         }
 
         // Validate that public reward pools await `minRewardsDistributePeriod`
         if (block.timestamp <= lastCalculatedTimestamp_ + minRewardsDistributePeriod) return;
+        rewardPoolLastCalculatedTimestamp[rewardPoolIndex_] = uint128(block.timestamp);
 
         //// Update prices
         updateDepositTokensPrices(rewardPoolIndex_);
