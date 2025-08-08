@@ -13,11 +13,13 @@ interface IDistributor is IERC165 {
     event L1SenderSet(address l1Sender);
     event AavePoolSet(address aavePool);
     event AavePoolDataProviderSet(address aavePoolDataProvider);
+    event AaveRewardsControllerSet(address aaveRewardsController);
     event RewardPoolSet(address rewardPool);
     event MinRewardsDistributePeriodSet(uint256 minRewardsDistributePeriod);
     event RewardPoolLastCalculatedTimestampSet(uint256 rewardPoolIndex_, uint128 rewardPoolLastCalculatedTimestamp);
     event DepositPoolAdded(uint256 rewardPoolIndex, DepositPool depositPool);
     event TokenPriceSet(string chainLinkPath, uint256 price);
+    event AaveRewardsClaimed(address[] assets, uint256 amount, address to, address reward, uint256 claimedAmount);
 
     /**
      * @notice The Yield strategy.
@@ -84,6 +86,12 @@ interface IDistributor is IERC165 {
     function aavePoolDataProvider() external view returns (address);
 
     /**
+     * @notice The function to receive the Aave `RewardsController` contract address.
+     * @return The Aave `RewardsController` contract address.
+     */
+    function aaveRewardsController() external view returns (address);
+
+    /**
      * @notice The function to receive the undistributed reward.
      * @return The undistributed reward.
      */
@@ -116,6 +124,13 @@ interface IDistributor is IERC165 {
      * @param value_ The `AavePoolDataProvider` address.
      */
     function setAavePoolDataProvider(address value_) external;
+
+    /**
+     * @notice The function to set the Aave `RewardsController` contract.
+     * @dev Only for the contract `owner()`.
+     * @param value_ The Aave `RewardsController` address.
+     */
+    function setAaveRewardsController(address value_) external;
 
     /**
      * @notice The function to set the `RewardPool` contract.
@@ -208,6 +223,22 @@ interface IDistributor is IERC165 {
         uint256 amount_,
         address refundTo_
     ) external payable;
+
+    /**
+     * @notice Claims rewards from Aave protocol for the specified assets.
+     * @dev Only for the contract `owner()`.
+     * @param assets Array of aToken addresses to claim rewards for
+     * @param amount Amount of rewards to claim (use type(uint256).max for all available)
+     * @param to Address that will receive the rewards
+     * @param reward Address of the reward token
+     * @return claimedAmount The amount of rewards actually claimed
+     */
+    function claimAaveRewards(
+        address[] calldata assets,
+        uint256 amount,
+        address to,
+        address reward
+    ) external returns (uint256 claimedAmount);
 
     /**
      * @notice The function to get the contract version.

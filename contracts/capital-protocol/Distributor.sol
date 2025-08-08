@@ -9,6 +9,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPool as AaveIPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolDataProvider as AaveIPoolDataProvider} from "@aave/core-v3/contracts/interfaces/IPoolDataProvider.sol";
+import {IRewardsController} from "../interfaces/aave/IRewardsController.sol";
 
 import {DecimalsConverter} from "@solarity/solidity-lib/libs/decimals/DecimalsConverter.sol";
 
@@ -61,6 +62,12 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
      */
     address public aavePool;
     address public aavePoolDataProvider;
+
+    /**
+     * @dev The variable contain `RewardsController` contract address.
+     * Used to claim rewards from Aave protocol.
+     */
+    address public aaveRewardsController;
 
     /**
      * @dev This variable contain undistributed rewards, e.g. the situation
@@ -142,6 +149,17 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         aavePoolDataProvider = value_;
 
         emit AavePoolDataProviderSet(value_);
+    }
+
+    /**
+     * @dev https://aave.com/docs/resources/addresses. See `RewardsController`.
+     */
+    function setAaveRewardsController(address value_) public onlyOwner {
+        require(value_ != address(0), "DR: invalid Aave rewards controller address");
+
+        aaveRewardsController = value_;
+
+        emit AaveRewardsControllerSet(value_);
     }
 
     function setRewardPool(address value_) public onlyOwner {
@@ -411,6 +429,30 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         IL1SenderV2(l1Sender).sendMintMessage{value: msg.value}(user_, undistributedRewards, refundTo_);
 
         undistributedRewards = 0;
+    }
+
+    /**
+     * @dev Claims rewards from Aave protocol for the specified assets.
+     * Only the owner can call this function.
+     * @param assets Array of aToken addresses to claim rewards for
+     * @param amount Amount of rewards to claim (use type(uint256).max for all available)
+     * @param to Address that will receive the rewards
+     * @param reward Address of the reward token
+     * @return claimedAmount The amount of rewards actually claimed
+     */
+    function claimAaveRewards(
+        address[] calldata assets,
+        uint256 amount,
+        address to,
+        address reward
+    ) external onlyOwner returns (uint256 claimedAmount) {
+        require(aaveRewardsController != address(0), "DR: rewards controller not set");
+        require(to != address(0), "DR: invalid recipient address");
+        require(assets.length > 0, "DR: no assets provided");
+
+        claimedAmount = IRewardsController(aaveRewardsController).claimRewards(assets, amount, to, reward);
+
+        emit AaveRewardsClaimed(assets, amount, to, reward, claimedAmount);
     }
 
     /**
