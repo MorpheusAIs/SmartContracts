@@ -319,7 +319,7 @@ describe('Distributor', () => {
     });
   });
 
-  describe('#addDepositPoolDetails', () => {
+  describe('#addDepositPool', () => {
     beforeEach(async () => {
       for (let i = 0; i < depositPools.length; i++) {
         await chainLinkDataConsumerMock.setAnswer(depositPools[i].chainLinkPath, wei(i + 1));
@@ -381,6 +381,25 @@ describe('Distributor', () => {
           Strategy.NO_YIELD,
         ),
       ).to.be.revertedWith('DR: the deposit pool for this index already added');
+    });
+    it('should revert when deposit token already added', async () => {
+      await distributor.addDepositPool(
+        dp0Info.rewardPoolId,
+        dp0Info.depositPool,
+        dp0Info.depositToken,
+        dp0Info.chainLinkPath,
+        dp0Info.strategy,
+      );
+
+      await expect(
+        distributor.addDepositPool(
+          dp1Info.rewardPoolId,
+          dp1Info.depositPool,
+          dp0Info.depositToken,
+          dp1Info.chainLinkPath,
+          dp1Info.strategy,
+        ),
+      ).to.be.revertedWith('DR: the deposit token already added');
     });
     it('should revert if caller is not owner', async () => {
       await expect(

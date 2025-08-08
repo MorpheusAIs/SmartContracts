@@ -25,6 +25,8 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
     /** @dev `reward_pool_index` => `deposit_pool_address` => `DepositPool` */
     mapping(uint256 => mapping(address => DepositPool)) public depositPools;
+    /** @dev `DepositPool.token` => `bool` */
+    mapping(address => bool) public isDepositTokenAdded;
 
     /** @dev `reward_pool_index` => `deposit_pool_address` => `rewards` */
     mapping(uint256 => mapping(address => uint256)) public distributedRewards;
@@ -198,6 +200,8 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             token_ = address(0);
             chainLinkPath_ = "";
         } else {
+            require(!isDepositTokenAdded[token_], "DR: the deposit token already added");
+
             rewardPool_.onlyPublicRewardPool(rewardPoolIndex_);
         }
 
@@ -215,6 +219,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         depositPoolAddresses[rewardPoolIndex_].push(depositPoolAddress_);
         depositPools[rewardPoolIndex_][depositPoolAddress_] = depositPool_;
+        isDepositTokenAdded[token_] = true;
 
         // Update prices for all `depositPools` by `rewardPoolIndex_`
         if (strategy_ != Strategy.NO_YIELD) {
