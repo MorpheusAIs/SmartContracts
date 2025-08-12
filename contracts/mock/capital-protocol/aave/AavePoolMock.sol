@@ -7,7 +7,7 @@ import "./AavePoolDataProviderMock.sol";
 import "../../tokens/ERC20Token.sol";
 
 contract AavePoolMock {
-    address public aavePoolDataProviderMock;
+    address aavePoolDataProviderMock;
 
     constructor(address aavePoolDataProviderMock_) {
         aavePoolDataProviderMock = aavePoolDataProviderMock_;

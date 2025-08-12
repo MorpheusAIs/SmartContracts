@@ -2,7 +2,6 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { setTime } from '../helpers/block-helper';
 import {
   deployChainLinkAggregatorV3Mock,
   deployChainLinkDataConsumer,
@@ -106,21 +105,6 @@ describe('ChainLinkDataConsumer', () => {
     });
   });
 
-  describe('#setAllowedPriceUpdateDelay', () => {
-    it('should set new value', async () => {
-      await dataConsumer.setAllowedPriceUpdateDelay(10);
-      expect(await dataConsumer.allowedPriceUpdateDelay()).to.eq(10);
-
-      await dataConsumer.setAllowedPriceUpdateDelay(20);
-      expect(await dataConsumer.allowedPriceUpdateDelay()).to.eq(20);
-    });
-    it('should revert if caller is not owner', async () => {
-      await expect(dataConsumer.connect(SECOND).setAllowedPriceUpdateDelay(30)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
-    });
-  });
-
   describe('#updateDataFeeds', () => {
     it('should add new reward pool', async () => {
       await dataConsumer.updateDataFeeds(paths, feeds);
@@ -148,9 +132,6 @@ describe('ChainLinkDataConsumer', () => {
   });
 
   describe('#getChainLinkDataFeedLatestAnswer', () => {
-    beforeEach(async () => {
-      await dataConsumer.setAllowedPriceUpdateDelay(120);
-    });
     it('should return correct result, base decimals', async () => {
       await dataConsumer.updateDataFeeds(paths, feeds);
 
@@ -181,20 +162,6 @@ describe('ChainLinkDataConsumer', () => {
       await aggregator2.setAnswerResult(wei(0.25, 8));
 
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(2, 18));
-    });
-    it('should return zero when the update price delay is too big', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
-
-      const pathId = await dataConsumer.getPathId(paths[0]);
-      const aggregator = feedContracts[0][0];
-      await aggregator.setAnswerResult(wei(1.2345, 18));
-      await aggregator.setUpdated(600);
-
-      await setTime(720);
-      expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(1.2345, 18));
-
-      await setTime(721);
-      expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(0, 18));
     });
     it('should return zero when result less then 0 or equals', async () => {
       await dataConsumer.updateDataFeeds(paths, feeds);

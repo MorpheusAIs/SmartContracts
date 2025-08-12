@@ -125,7 +125,7 @@ describe('CapitalProtocolV6 Fork', () => {
 
       expect(await depositPool.isNotUpgradeable()).to.eq(isNotUpgradeable);
       expect(await depositPool.depositToken()).to.eq(depositToken);
-      expect(await depositPool.unusedStorage0()).to.eq(l1Sender);
+      expect(await depositPool.l1Sender()).to.eq(l1Sender);
       expect(await depositPool.unusedStorage1(0)).to.deep.eq(pool0);
       expect(await depositPool.unusedStorage1(4)).to.deep.eq(pool4);
       expect(await depositPool.rewardPoolsData(0)).to.deep.eq(poolsData0);

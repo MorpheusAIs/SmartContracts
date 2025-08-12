@@ -155,7 +155,7 @@ library LinearDistributionIntervalDecrease {
             return 0;
         }
 
-        return initialReward_ * ip_ - decreaseAmount_ * ((ip_ * (ip_ - 1)) / 2);
+        return initialReward_ * ip_ - (decreaseAmount_ * (ip_ * (ip_ - 1))) / 2;
     }
 
     function _divideCeil(uint256 a_, uint256 b_) private pure returns (uint256) {
