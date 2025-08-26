@@ -14,6 +14,7 @@ import {
   deployRewardPoolMock,
   deployStETHMock,
 } from '../helpers/deployers';
+import { deployTransferMock } from '../helpers/deployers/mock/capital-protocol/transfer-mock';
 import { getDefaultPool, getDefaultReferrerTiers, oneDay, oneHour } from '../helpers/distribution-helper';
 
 import { DepositPool, DistributorMock, ERC20Token, RewardPoolMock, StETHMock } from '@/generated-types/ethers';
@@ -45,7 +46,7 @@ describe('DepositPool', () => {
   const rewardPoolId = 0;
 
   before(async () => {
-    [OWNER, SECOND, REFERRER_1, REFERRER_2] = await ethers.getSigners();
+    [OWNER, SECOND, REFERRER_1, REFERRER_2, ALICE] = await ethers.getSigners();
 
     depositToken = await deployStETHMock();
     rewardToken = await deployERC20Token();
@@ -3441,6 +3442,26 @@ describe('DepositPool', () => {
       const multiplier = await depositPool.getReferrerMultiplier(rewardPoolId, OWNER);
 
       expect(multiplier).to.eq(0);
+    });
+  });
+
+  describe('#stake', () => {
+    it('should stake correctly', async () => {
+      await depositToken.setTotalPooledEther(wei('123456.789123456789'));
+
+      const transferMock0 = await deployTransferMock();
+      const transferMock1 = await deployTransferMock();
+      const transferMock2 = await deployTransferMock();
+
+      const amount = wei('1.000000001');
+      await depositToken.approve(transferMock0, amount);
+
+      const balBefore = await depositToken.balanceOf(SECOND);
+      await transferMock0.initialTransfer(depositToken, amount, transferMock1, transferMock2, SECOND);
+      const balAfter = await depositToken.balanceOf(SECOND);
+
+      console.log(await transferMock0.transferredAmount());
+      console.log(balAfter - balBefore);
     });
   });
 });
