@@ -19,7 +19,7 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
     mapping(bytes32 => address[]) public dataFeeds;
 
     /** @notice The maximum allowed delay in seconds for the price update between ChainLink and now. */
-    uint64 public allowedPriceUpdateDelay;
+    mapping(bytes32 => uint64) public allowedPriceUpdateDelay;
 
     /**********************************************************************************************/
     /*** Init, IERC165                                                                          ***/
@@ -42,8 +42,8 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
     /*** Functionality for the contract `owner()`                                               ***/
     /**********************************************************************************************/
 
-    function setAllowedPriceUpdateDelay(uint64 allowedPriceUpdateDelay_) external onlyOwner {
-        allowedPriceUpdateDelay = allowedPriceUpdateDelay_;
+    function setAllowedPriceUpdateDelay(bytes32 pathId_, uint64 allowedPriceUpdateDelay_) external onlyOwner {
+        allowedPriceUpdateDelay[pathId_] = allowedPriceUpdateDelay_;
     }
 
     /**********************************************************************************************/
@@ -88,7 +88,7 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
                     return 0;
                 }
 
-                if (block.timestamp < updatedAt_ || block.timestamp - updatedAt_ > allowedPriceUpdateDelay) {
+                if (block.timestamp < updatedAt_ || block.timestamp - updatedAt_ > allowedPriceUpdateDelay[pathId_]) {
                     return 0;
                 }
 
