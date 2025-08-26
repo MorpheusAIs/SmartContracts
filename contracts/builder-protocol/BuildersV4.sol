@@ -195,10 +195,10 @@ contract BuildersV4 is IBuildersV4, UUPSUpgradeable, OwnableUpgradeable {
 
     function createSubnet(Subnet calldata subnet_, SubnetMetadata calldata metadata_) public {
         bytes32 subnetId_ = getSubnetId(subnet_.name);
-        bytes32 odlSubnetId_ = getSubnetIdOld(subnet_.name);
+        bytes32 oldSubnetId_ = getSubnetIdOld(subnet_.name);
 
         require(!_isSubnetExist(subnetId_), "BU: the Subnet already exist (1)");
-        require(!_isSubnetExist(odlSubnetId_), "BU: the Subnet already exist (2)");
+        require(!_isSubnetExist(oldSubnetId_), "BU: the Subnet already exist (2)");
 
         _validateSubnet(subnet_);
 
@@ -261,7 +261,7 @@ contract BuildersV4 is IBuildersV4, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Get the Subnet ID by the `subnetName_`. Wee keep this function for backward
+     * @dev Get the Subnet ID by the `subnetName_`. We keep this function for backward
      * compatibility.
      */
     function getSubnetIdOld(string memory subnetName_) public pure returns (bytes32) {
