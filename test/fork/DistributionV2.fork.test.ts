@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { assert } from 'console';
+import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { getCurrentBlockTime, setNextTime, setTime } from '../helpers/block-helper';
@@ -30,7 +31,7 @@ describe('DistributionV2 Fork', () => {
       },
     ]);
 
-    OWNER = await ethers.getImpersonatedSigner(richAddress);
+    OWNER = (await ethers.getImpersonatedSigner(richAddress)) as Signer;
     [SECOND] = await ethers.getSigners();
 
     await SECOND.sendTransaction({ to: richAddress, value: wei(100) });

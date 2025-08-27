@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+import { expect } from 'chai';
 import { assert } from 'console';
-import { ethers, expect } from 'hardhat';
+import { ethers } from 'hardhat';
 
 import { getCurrentBlockTime } from '../helpers/block-helper';
 import { getDefaultSwapParams } from '../helpers/distribution-helper';

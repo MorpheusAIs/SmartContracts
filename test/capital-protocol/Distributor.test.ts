@@ -13,6 +13,7 @@ import {
   deployL1SenderMock,
   deployL1SenderV2,
   deployRewardPoolMock,
+  deployStETHMock,
 } from '../helpers/deployers';
 import { deployChainLinkDataConsumerMock } from '../helpers/deployers/mock/capital-protocol/chain-link-data-consumer-mock';
 import { oneDay } from '../helpers/distribution-helper';
@@ -26,6 +27,7 @@ import {
   ERC20Token,
   L1SenderMock,
   RewardPoolMock,
+  StETHMock,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
@@ -42,7 +44,7 @@ describe('Distributor', () => {
     rewardPoolId: number;
     chainLinkPath: string;
     chainLinkPrice: bigint;
-    depositToken: ERC20Token;
+    depositToken: ERC20Token | StETHMock;
     depositPool: DepositPoolMock;
     aToken: ERC20Token;
     strategy: Strategy;
@@ -567,13 +569,16 @@ describe('Distributor', () => {
       await distributor.setRewardPoolLastCalculatedTimestamp(publicRewardPoolId, 1);
 
       await dp0Info.depositToken.mint(BOB, wei(1000, 6));
-      await dp0Info.depositToken.connect(BOB).approve(dp0Info.depositPool, wei(1000, 6));
+      // await dp0Info.depositToken.connect(BOB).approve(dp0Info.depositPool, wei(1000, 6));
       await dp1Info.depositToken.mint(BOB, wei(1000));
-      await dp1Info.depositToken.connect(BOB).approve(dp1Info.depositPool, wei(1000));
+      // await dp1Info.depositToken.connect(BOB).approve(dp1Info.depositPool, wei(1000));
+
+      await dp0Info.depositToken.connect(BOB).approve(distributor, wei(1000, 6));
+      await dp1Info.depositToken.connect(BOB).approve(distributor, wei(1000));
     });
 
     it('should correctly supply, one deposit pool', async () => {
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(20, 6));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
 
       let dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(20, 6));
@@ -581,7 +586,7 @@ describe('Distributor', () => {
       expect(await dp0Info.depositToken.balanceOf(distributor)).to.eq(wei(20, 6));
 
       await imitateYield([wei(1), wei(1)], wei(100), [wei(10, 6), wei(0)]);
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(20, 6));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
 
       dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(40, 6));
@@ -590,7 +595,7 @@ describe('Distributor', () => {
       expect(await dp0Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(10, 6));
 
       await imitateYield([wei(1), wei(1)], wei(100), [wei(5, 6), wei(0)]);
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(8, 6));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(8, 6));
 
       dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(48, 6));
@@ -599,8 +604,8 @@ describe('Distributor', () => {
       expect(await dp0Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(15, 6));
     });
     it('should correctly supply, two deposit pools', async () => {
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(20, 6));
-      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(30));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
+      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(30));
 
       let dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(20, 6));
@@ -615,7 +620,7 @@ describe('Distributor', () => {
       //////////
 
       await imitateYield([wei(1), wei(1)], wei(100), [wei(3, 6), wei(6)]);
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(1, 6));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(1, 6));
 
       dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(20 + 1, 6));
@@ -632,7 +637,7 @@ describe('Distributor', () => {
       /////////
 
       await imitateYield([wei(1), wei(1)], wei(100), [wei(4, 6), wei(7)]);
-      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(2));
+      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(2));
 
       dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(20 + 1, 6));
@@ -647,12 +652,12 @@ describe('Distributor', () => {
       expect(await dp1Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(6 + 7));
     });
     it('should revert when invalid strategy for the deposit pool', async () => {
-      await expect(dp2Info.depositPool.connect(BOB).supply(privateRewardPoolId, wei(1, 6))).to.be.revertedWith(
+      await expect(dp2Info.depositPool.connect(BOB).supply(privateRewardPoolId, BOB, wei(1, 6))).to.be.revertedWith(
         'DR: invalid strategy for the deposit pool',
       );
     });
     it('should revert when deposit pool doesn`t exist', async () => {
-      await expect(dp1Info.depositPool.connect(BOB).supply(666, wei(1, 6))).to.be.revertedWith(
+      await expect(dp1Info.depositPool.connect(BOB).supply(666, BOB, wei(1, 6))).to.be.revertedWith(
         "DR: deposit pool doesn't exist",
       );
     });
@@ -664,14 +669,50 @@ describe('Distributor', () => {
       await distributor.setRewardPoolLastCalculatedTimestamp(publicRewardPoolId, 1);
 
       await dp0Info.depositToken.mint(BOB, wei(1000, 6));
-      await dp0Info.depositToken.connect(BOB).approve(dp0Info.depositPool, wei(1000, 6));
+      // await dp0Info.depositToken.connect(BOB).approve(dp0Info.depositPool, wei(1000, 6));
       await dp1Info.depositToken.mint(BOB, wei(1000));
-      await dp1Info.depositToken.connect(BOB).approve(dp1Info.depositPool, wei(1000));
+      // await dp1Info.depositToken.connect(BOB).approve(dp1Info.depositPool, wei(1000));
+
+      await dp0Info.depositToken.connect(BOB).approve(distributor, wei(1000, 6));
+      await dp1Info.depositToken.connect(BOB).approve(distributor, wei(1000));
+    });
+
+    it('should correctly withdraw, without yield, with deposit token rebalance', async () => {
+      const depositToken = await deployStETHMock();
+      const depositPool = await deployDepositPoolMock(depositToken, distributor);
+      const dpInfo = {
+        rewardPoolId: publicRewardPoolId,
+        chainLinkPath: 'stETH/USD',
+        chainLinkPrice: wei(0),
+        depositToken: depositToken,
+        depositPool: depositPool,
+        aToken: await deployERC20Token(),
+        strategy: Strategy.NONE,
+      };
+      await chainLinkDataConsumerMock.setAnswer(dpInfo.chainLinkPath, wei(3));
+      await distributor.addDepositPool(
+        dpInfo.rewardPoolId,
+        dpInfo.depositPool,
+        dpInfo.depositToken,
+        dpInfo.chainLinkPath,
+        dpInfo.strategy,
+      );
+
+      await depositToken.setTotalPooledEther(wei('123456.789123456789'));
+
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
+      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999, 6));
+
+      const dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
+      expect(dp0.deposited).to.eq(wei(0, 6));
+      expect(dp0.lastUnderlyingBalance).to.eq(wei(0, 6));
+      expect(await dp0Info.depositToken.balanceOf(distributor)).to.eq(wei(0, 6));
+      expect(await dp0Info.depositToken.balanceOf(BOB)).to.eq(wei(1000, 6));
     });
 
     it('should correctly withdraw, without yield', async () => {
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(20, 6));
-      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, wei(999, 6));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
+      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999, 6));
 
       const dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(0, 6));
@@ -680,9 +721,9 @@ describe('Distributor', () => {
       expect(await dp0Info.depositToken.balanceOf(BOB)).to.eq(wei(1000, 6));
     });
     it('should correctly withdraw, partially, with yield, Strategy.NONE', async () => {
-      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(20, 6));
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
       await imitateYield([wei(1), wei(1)], wei(100), [wei(3, 6), wei(0)]);
-      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, wei(15, 6));
+      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(15, 6));
 
       let dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(5, 6));
@@ -694,7 +735,7 @@ describe('Distributor', () => {
       //////////
 
       await imitateYield([wei(1), wei(1)], wei(100), [wei(0, 6), wei(0)]);
-      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, wei(999, 6));
+      await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999, 6));
 
       dp0 = await distributor.depositPools(publicRewardPoolId, dp0Info.depositPool);
       expect(dp0.deposited).to.eq(wei(0, 6));
@@ -704,9 +745,9 @@ describe('Distributor', () => {
       expect(await dp0Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(3, 6));
     });
     it('should correctly withdraw, partially, with yield, Strategy.AAVE', async () => {
-      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, wei(20));
+      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20));
       await imitateYield([wei(1), wei(1)], wei(100), [wei(0, 6), wei(3)]);
-      await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, wei(15));
+      await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(15));
 
       let dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
       expect(dp1.deposited).to.eq(wei(5));
@@ -718,7 +759,7 @@ describe('Distributor', () => {
       //////////
 
       await imitateYield([wei(1), wei(1)], wei(100), [wei(0, 6), wei(0)]);
-      await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, wei(999));
+      await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999));
 
       dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
       expect(dp1.deposited).to.eq(wei(0));
@@ -728,17 +769,17 @@ describe('Distributor', () => {
       expect(await dp1Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(3));
     });
     it('should revert when invalid strategy for the deposit pool', async () => {
-      await expect(dp2Info.depositPool.connect(BOB).withdraw(privateRewardPoolId, wei(1, 6))).to.be.revertedWith(
+      await expect(dp2Info.depositPool.connect(BOB).withdraw(privateRewardPoolId, BOB, wei(1, 6))).to.be.revertedWith(
         'DR: invalid strategy for the deposit pool',
       );
     });
     it('should revert when invalid strategy for the deposit pool', async () => {
-      await expect(dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, wei(1, 6))).to.be.revertedWith(
+      await expect(dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(1, 6))).to.be.revertedWith(
         'DR: nothing to withdraw',
       );
     });
     it('should revert when deposit pool doesn`t exist', async () => {
-      await expect(dp1Info.depositPool.connect(BOB).withdraw(666, wei(1, 6))).to.be.revertedWith(
+      await expect(dp1Info.depositPool.connect(BOB).withdraw(666, BOB, wei(1, 6))).to.be.revertedWith(
         "DR: deposit pool doesn't exist",
       );
     });
