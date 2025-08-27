@@ -97,28 +97,38 @@ contract DistributorMock {
         IL1SenderV2(l1Sender_).sendMintMessage{value: msg.value}(user_, amount_, refundTo_);
     }
 
-    function supply(uint256 rewardPoolIndex_, uint256 amount_) external {
+    function supply(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
         uint256 preventWarnings_ = rewardPoolIndex_;
 
+        uint256 balanceBefore_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
         IERC20(depositPools[msg.sender].token).safeTransferFrom(
-            msg.sender,
+            user_,
             address(this),
             amount_ + preventWarnings_ - preventWarnings_
         );
+        uint256 balanceAfter_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+
+        amount_ = balanceAfter_ - balanceBefore_;
 
         if (depositPools[msg.sender].strategy == IDistributor.Strategy.AAVE) {
             AavePoolMock(aavePoolMock).supply(depositPools[msg.sender].token, amount_, address(0), 0);
         }
+
+        return amount_;
     }
 
-    function withdraw(uint256 rewardPoolIndex_, uint256 amount_) external returns (uint256) {
+    function withdraw(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
         uint256 preventWarnings_ = rewardPoolIndex_;
 
         if (depositPools[msg.sender].strategy == IDistributor.Strategy.AAVE) {
             AavePoolMock(aavePoolMock).withdraw(depositPools[msg.sender].token, amount_, address(this));
         }
 
-        IERC20(depositPools[msg.sender].token).safeTransfer(msg.sender, amount_ + preventWarnings_ - preventWarnings_);
+        uint256 balanceBefore_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+        IERC20(depositPools[msg.sender].token).safeTransfer(user_, amount_ + preventWarnings_ - preventWarnings_);
+        uint256 balanceAfter_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+
+        amount_ = balanceBefore_ - balanceAfter_;
 
         return amount_;
     }

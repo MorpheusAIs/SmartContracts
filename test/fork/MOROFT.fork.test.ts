@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
-import { ethers, expect } from 'hardhat';
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
 
 import { MOROFT, OptionsGenerator } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
@@ -32,7 +33,7 @@ describe('MOROFT', () => {
       {
         forking: {
           jsonRpcUrl: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-          // blockNumber: 190000000,
+          blockNumber: 190000000,
         },
       },
     ]);

@@ -177,17 +177,21 @@ interface IDistributor is IERC165 {
      * @notice The function to supply tokens to the contract.
      * @dev Only for deposit pools
      * @param rewardPoolIndex_ The reward pool index.
+     * @param user_ The user's address.
      * @param amount_ The token amount.
+     * @return The token amount.
      */
-    function supply(uint256 rewardPoolIndex_, uint256 amount_) external;
+    function supply(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256);
 
     /**
      * @notice The function to withdraw tokens from the contract.
      * @dev Only for deposit pools
      * @param rewardPoolIndex_ The reward pool index.
+     * @param user_ The user's address.
      * @param amount_ The token amount.
+     * @return The token amount.
      */
-    function withdraw(uint256 rewardPoolIndex_, uint256 amount_) external returns (uint256);
+    function withdraw(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256);
 
     /**
      * @notice The function to distribute rewards based on the tokens yield.

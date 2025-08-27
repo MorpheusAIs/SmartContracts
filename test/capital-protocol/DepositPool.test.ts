@@ -14,7 +14,6 @@ import {
   deployRewardPoolMock,
   deployStETHMock,
 } from '../helpers/deployers';
-import { deployTransferMock } from '../helpers/deployers/mock/capital-protocol/transfer-mock';
 import { getDefaultPool, getDefaultReferrerTiers, oneDay, oneHour } from '../helpers/distribution-helper';
 
 import { DepositPool, DistributorMock, ERC20Token, RewardPoolMock, StETHMock } from '@/generated-types/ethers';
@@ -46,7 +45,7 @@ describe('DepositPool', () => {
   const rewardPoolId = 0;
 
   before(async () => {
-    [OWNER, SECOND, REFERRER_1, REFERRER_2, ALICE] = await ethers.getSigners();
+    [OWNER, SECOND, REFERRER_1, REFERRER_2] = await ethers.getSigners();
 
     depositToken = await deployStETHMock();
     rewardToken = await deployERC20Token();
@@ -56,8 +55,8 @@ describe('DepositPool', () => {
 
     await depositToken.mint(OWNER.address, wei(1000));
     await depositToken.mint(SECOND.address, wei(1000));
-    await depositToken.connect(OWNER).approve(depositPool, wei(1000));
-    await depositToken.connect(SECOND).approve(depositPool, wei(1000));
+    await depositToken.connect(OWNER).approve(distributorMock, wei(1000));
+    await depositToken.connect(SECOND).approve(distributorMock, wei(1000));
 
     // Setup mock env
     await rewardPoolMock.setIsRewardPoolExist(rewardPoolId, true);
@@ -119,13 +118,13 @@ describe('DepositPool', () => {
 
   describe('#setDistributor', () => {
     it('should set `Distributor`', async () => {
-      expect(await depositToken.allowance(depositPool, distributorMock)).to.eq(MaxUint256);
+      expect(await depositToken.allowance(depositPool, distributorMock)).to.eq(0);
 
       const newDistributor = await deployDistributorMock(rewardPoolMock, rewardToken);
       await depositPool.setDistributor(newDistributor);
 
       expect(await depositToken.allowance(depositPool, distributorMock)).to.eq(0);
-      expect(await depositToken.allowance(depositPool, newDistributor)).to.eq(MaxUint256);
+      expect(await depositToken.allowance(depositPool, newDistributor)).to.eq(0);
     });
     it('should revert when the implementation is invalid', async () => {
       const invalidContract = await deployRewardPoolMock();
@@ -2618,6 +2617,35 @@ describe('DepositPool', () => {
       await expect(depositPool.claim(rewardPoolId, OWNER)).to.be.revertedWith('DS: nothing to claim');
       await expect(depositPool.connect(SECOND).claim(rewardPoolId, SECOND)).to.be.revertedWith('DS: nothing to claim');
     });
+
+    it('should correctly withdraw, withdraw all with deposit token rebalance', async () => {
+      await depositToken.setTotalPooledEther(wei('123456.789123456789'));
+
+      expect(await depositPool.totalDepositedInPublicPools()).to.eq(0);
+      expect(await depositToken.balanceOf(distributorMock)).to.eq(0);
+
+      await depositPool.connect(SECOND).stake(rewardPoolId, wei(4), 0, ZERO_ADDR);
+
+      expect(await depositPool.totalDepositedInPublicPools()).to.eq(await depositToken.balanceOf(distributorMock));
+
+      await depositPool.connect(OWNER).stake(rewardPoolId, wei(3), 0, ZERO_ADDR);
+
+      expect(await depositPool.totalDepositedInPublicPools()).to.eq(await depositToken.balanceOf(distributorMock));
+
+      // Withdraw after 2 days
+      await setNextTime(oneDay + oneDay * 2);
+      expect(await depositPool.totalDepositedInPublicPools()).to.eq(await depositToken.balanceOf(distributorMock));
+
+      const tx = await depositPool.connect(OWNER).withdraw(rewardPoolId, wei(999));
+
+      await expect(tx).to.changeTokenBalance(depositToken, OWNER.address, '2999999999999999961');
+      await expect(tx).to.changeTokenBalance(depositToken, distributorMock, '-2999999999999999961');
+
+      const userData = await depositPool.usersData(OWNER.address, rewardPoolId);
+      expect(userData.deposited).to.eq(wei(0));
+      expect(await depositPool.totalDepositedInPublicPools()).to.eq(await depositToken.balanceOf(distributorMock));
+    });
+
     it('should correctly withdraw, few users, withdraw part', async () => {
       let userData;
 
@@ -2723,7 +2751,9 @@ describe('DepositPool', () => {
       await usdc.mint(OWNER.address, wei(1000));
       await usdc.mint(SECOND.address, wei(1000));
       await usdc.connect(OWNER).approve(depositPoolUsdc, wei(1000));
+      await usdc.connect(OWNER).approve(distributorMock, wei(1000));
       await usdc.connect(SECOND).approve(depositPoolUsdc, wei(1000));
+      await usdc.connect(SECOND).approve(distributorMock, wei(1000));
 
       const aavePoolDataProviderMock = await deployAavePoolDataProviderMock();
       await aavePoolDataProviderMock.setATokenAddress(usdc, aUsdc);
@@ -3378,7 +3408,7 @@ describe('DepositPool', () => {
       await depositToken.mint(SECOND, wei(1000));
       await depositToken.mint(SECOND, wei(1000));
 
-      await depositToken.connect(SECOND).approve(depositPool, MaxUint256);
+      await depositToken.connect(SECOND).approve(distributorMock, MaxUint256);
     });
 
     it('should calculate multiplier correctly', async () => {
@@ -3442,26 +3472,6 @@ describe('DepositPool', () => {
       const multiplier = await depositPool.getReferrerMultiplier(rewardPoolId, OWNER);
 
       expect(multiplier).to.eq(0);
-    });
-  });
-
-  describe('#stake', () => {
-    it('should stake correctly', async () => {
-      await depositToken.setTotalPooledEther(wei('123456.789123456789'));
-
-      const transferMock0 = await deployTransferMock();
-      const transferMock1 = await deployTransferMock();
-      const transferMock2 = await deployTransferMock();
-
-      const amount = wei('1.000000001');
-      await depositToken.approve(transferMock0, amount);
-
-      const balBefore = await depositToken.balanceOf(SECOND);
-      await transferMock0.initialTransfer(depositToken, amount, transferMock1, transferMock2, SECOND);
-      const balAfter = await depositToken.balanceOf(SECOND);
-
-      console.log(await transferMock0.transferredAmount());
-      console.log(balAfter - balBefore);
     });
   });
 });

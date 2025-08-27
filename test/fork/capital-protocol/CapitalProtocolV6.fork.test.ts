@@ -151,6 +151,7 @@ describe('CapitalProtocolV6 Fork', () => {
 
       const stETH = await getStETH(depositPool);
       await stETH.connect(STETH_HOLDER).transfer(PUBLIC_POOL_USER_ADDRESS, wei(1));
+      await stETH.connect(PUBLIC_POOL_USER_ADDRESS).approve(distributor, wei(1));
 
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
