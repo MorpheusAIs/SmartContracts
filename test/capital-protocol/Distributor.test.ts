@@ -15,10 +15,12 @@ import {
   deployRewardPoolMock,
   deployStETHMock,
 } from '../helpers/deployers';
+import { deployAavePoolAddressesProviderMock } from '../helpers/deployers/mock/capital-protocol/aave-pool-addresses-provider-mock';
 import { deployChainLinkDataConsumerMock } from '../helpers/deployers/mock/capital-protocol/chain-link-data-consumer-mock';
 import { oneDay } from '../helpers/distribution-helper';
 
 import {
+  AavePoolAddressesProviderMock,
   AavePoolDataProviderMock,
   AavePoolMock,
   ChainLinkDataConsumerMock,
@@ -57,6 +59,7 @@ describe('Distributor', () => {
 
   let chainLinkDataConsumerMock: ChainLinkDataConsumerMock;
   let aavePoolDataProviderMock: AavePoolDataProviderMock;
+  let aavePoolAddressesProviderMock: AavePoolAddressesProviderMock;
   let aavePoolMock: AavePoolMock;
   let rewardPoolMock: RewardPoolMock;
   let distributor: Distributor;
@@ -77,12 +80,14 @@ describe('Distributor', () => {
     chainLinkDataConsumerMock = await deployChainLinkDataConsumerMock();
     aavePoolDataProviderMock = await deployAavePoolDataProviderMock();
     aavePoolMock = await deployAavePoolMock(aavePoolDataProviderMock);
+    aavePoolAddressesProviderMock = await deployAavePoolAddressesProviderMock();
+    await aavePoolAddressesProviderMock.setPool(aavePoolMock);
     rewardPoolMock = await deployRewardPoolMock();
     l1SenderMock = await deployL1SenderMock();
     distributor = await deployDistributor(
       chainLinkDataConsumerMock,
-      aavePoolMock,
       aavePoolDataProviderMock,
+      aavePoolAddressesProviderMock,
       rewardPoolMock,
       l1SenderMock,
     );
@@ -151,8 +156,8 @@ describe('Distributor', () => {
     describe('#Distributor_init', () => {
       it('should set correct data after creation', async () => {
         expect(await distributor.chainLinkDataConsumer()).to.eq(await chainLinkDataConsumerMock.getAddress());
-        expect(await distributor.aavePool()).to.eq(await aavePoolMock.getAddress());
         expect(await distributor.aavePoolDataProvider()).to.eq(await aavePoolDataProviderMock.getAddress());
+        expect(await distributor.aavePoolAddressesProvider()).to.eq(await aavePoolAddressesProviderMock.getAddress());
         expect(await distributor.rewardPool()).to.eq(await rewardPoolMock.getAddress());
       });
     });
@@ -229,23 +234,6 @@ describe('Distributor', () => {
     });
   });
 
-  describe('#setAavePool', () => {
-    it('should set new value', async () => {
-      expect(await distributor.aavePool()).to.eq(aavePoolMock);
-
-      const newValue = await deployAavePoolMock(aavePoolDataProviderMock);
-      await distributor.setAavePool(newValue);
-
-      expect(await distributor.aavePool()).to.eq(newValue);
-    });
-    it('should revert when invalid Aave pool address', async () => {
-      await expect(distributor.setAavePool(ZERO_ADDR)).to.be.revertedWith('DR: invalid Aave pool address');
-    });
-    it('should revert if caller is not owner', async () => {
-      await expect(distributor.connect(BOB).setAavePool(OWNER)).to.be.revertedWith('Ownable: caller is not the owner');
-    });
-  });
-
   describe('#setAavePoolDataProvider', () => {
     it('should set new value', async () => {
       expect(await distributor.aavePoolDataProvider()).to.eq(aavePoolDataProviderMock);
@@ -262,6 +250,27 @@ describe('Distributor', () => {
     });
     it('should revert if caller is not owner', async () => {
       await expect(distributor.connect(BOB).setAavePoolDataProvider(OWNER)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
+  });
+
+  describe('#setAavePoolAddressesProvider', () => {
+    it('should set new value', async () => {
+      expect(await distributor.aavePoolAddressesProvider()).to.eq(aavePoolAddressesProviderMock);
+
+      const newValue = await deployAavePoolAddressesProviderMock();
+      await distributor.setAavePoolAddressesProvider(newValue);
+
+      expect(await distributor.aavePoolAddressesProvider()).to.eq(newValue);
+    });
+    it('should revert when invalid Aave pool addresses provider address', async () => {
+      await expect(distributor.setAavePoolAddressesProvider(ZERO_ADDR)).to.be.revertedWith(
+        'DR: invalid Aave pool addresses provider address',
+      );
+    });
+    it('should revert if caller is not owner', async () => {
+      await expect(distributor.connect(BOB).setAavePoolAddressesProvider(OWNER)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -650,6 +659,16 @@ describe('Distributor', () => {
       expect(dp1.lastUnderlyingBalance).to.eq(wei(30 + 2));
       expect(await dp1Info.aToken.balanceOf(distributor)).to.eq(wei(30 + 2));
       expect(await dp1Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(6 + 7));
+    });
+    it('should correctly supply, when pool is changed', async () => {
+      await distributor.setAavePoolAddressesProvider(aavePoolAddressesProviderMock);
+
+      await expect(dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6))).to.be.not.reverted;
+
+      const newPool = await deployAavePoolMock(aavePoolDataProviderMock);
+      await aavePoolAddressesProviderMock.setPool(newPool);
+
+      await expect(dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6))).to.be.not.reverted;
     });
     it('should revert when invalid strategy for the deposit pool', async () => {
       await expect(dp2Info.depositPool.connect(BOB).supply(privateRewardPoolId, BOB, wei(1, 6))).to.be.revertedWith(
