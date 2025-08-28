@@ -53,6 +53,8 @@ describe('CapitalProtocolV6 Fork', () => {
   const aavePoolAddress = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';
   // https://etherscan.io/address/0x497a1994c46d4f6C864904A9f1fac6328Cb7C8a6
   const aaveProtocolDataProvider = '0x497a1994c46d4f6C864904A9f1fac6328Cb7C8a6';
+  // https://etherscan.io/address/0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e
+  const aavePoolAddressesProvider = '0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e';
 
   const publicPoolUserAddress = '0x0302CB360862aB7A5670D5E9958E8766fA50418F';
   const privatePoolUserAddress = '0xe549A9c6429A021C4DAc675D18161953749c8786';
@@ -82,8 +84,8 @@ describe('CapitalProtocolV6 Fork', () => {
     l1SenderV2 = await upgradeL1SenderToL1SenderV2();
     distributor = await deployDistributor(
       chainLinkDataConsumer,
-      aavePoolAddress,
       aaveProtocolDataProvider,
+      aavePoolAddressesProvider,
       rewardPool,
       l1SenderV2,
     );
@@ -180,8 +182,8 @@ describe('CapitalProtocolV6 Fork', () => {
     it('should distribute rewards with stETH, USDC, USDT, wBTC, cbBTC', async () => {
       const distributor_test = await deployDistributor(
         chainLinkDataConsumer,
-        aavePoolAddress,
         aaveProtocolDataProvider,
+        aavePoolAddressesProvider,
         rewardPool,
         l1SenderV2,
       );

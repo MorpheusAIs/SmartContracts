@@ -11,8 +11,8 @@ import {IReferrer} from "./IReferrer.sol";
 interface IDistributor is IERC165 {
     event ChainLinkDataConsumerSet(address chainLinkDataConsumer);
     event L1SenderSet(address l1Sender);
-    event AavePoolSet(address aavePool);
     event AavePoolDataProviderSet(address aavePoolDataProvider);
+    event AavePoolAddressesProviderSet(address aavePoolAddressesProvider);
     event AaveRewardsControllerSet(address aaveRewardsController);
     event RewardPoolSet(address rewardPool);
     event MinRewardsDistributePeriodSet(uint256 minRewardsDistributePeriod);
@@ -74,16 +74,16 @@ interface IDistributor is IERC165 {
     function l1Sender() external view returns (address);
 
     /**
-     * @notice The function to receive the Aave `Pool` contract address.
-     * @return The Aave `Pool` contract address.
-     */
-    function aavePool() external view returns (address);
-
-    /**
      * @notice The function to receive the Aave `AaveProtocolDataProvider` contract address.
      * @return The Aave `AaveProtocolDataProvider` contract address.
      */
     function aavePoolDataProvider() external view returns (address);
+
+    /**
+     * @notice The function to receive the Aave `PoolAddressesProvider` contract address.
+     * @return The Aave `PoolAddressesProvider` contract address.
+     */
+    function aavePoolAddressesProvider() external view returns (address);
 
     /**
      * @notice The function to receive the Aave `RewardsController` contract address.
@@ -112,18 +112,18 @@ interface IDistributor is IERC165 {
     function setChainLinkDataConsumer(address value_) external;
 
     /**
-     * @notice The function to set the Aave `Pool` contract.
-     * @dev Only for the contract `owner()`.
-     * @param value_ The Aave `Pool` address.
-     */
-    function setAavePool(address value_) external;
-
-    /**
      * @notice The function to set the `AavePoolDataProvider` contract.
      * @dev Only for the contract `owner()`.
      * @param value_ The `AavePoolDataProvider` address.
      */
     function setAavePoolDataProvider(address value_) external;
+
+    /**
+     * @notice The function to set the Aave `PoolAddressesProvider` contract.
+     * @dev Only for the contract `owner()`.
+     * @param value_ The Aave `PoolAddressesProvider` address.
+     */
+    function setAavePoolAddressesProvider(address value_) external;
 
     /**
      * @notice The function to set the Aave `RewardsController` contract.

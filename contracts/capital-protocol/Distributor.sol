@@ -9,6 +9,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPool as AaveIPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolDataProvider as AaveIPoolDataProvider} from "@aave/core-v3/contracts/interfaces/IPoolDataProvider.sol";
+import {IPoolAddressesProvider as AaveIPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IRewardsController} from "../interfaces/aave/IRewardsController.sol";
 
 import {DecimalsConverter} from "@solarity/solidity-lib/libs/decimals/DecimalsConverter.sol";
@@ -58,10 +59,10 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
     /**
      * @dev https://aave.com/docs/resources/addresses
-     * See `Pool` and `AaveProtocolDataProvider`
+     * See `AaveProtocolDataProvider` and `PoolAddressesProvider`
      */
-    address public aavePool;
     address public aavePoolDataProvider;
+    address public aavePoolAddressesProvider;
 
     /**
      * @dev The variable contain `RewardsController` contract address.
@@ -87,8 +88,8 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
     function Distributor_init(
         address chainLinkDataConsumer_,
-        address aavePool_,
         address aavePoolDataProvider_,
+        address aavePoolAddressesProvider_,
         address rewardPool_,
         address l1Sender_
     ) external initializer {
@@ -96,8 +97,8 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
 
         setChainLinkDataConsumer(chainLinkDataConsumer_);
-        setAavePool(aavePool_);
         setAavePoolDataProvider(aavePoolDataProvider_);
+        setAavePoolAddressesProvider(aavePoolAddressesProvider_);
         setRewardPool(rewardPool_);
         setL1Sender(l1Sender_);
     }
@@ -130,18 +131,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**
-     * @dev https://aave.com/docs/resources/addresses. See `Pool`.
-     */
-    function setAavePool(address value_) public onlyOwner {
-        require(value_ != address(0), "DR: invalid Aave pool address");
-
-        aavePool = value_;
-
-        emit AavePoolSet(value_);
-    }
-
-    /**
-     * @dev https://aave.com/docs/resources/addresses. See `AaveProtocolDataProvider`.
+     * @dev https://aave.com/docs/resources/addresses. See `ProtocolDataProvider`.
      */
     function setAavePoolDataProvider(address value_) public onlyOwner {
         require(value_ != address(0), "DR: invalid Aave pool data provider address");
@@ -149,6 +139,17 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         aavePoolDataProvider = value_;
 
         emit AavePoolDataProviderSet(value_);
+    }
+
+    /**
+     * @dev https://aave.com/docs/resources/addresses. See `PoolAddressesProvider`.
+     */
+    function setAavePoolAddressesProvider(address value_) public onlyOwner {
+        require(value_ != address(0), "DR: invalid Aave pool addresses provider address");
+
+        aavePoolAddressesProvider = value_;
+
+        emit AavePoolAddressesProviderSet(value_);
     }
 
     /**
@@ -228,9 +229,6 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         address aToken_ = address(0);
         if (strategy_ == Strategy.AAVE) {
             (aToken_, , ) = AaveIPoolDataProvider(aavePoolDataProvider).getReserveTokensAddresses(token_);
-
-            IERC20(token_).safeApprove(aavePool, type(uint256).max);
-            IERC20(aToken_).approve(aavePool, type(uint256).max);
         }
 
         DepositPool memory depositPool_ = DepositPool(token_, chainLinkPath_, 0, 0, 0, strategy_, aToken_, true);
@@ -300,7 +298,13 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         amount_ = balanceAfter_ - balanceBefore_;
 
         if (depositPool.strategy == Strategy.AAVE) {
-            AaveIPool(aavePool).supply(depositPool.token, amount_, address(this), 0);
+            address aavePool_ = AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool();
+
+            if (IERC20(depositPool.token).allowance(address(this), aavePool_) < amount_) {
+                IERC20(depositPool.token).safeApprove(aavePool_, type(uint256).max);
+            }
+
+            AaveIPool(aavePool_).supply(depositPool.token, amount_, address(this), 0);
         }
 
         depositPool.deposited += amount_;
@@ -322,7 +326,13 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         require(amount_ > 0, "DR: nothing to withdraw");
 
         if (depositPool.strategy == Strategy.AAVE) {
-            AaveIPool(aavePool).withdraw(depositPool.token, amount_, user_);
+            address aavePool_ = AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool();
+
+            if (IERC20(depositPool.aToken).allowance(address(this), aavePool_) < amount_) {
+                IERC20(depositPool.aToken).approve(aavePool_, type(uint256).max);
+            }
+
+            AaveIPool(aavePool_).withdraw(depositPool.token, amount_, user_);
         } else {
             uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
             IERC20(depositPool.token).safeTransfer(user_, amount_);
@@ -495,7 +505,13 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         if (yield_ == 0) return;
 
         if (depositPool.strategy == Strategy.AAVE) {
-            AaveIPool(aavePool).withdraw(depositPool.token, yield_, l1Sender);
+            address aavePool_ = AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool();
+
+            if (IERC20(depositPool.aToken).allowance(address(this), aavePool_) < yield_) {
+                IERC20(depositPool.aToken).approve(aavePool_, type(uint256).max);
+            }
+
+            AaveIPool(aavePool_).withdraw(depositPool.token, yield_, l1Sender);
         } else {
             uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
             IERC20(depositPool.token).safeTransfer(l1Sender, yield_);
