@@ -79,6 +79,12 @@ interface IRewardPool is IERC165 {
     function getPeriodRewards(uint256 index_, uint128 startTime_, uint128 endTime_) external view returns (uint256);
 
     /**
+     * @notice The function to get the max end time for public reward pools.
+     * @return The max end time.
+     */
+    function getPublicRewardPoolMaxEndTime() external view returns (uint256);
+
+    /**
      * @notice The function to get the contract version.
      * @return The current contract version
      */

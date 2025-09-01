@@ -872,6 +872,19 @@ describe('Distributor', () => {
       expect(await dp1Info.depositToken.balanceOf(distributor)).to.eq(wei(0));
       expect(await dp1Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(3));
     });
+    it('should correctly withdraw, after reward pool max end time', async () => {
+      await dp0Info.depositToken.connect(BOB).approve(distributor, wei(1000, 6));
+
+      await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(1, 6));
+
+      await dp0Info.depositToken.mint(distributor, wei(1, 6));
+
+      await rewardPoolMock.setPublicRewardPoolMaxEndTime(1);
+
+      const tx = await distributor.connect(BOB).withdrawYield(publicRewardPoolId, dp0Info.depositPool);
+
+      await expect(tx).to.changeTokenBalance(dp0Info.depositToken, l1SenderMock, wei(1, 6));
+    });
     it('should revert when invalid strategy for the deposit pool', async () => {
       await expect(distributor.connect(BOB).withdrawYield(privateRewardPoolId, dp2Info.depositPool)).to.be.revertedWith(
         'DR: invalid strategy for the deposit pool',
