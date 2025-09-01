@@ -326,13 +326,11 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         require(amount_ > 0, "DR: nothing to withdraw");
 
         if (depositPool.strategy == Strategy.AAVE) {
-            address aavePool_ = AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool();
-
-            if (IERC20(depositPool.aToken).allowance(address(this), aavePool_) < amount_) {
-                IERC20(depositPool.aToken).approve(aavePool_, type(uint256).max);
-            }
-
-            AaveIPool(aavePool_).withdraw(depositPool.token, amount_, user_);
+            AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
+                depositPool.token,
+                amount_,
+                user_
+            );
         } else {
             uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
             IERC20(depositPool.token).safeTransfer(user_, amount_);
@@ -505,13 +503,11 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         if (yield_ == 0) return;
 
         if (depositPool.strategy == Strategy.AAVE) {
-            address aavePool_ = AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool();
-
-            if (IERC20(depositPool.aToken).allowance(address(this), aavePool_) < yield_) {
-                IERC20(depositPool.aToken).approve(aavePool_, type(uint256).max);
-            }
-
-            AaveIPool(aavePool_).withdraw(depositPool.token, yield_, l1Sender);
+            AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
+                depositPool.token,
+                yield_,
+                l1Sender
+            );
         } else {
             uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
             IERC20(depositPool.token).safeTransfer(l1Sender, yield_);

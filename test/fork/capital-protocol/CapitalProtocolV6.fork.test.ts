@@ -11,6 +11,8 @@ import {
   DistributionV5,
   Distributor,
   ERC20Token,
+  IERC20__factory,
+  IPool__factory,
   L1Sender,
   L1SenderV2,
   RewardPool,
@@ -91,6 +93,58 @@ describe('CapitalProtocolV6 Fork', () => {
     );
 
     await reverter.snapshot();
+  });
+
+  it('should withdraw from aave pool without approval', async () => {
+    const wETHAbi = [
+      {
+        constant: false,
+        inputs: [
+          { name: 'guy', type: 'address' },
+          { name: 'wad', type: 'uint256' },
+        ],
+        name: 'approve',
+        outputs: [{ name: '', type: 'bool' }],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+      },
+      {
+        constant: true,
+        inputs: [{ name: '', type: 'address' }],
+        name: 'balanceOf',
+        outputs: [{ name: '', type: 'uint256' }],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+      },
+      {
+        constant: false,
+        inputs: [],
+        name: 'deposit',
+        outputs: [],
+        payable: true,
+        stateMutability: 'payable',
+        type: 'function',
+      },
+    ];
+    const wETH = new ethers.Contract('0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', wETHAbi, OWNER);
+
+    const aavePool = IPool__factory.connect(aavePoolAddress, OWNER);
+
+    await wETH.deposit({ value: wei(1) });
+
+    await wETH.approve(aavePool, wei(99999999));
+    await aavePool.supply(wETH, wei(1), OWNER, 0);
+
+    const aToken = (await aavePool.getReserveData(wETH)).aTokenAddress;
+    const aTokenContract = IERC20__factory.connect(aToken, OWNER);
+    // await aTokenContract.approve(aavePool, wei(99999999));
+
+    expect(await aTokenContract.allowance(OWNER, aavePool)).to.eq(0);
+    const tx = await aavePool.withdraw(wETH, wei(1), OWNER);
+
+    await expect(tx).to.changeTokenBalance(wETH, OWNER, wei(1));
   });
 
   beforeEach(async () => {
