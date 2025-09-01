@@ -570,6 +570,45 @@ describe('Distributor', () => {
       expect(await distributor.distributedRewards(dp0Info.rewardPoolId, dp0Info.depositPool)).to.eq(wei(20 + 45));
       expect(await distributor.distributedRewards(dp1Info.rewardPoolId, dp1Info.depositPool)).to.eq(wei(80 + 5));
     });
+    it('should work correctly when negative yield', async () => {
+      const depositToken = await deployStETHMock();
+      const depositPool = await deployDepositPoolMock(depositToken, distributor);
+      const dpInfo = {
+        rewardPoolId: publicRewardPoolId,
+        chainLinkPath: 'stETH/USD',
+        chainLinkPrice: wei(0),
+        depositToken: depositToken,
+        depositPool: depositPool,
+        aToken: await deployERC20Token(),
+        strategy: Strategy.NONE,
+      };
+      await chainLinkDataConsumerMock.setAnswer(dpInfo.chainLinkPath, wei(3));
+      await distributor.addDepositPool(
+        dpInfo.rewardPoolId,
+        dpInfo.depositPool,
+        dpInfo.depositToken,
+        dpInfo.chainLinkPath,
+        dpInfo.strategy,
+      );
+
+      await chainLinkDataConsumerMock.setAnswer(dpInfo.chainLinkPath, wei(3));
+      await rewardPoolMock.setPeriodRewardAnswer(wei(50));
+      await depositToken.mint(distributor, wei(10));
+
+      await setNextTime(1000);
+
+      await distributor.distributeRewards(publicRewardPoolId);
+
+      await chainLinkDataConsumerMock.setAnswer(dpInfo.chainLinkPath, wei(3));
+      await rewardPoolMock.setPeriodRewardAnswer(wei(50));
+      await depositToken.mint(distributor, wei(10));
+
+      await setNextTime(2000);
+
+      await depositToken.setTotalPooledEther(wei(0.0001));
+
+      await expect(distributor.distributeRewards(publicRewardPoolId)).to.not.be.reverted;
+    });
   });
 
   describe('#supply', () => {

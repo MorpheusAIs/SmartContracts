@@ -402,8 +402,13 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             }
 
             uint256 balance_ = IERC20(yieldToken_).balanceOf(address(this));
-            uint256 decimals_ = IERC20Metadata(yieldToken_).decimals();
-            uint256 underlyingYield_ = (balance_ - depositPool.lastUnderlyingBalance).to18(decimals_);
+            uint256 underlyingYield_ = 0;
+            if (depositPool.lastUnderlyingBalance >= balance_) {
+                underlyingYield_ = 0;
+            } else {
+                uint256 decimals_ = IERC20Metadata(yieldToken_).decimals();
+                underlyingYield_ = (balance_ - depositPool.lastUnderlyingBalance).to18(decimals_);
+            }
             uint256 yield_ = underlyingYield_ * depositPool.tokenPrice;
 
             depositPool.lastUnderlyingBalance = balance_;
