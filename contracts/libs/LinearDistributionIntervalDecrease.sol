@@ -33,7 +33,7 @@ library LinearDistributionIntervalDecrease {
             startTime_ = payoutStart_;
         }
 
-        uint128 maxEndTime_ = _calculateMaxEndTime(payoutStart_, interval_, initialAmount_, decreaseAmount_);
+        uint128 maxEndTime_ = calculateMaxEndTime(payoutStart_, interval_, initialAmount_, decreaseAmount_);
 
         if (endTime_ > maxEndTime_) {
             endTime_ = maxEndTime_;
@@ -84,12 +84,12 @@ library LinearDistributionIntervalDecrease {
         return firstPeriodReward_ + secondPeriodReward_ + thirdPeriodReward_;
     }
 
-    function _calculateMaxEndTime(
+    function calculateMaxEndTime(
         uint128 payoutStart_,
         uint128 interval_,
         uint256 initialAmount_,
         uint256 decreaseAmount_
-    ) private pure returns (uint128) {
+    ) public pure returns (uint128) {
         if (decreaseAmount_ == 0) {
             return type(uint128).max;
         }

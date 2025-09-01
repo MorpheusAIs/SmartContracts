@@ -504,7 +504,15 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     function _withdrawYield(uint256 rewardPoolIndex_, address depositPoolAddress_) private {
         DepositPool storage depositPool = depositPools[rewardPoolIndex_][depositPoolAddress_];
 
-        uint256 yield_ = depositPool.lastUnderlyingBalance - depositPool.deposited;
+        bool isRewardsEnded_ = block.timestamp > IRewardPool(rewardPool).getPublicRewardPoolMaxEndTime();
+
+        uint256 yield_ = 0;
+        if (isRewardsEnded_) {
+            yield_ = IERC20(depositPool.token).balanceOf(address(this)) - depositPool.deposited;
+        } else {
+            yield_ = depositPool.lastUnderlyingBalance - depositPool.deposited;
+        }
+
         if (yield_ == 0) return;
 
         if (depositPool.strategy == Strategy.AAVE) {
@@ -521,7 +529,11 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             yield_ = balanceBefore_ - balanceAfter_;
         }
 
-        depositPool.lastUnderlyingBalance -= yield_;
+        if (isRewardsEnded_) {
+            depositPool.lastUnderlyingBalance = IERC20(depositPool.token).balanceOf(address(this));
+        } else {
+            depositPool.lastUnderlyingBalance -= yield_;
+        }
     }
 
     /**********************************************************************************************/
