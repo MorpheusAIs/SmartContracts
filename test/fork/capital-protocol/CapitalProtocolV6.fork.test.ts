@@ -155,11 +155,7 @@ describe('CapitalProtocolV6 Fork', () => {
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
 
-      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
-        await chainLinkDataConsumer.getPathId('stETH/USD'),
-        72000000,
-      );
-
+      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(72000000);
       await setTime((await getCurrentBlockTime()) + 100 * oneDay);
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).claim(0, PUBLIC_POOL_USER_ADDRESS, { value: wei(0.1) });
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).withdraw(0, wei(999));
@@ -225,11 +221,8 @@ describe('CapitalProtocolV6 Fork', () => {
         },
       ];
 
+      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(720000);
       for (let i = 0; i < pairs.length; i++) {
-        await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
-          await chainLinkDataConsumer.getPathId(pairs[i].pair),
-          720000,
-        );
         await chainLinkDataConsumer.updateDataFeeds([pairs[i].pair], [pairs[i].feed]);
         await distributor_test.addDepositPool(
           0,
@@ -427,15 +420,7 @@ describe('CapitalProtocolV6 Fork', () => {
       [['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c']],
     );
     await chainLinkDataConsumer.updateDataFeeds(['stETH/USD'], [['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8']]);
-
-    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('USDC/USD'), 7200);
-    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('USDT/USD'), 7200);
-    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('cbBTC/USD'), 7200);
-    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
-      await chainLinkDataConsumer.getPathId('wBTC/BTC,BTC/USD'),
-      7200,
-    );
-    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('stETH/USD'), 7200);
+    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(7200);
 
     await l1SenderV2.setDistributor(distributor);
 

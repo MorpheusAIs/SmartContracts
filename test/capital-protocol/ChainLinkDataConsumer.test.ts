@@ -108,17 +108,14 @@ describe('ChainLinkDataConsumer', () => {
 
   describe('#setAllowedPriceUpdateDelay', () => {
     it('should set new value', async () => {
-      const pathId = await dataConsumer.getPathId(paths[0]);
+      await dataConsumer.setAllowedPriceUpdateDelay(10);
+      expect(await dataConsumer.allowedPriceUpdateDelay()).to.eq(10);
 
-      await dataConsumer.setAllowedPriceUpdateDelay(pathId, 10);
-      expect(await dataConsumer.allowedPriceUpdateDelay(pathId)).to.eq(10);
-
-      await dataConsumer.setAllowedPriceUpdateDelay(pathId, 20);
-      expect(await dataConsumer.allowedPriceUpdateDelay(pathId)).to.eq(20);
+      await dataConsumer.setAllowedPriceUpdateDelay(20);
+      expect(await dataConsumer.allowedPriceUpdateDelay()).to.eq(20);
     });
     it('should revert if caller is not owner', async () => {
-      const pathId = await dataConsumer.getPathId(paths[0]);
-      await expect(dataConsumer.connect(SECOND).setAllowedPriceUpdateDelay(pathId, 30)).to.be.revertedWith(
+      await expect(dataConsumer.connect(SECOND).setAllowedPriceUpdateDelay(30)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -152,9 +149,7 @@ describe('ChainLinkDataConsumer', () => {
 
   describe('#getChainLinkDataFeedLatestAnswer', () => {
     beforeEach(async () => {
-      const pathId = await dataConsumer.getPathId(paths[0]);
-
-      await dataConsumer.setAllowedPriceUpdateDelay(pathId, 120);
+      await dataConsumer.setAllowedPriceUpdateDelay(120);
     });
     it('should return correct result, base decimals', async () => {
       await dataConsumer.updateDataFeeds(paths, feeds);
