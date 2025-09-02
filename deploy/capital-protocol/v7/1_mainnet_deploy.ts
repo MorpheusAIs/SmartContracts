@@ -42,27 +42,35 @@ const usdtAddress = '0xdac17f958d2ee523a2206206994597c13d831ec7';
 
 module.exports = async function (deployer: Deployer) {
   // TO BE CALLED BY DL
+  // Deploy and setup new contracts (partially).
   await _step1(deployer);
 
   // TO BE CALLED BY MS
+  // Upgrade existing contracts. Setup existed contracts.
   await _step2(deployer);
 
   // TO BE CALLED BY DL
+  // Setup `Distributor` contract.
   await _step3(deployer);
 
   // TO BE CALLED BY MS
+  // Migrate to v2.
   await _step4(deployer);
 
   // TO BE CALLED BY DL
+  // Transfer ownership rights
   await _step5(deployer);
 
   // ONLY FOR TESTS
+  // Test deployed v2 contracts
   await test(deployer);
 
   // TO BE CALLED BY DL
+  // Deploy new `DepositPool` contracts
   await _step6(deployer);
 
   // TO BE CALLED BY MS
+  // Add new `DepositPool` contracts to `Distributor`
   await _step7(deployer);
 };
 
