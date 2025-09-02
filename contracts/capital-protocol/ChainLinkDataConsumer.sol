@@ -44,6 +44,8 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
 
     function setAllowedPriceUpdateDelay(bytes32 pathId_, uint64 allowedPriceUpdateDelay_) external onlyOwner {
         allowedPriceUpdateDelay[pathId_] = allowedPriceUpdateDelay_;
+
+        emit PriceUpdateDelaySet(pathId_, allowedPriceUpdateDelay_);
     }
 
     /**********************************************************************************************/
@@ -53,13 +55,20 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
     /**
      * @dev https://docs.chain.link/data-feeds/price-feeds/addresses?network=ethereum&page=1
      */
-    function updateDataFeeds(string[] calldata paths_, address[][] calldata feeds_) external onlyOwner {
+    function updateDataFeeds(
+        string[] calldata paths_,
+        address[][] calldata feeds_,
+        uint64[] calldata allowedPriceUpdateDelay_
+    ) external onlyOwner {
         require(paths_.length == feeds_.length, "CLDC: mismatched array lengths");
         for (uint256 i = 0; i < paths_.length; i++) {
             require(feeds_[i].length > 0, "CLDC: empty feed array");
-            dataFeeds[getPathId(paths_[i])] = feeds_[i];
 
-            emit DataFeedSet(paths_[i], feeds_[i]);
+            bytes32 pathId_ = getPathId(paths_[i]);
+            dataFeeds[pathId_] = feeds_[i];
+            allowedPriceUpdateDelay[pathId_] = allowedPriceUpdateDelay_[i];
+
+            emit DataFeedSet(paths_[i], feeds_[i], allowedPriceUpdateDelay_[i]);
         }
     }
 

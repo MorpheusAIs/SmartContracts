@@ -26,19 +26,23 @@ describe('ChainLinkDataConsumer', () => {
     {
       path: 'USDC/USD',
       addresses: [''],
+      delay: 1,
     },
     {
       path: 'wBTC/BTC,BTC/USD',
       addresses: ['', ''],
+      delay: 2,
     },
     {
       path: 'wBTC/BTC,BTC/ETH',
       addresses: ['', ''],
+      delay: 3,
     },
   ];
   let paths: string[];
   let feedContracts: ChainLinkAggregatorV3Mock[][];
   let feeds: string[][];
+  let delays: number[];
 
   before(async () => {
     [OWNER, SECOND] = await ethers.getSigners();
@@ -56,6 +60,7 @@ describe('ChainLinkDataConsumer', () => {
       [await feedContracts[1][0].getAddress(), await feedContracts[1][1].getAddress()],
       [await feedContracts[2][0].getAddress(), await feedContracts[2][1].getAddress()],
     ];
+    delays = data.map((e) => e.delay);
 
     await reverter.snapshot();
   });
@@ -126,7 +131,7 @@ describe('ChainLinkDataConsumer', () => {
 
   describe('#updateDataFeeds', () => {
     it('should add new reward pool', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
+      await dataConsumer.updateDataFeeds(paths, feeds, delays);
 
       for (let i = 0; i < paths.length; i++) {
         const pathId = await dataConsumer.getPathId(paths[i]);
@@ -138,13 +143,13 @@ describe('ChainLinkDataConsumer', () => {
       expect(await dataConsumer.decimals()).to.eq(18);
     });
     it('should revert when mismatched array lengths', async () => {
-      await expect(dataConsumer.updateDataFeeds([''], [])).to.be.revertedWith('CLDC: mismatched array lengths');
+      await expect(dataConsumer.updateDataFeeds([''], [], [])).to.be.revertedWith('CLDC: mismatched array lengths');
     });
     it('should revert when empty feed array', async () => {
-      await expect(dataConsumer.updateDataFeeds([''], [[]])).to.be.revertedWith('CLDC: empty feed array');
+      await expect(dataConsumer.updateDataFeeds([''], [[]], [])).to.be.revertedWith('CLDC: empty feed array');
     });
     it('should revert if caller is not owner', async () => {
-      await expect(dataConsumer.connect(SECOND).updateDataFeeds([], [])).to.be.revertedWith(
+      await expect(dataConsumer.connect(SECOND).updateDataFeeds([], [], [])).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -157,7 +162,7 @@ describe('ChainLinkDataConsumer', () => {
       await dataConsumer.setAllowedPriceUpdateDelay(pathId, 120);
     });
     it('should return correct result, base decimals', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
+      await dataConsumer.updateDataFeeds(paths, feeds, delays);
 
       const pathId = await dataConsumer.getPathId(paths[0]);
       const aggregator = feedContracts[0][0];
@@ -166,7 +171,7 @@ describe('ChainLinkDataConsumer', () => {
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(1.2345, 18));
     });
     it('should return correct result, 8 -> 12 -> 18', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
+      await dataConsumer.updateDataFeeds(paths, feeds, delays);
 
       const pathId = await dataConsumer.getPathId(paths[1]);
       const aggregator1 = feedContracts[1][0];
@@ -177,7 +182,7 @@ describe('ChainLinkDataConsumer', () => {
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(3, 18));
     });
     it('should return correct result, 12 -> 8 -> 18', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
+      await dataConsumer.updateDataFeeds(paths, feeds, delays);
 
       const pathId = await dataConsumer.getPathId(paths[2]);
       const aggregator1 = feedContracts[2][0];
@@ -188,7 +193,7 @@ describe('ChainLinkDataConsumer', () => {
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(2, 18));
     });
     it('should return zero when the update price delay is too big', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
+      await dataConsumer.updateDataFeeds(paths, feeds, delays);
 
       const pathId = await dataConsumer.getPathId(paths[0]);
       const aggregator = feedContracts[0][0];
@@ -202,7 +207,7 @@ describe('ChainLinkDataConsumer', () => {
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(0, 18));
     });
     it('should return zero when result less then 0 or equals', async () => {
-      await dataConsumer.updateDataFeeds(paths, feeds);
+      await dataConsumer.updateDataFeeds(paths, feeds, delays);
 
       const pathId = await dataConsumer.getPathId(paths[0]);
       const aggregator = feedContracts[0][0];
@@ -214,7 +219,7 @@ describe('ChainLinkDataConsumer', () => {
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(0, 18));
     });
     it('should return zero when path is invalid', async () => {
-      await dataConsumer.updateDataFeeds(['undefined'], [[dataConsumer]]);
+      await dataConsumer.updateDataFeeds(['undefined'], [[dataConsumer]], delays);
       const pathId = await dataConsumer.getPathId('undefined');
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(0, 18));
     });
