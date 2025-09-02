@@ -18,8 +18,6 @@ import {
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
-import { getCurrentBlockTime, setTime } from '@/test/helpers/block-helper';
-import { oneDay } from '@/test/helpers/distribution-helper';
 
 const msAddress = '0x1FE04BC15Cf2c5A2d41a0b3a96725596676eBa1E';
 
@@ -29,8 +27,18 @@ let distributorAddress = '';
 let depositPoolImplAddress = '';
 let l1SenderV2ImplAddress = '';
 
+let depositPoolWBTC = '';
+let depositPoolWETH = '';
+let depositPoolUSDC = '';
+let depositPoolUSDT = '';
+
 const distributionV5Address = '0x47176B2Af9885dC6C4575d4eFd63895f7Aaa4790';
 const l1SenderAddress = '0x2Efd4430489e1a05A89c2f51811aC661B7E5FF84';
+
+const wBTCAddress = '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599';
+const wETHAddress = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+const usdcAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+const usdtAddress = '0xdac17f958d2ee523a2206206994597c13d831ec7';
 
 module.exports = async function (deployer: Deployer) {
   // TO BE CALLED BY DL
@@ -48,11 +56,14 @@ module.exports = async function (deployer: Deployer) {
   // TO BE CALLED BY DL
   await _step5(deployer);
 
-  // // TO BE CALLED BY MS
-  // await step6();
-  // await step7();
+  // ONLY FOR TESTS
+  await test(deployer);
 
-  // await testStake();
+  // TO BE CALLED BY DL
+  await _step6(deployer);
+
+  // TO BE CALLED BY MS
+  await _step7(deployer);
 };
 
 const _step1 = async (deployer: Deployer) => {
@@ -159,45 +170,64 @@ const _step5 = async (deployer: Deployer) => {
   const depositPoolStETH = await deployer.deployed(DepositPool__factory, distributionV5Address);
   const stETH = await deployer.deployed(StETHMock__factory, await depositPoolStETH.depositToken());
 
-  console.log(`Undistributed rewards. Expected: 0; Actual: ${await distributor.undistributedRewards()}`);
+  console.log(`Undistributed rewards. Expected: 0. Actual: ${await distributor.undistributedRewards()}`);
   console.log(`stETH DepositPool balance. Expected: 0. Actual: ${await stETH.balanceOf(depositPoolStETH)}`);
   console.log(`Distributor balance. Expected: 0. Actual: ${await stETH.balanceOf(distributor)}`);
 };
 
-// const test = async (deployer: Deployer) => {
-//   const ms = await ethers.getImpersonatedSigner(msAddress);
+const _step6 = async (deployer: Deployer) => {
+  const depositPoolStETH = await deployer.deployed(DepositPool__factory, distributionV5Address);
+  const rewardPoolDetails = await depositPoolStETH.rewardPoolsProtocolDetails(0);
 
-//   const STETH_HOLDER = await ethers.getImpersonatedSigner('0xE53FFF67f9f384d20Ebea36F43b93DC49Ed22753');
-//   const PUBLIC_POOL_USER_ADDRESS = await ethers.getImpersonatedSigner('0x0302cb360862ab7a5670d5e9958e8766fa50418f');
-//   const PRIVATE_POOL_USER_ADDRESS = await ethers.getImpersonatedSigner('0xe549A9c6429A021C4DAc675D18161953749c8786');
+  const deployDepositPool = async (tokenAddress: string): Promise<string> => {
+    const proxy = await deployer.deploy(ERC1967Proxy__factory, [depositPoolImplAddress, '0x'], {
+      name: `DepositPool ${tokenAddress}`,
+    });
+    const depositPool = await deployer.deployed(DepositPool__factory, await proxy.getAddress());
 
-//   await deployer.sendTransaction({ to: PUBLIC_POOL_USER_ADDRESS, value: wei(1) });
-//   await deployer.sendTransaction({ to: PRIVATE_POOL_USER_ADDRESS, value: wei(1) });
+    await depositPool.DepositPool_init(tokenAddress, distributorAddress);
+    await depositPool.setRewardPoolProtocolDetails(
+      0,
+      rewardPoolDetails.withdrawLockPeriodAfterStake,
+      rewardPoolDetails.claimLockPeriodAfterStake,
+      rewardPoolDetails.claimLockPeriodAfterClaim,
+      rewardPoolDetails.minimalStake,
+    );
+    await depositPool.migrate(0);
+    await depositPool.transferOwnership(msAddress);
 
-//   const depositPool = DepositPool__factory.connect(depositPoolAddress, deployer);
-//   const stETH = StETHMock__factory.connect(stETHAddress, deployer);
+    return depositPool.getAddress();
+  };
 
-//   await stETH.connect(STETH_HOLDER).transfer(PUBLIC_POOL_USER_ADDRESS, wei(1));
-//   await stETH.connect(PUBLIC_POOL_USER_ADDRESS).approve(distributorAddress, wei(1));
+  depositPoolWBTC = await deployDepositPool(wBTCAddress);
+  depositPoolWETH = await deployDepositPool(wETHAddress);
+  depositPoolUSDC = await deployDepositPool(usdcAddress);
+  depositPoolUSDT = await deployDepositPool(usdtAddress);
+};
 
-//   await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
-//   await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
-//   console.log('Stake works');
+const _step7 = async (deployer: Deployer) => {
+  const ms = await ethers.getImpersonatedSigner(msAddress);
 
-//   await setTime((await getCurrentBlockTime()) + 100 * oneDay);
-//   await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).claim(0, PUBLIC_POOL_USER_ADDRESS, { value: wei(0.1) });
-//   console.log('Public pool claim works');
-//   await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).withdraw(0, wei(999));
-//   console.log('Withdraw works');
+  const distributor = await deployer.deployed(Distributor__factory, distributorAddress);
 
-//   await depositPool
-//     .connect(ms)
-//     .manageUsersInPrivateRewardPool(1, ['0xe549A9c6429A021C4DAc675D18161953749c8786'], [wei(100)], [0], [ZERO_ADDR]);
+  await distributor.connect(ms).addDepositPool(0, depositPoolWBTC, wBTCAddress, 'wBTC/BTC,BTC/USD', 2);
+  await distributor.connect(ms).addDepositPool(0, depositPoolWETH, wETHAddress, 'wETH/USD', 2);
+  await distributor.connect(ms).addDepositPool(0, depositPoolUSDC, usdcAddress, 'USDC/USD', 2);
+  await distributor.connect(ms).addDepositPool(0, depositPoolUSDT, usdtAddress, 'USDT/USD', 2);
+};
 
-//   await setTime((await getCurrentBlockTime()) + 100 * oneDay);
-//   await depositPool.connect(PRIVATE_POOL_USER_ADDRESS).claim(1, PRIVATE_POOL_USER_ADDRESS, { value: wei(0.1) });
-//   console.log('Private pool claim works');
-// }
+const test = async (deployer: Deployer) => {
+  const USER = await ethers.getImpersonatedSigner('0x063e2575Eb717CC4031a39726CFEB38096C9fa8a');
+
+  const depositPoolStETH = await deployer.deployed(DepositPool__factory, distributionV5Address);
+  const stETH = await deployer.deployed(StETHMock__factory, await depositPoolStETH.depositToken());
+
+  await depositPoolStETH.connect(USER).claim(0, '0x063e2575Eb717CC4031a39726CFEB38096C9fa8a', { value: wei(0.0003) });
+  await depositPoolStETH.connect(USER).withdraw(0, wei(999));
+
+  await stETH.connect(USER).approve(distributorAddress, wei(10));
+  await depositPoolStETH.connect(USER).stake(0, wei(10), 0, ZERO_ADDR);
+};
 
 const _deployAndSetupChainLinkDataConsumer = async (deployer: Deployer): Promise<ChainLinkDataConsumer> => {
   const impl = await deployer.deploy(ChainLinkDataConsumer__factory);

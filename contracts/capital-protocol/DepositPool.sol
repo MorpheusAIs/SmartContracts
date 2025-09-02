@@ -450,8 +450,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             newDeposited_ = deposited_ - amount_;
 
             require(amount_ > 0, "DS: nothing to withdraw");
+
+            // `newDeposited_ < 10`, where `10` is the minimal gap for the stETH token,
+            // as the `IDistributor(distributor).withdraw(...)` allows that the actual
+            // withdrawal amount may be less than the declared initial `amount_` due to rounding.
             require(
-                newDeposited_ >= rewardPoolProtocolDetails.minimalStake || newDeposited_ == 0,
+                newDeposited_ >= rewardPoolProtocolDetails.minimalStake || newDeposited_ < 10,
                 "DS: invalid withdraw amount"
             );
         } else {
