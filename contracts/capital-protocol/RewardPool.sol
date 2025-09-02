@@ -86,29 +86,6 @@ contract RewardPool is IRewardPool, OwnableUpgradeable, UUPSUpgradeable {
             );
     }
 
-    function getPublicRewardPoolMaxEndTime() external view returns (uint256 endTime_) {
-        for (uint256 i = 0; i < rewardPools.length; i++) {
-            RewardPool memory rewardPool_ = rewardPools[i];
-
-            if (!rewardPool_.isPublic) {
-                continue;
-            }
-
-            uint256 poolEndTime_ = LinearDistributionIntervalDecrease.calculateMaxEndTime(
-                rewardPool_.payoutStart,
-                rewardPool_.decreaseInterval,
-                rewardPool_.initialReward,
-                rewardPool_.rewardDecrease
-            );
-
-            if (poolEndTime_ > endTime_) {
-                endTime_ = poolEndTime_;
-            }
-        }
-
-        return endTime_;
-    }
-
     /**********************************************************************************************/
     /*** UUPS                                                                                   ***/
     /**********************************************************************************************/

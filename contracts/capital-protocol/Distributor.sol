@@ -280,7 +280,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     /*** Yield logic functionality                                                              ***/
     /**********************************************************************************************/
 
-    function supply(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
+    function supply(uint256 rewardPoolIndex_, address holder_, uint256 amount_) external returns (uint256) {
         address depositPoolAddress_ = _msgSender();
         _onlyExistedDepositPool(rewardPoolIndex_, depositPoolAddress_);
 
@@ -292,7 +292,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
         uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
-        IERC20(depositPool.token).safeTransferFrom(user_, address(this), amount_);
+        IERC20(depositPool.token).safeTransferFrom(holder_, address(this), amount_);
         uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
 
         amount_ = balanceAfter_ - balanceBefore_;
@@ -313,7 +313,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         return amount_;
     }
 
-    function withdraw(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
+    function withdraw(uint256 rewardPoolIndex_, address receiver_, uint256 amount_) external returns (uint256) {
         address depositPoolAddress_ = _msgSender();
         _onlyExistedDepositPool(rewardPoolIndex_, depositPoolAddress_);
 
@@ -329,11 +329,11 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
                 depositPool.token,
                 amount_,
-                user_
+                receiver_
             );
         } else {
             uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
-            IERC20(depositPool.token).safeTransfer(user_, amount_);
+            IERC20(depositPool.token).safeTransfer(receiver_, amount_);
             uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
 
             amount_ = balanceBefore_ - balanceAfter_;
@@ -363,7 +363,6 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             uint128(block.timestamp)
         );
 
-        if (rewards_ == 0) return;
         //// End
 
         // Stop execution when the reward pool is private
@@ -381,7 +380,9 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         rewardPoolLastCalculatedTimestamp[rewardPoolIndex_] = uint128(block.timestamp);
 
         //// Update prices
-        updateDepositTokensPrices(rewardPoolIndex_);
+        if (rewards_ != 0) {
+            updateDepositTokensPrices(rewardPoolIndex_);
+        }
         //// End
 
         //// Calculate `yield` from all deposit pools
@@ -415,6 +416,10 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
             yields_[i] = yield_;
             totalYield_ += yield_;
+        }
+
+        if (rewards_ == 0) {
+            return;
         }
 
         if (totalYield_ == 0) {
@@ -504,14 +509,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     function _withdrawYield(uint256 rewardPoolIndex_, address depositPoolAddress_) private {
         DepositPool storage depositPool = depositPools[rewardPoolIndex_][depositPoolAddress_];
 
-        bool isRewardsEnded_ = block.timestamp > IRewardPool(rewardPool).getPublicRewardPoolMaxEndTime();
-
-        uint256 yield_ = 0;
-        if (isRewardsEnded_) {
-            yield_ = IERC20(depositPool.token).balanceOf(address(this)) - depositPool.deposited;
-        } else {
-            yield_ = depositPool.lastUnderlyingBalance - depositPool.deposited;
-        }
+        uint256 yield_ = depositPool.lastUnderlyingBalance - depositPool.deposited;
 
         if (yield_ == 0) return;
 
@@ -529,11 +527,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             yield_ = balanceBefore_ - balanceAfter_;
         }
 
-        if (isRewardsEnded_) {
-            depositPool.lastUnderlyingBalance = IERC20(depositPool.token).balanceOf(address(this));
-        } else {
-            depositPool.lastUnderlyingBalance -= yield_;
-        }
+        depositPool.lastUnderlyingBalance -= yield_;
     }
 
     /**********************************************************************************************/

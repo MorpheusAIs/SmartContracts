@@ -373,8 +373,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         if (IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolPublic(rewardPoolIndex_)) {
             require(amount_ > 0, "DS: nothing to stake");
 
-            amount_ = IDistributor(distributor).supply(rewardPoolIndex_, _msgSender(), amount_);
-
+            amount_ = IDistributor(distributor).supply(rewardPoolIndex_, user_, amount_);
             require(userData.deposited + amount_ >= rewardPoolProtocolDetails.minimalStake, "DS: amount too low");
 
             totalDepositedInPublicPools += amount_;

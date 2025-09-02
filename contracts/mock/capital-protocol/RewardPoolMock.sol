@@ -5,7 +5,6 @@ import {IRewardPool, IERC165} from "../../interfaces/capital-protocol/IRewardPoo
 
 contract RewardPoolMock is IERC165 {
     uint256 periodRewardAnswer;
-    uint256 publicRewardPoolMaxEndTime = 1000000000000000;
     mapping(uint256 => bool) isRewardPoolPublicAnswer;
     mapping(uint256 => bool) isRewardPoolExistAnswer;
 
@@ -43,13 +42,5 @@ contract RewardPoolMock is IERC165 {
         uint256 preventWarnings_ = index_ + startTime_ + endTime_;
 
         return periodRewardAnswer + preventWarnings_ - preventWarnings_;
-    }
-
-    function setPublicRewardPoolMaxEndTime(uint256 value_) external {
-        publicRewardPoolMaxEndTime = value_;
-    }
-
-    function getPublicRewardPoolMaxEndTime() external view returns (uint256) {
-        return publicRewardPoolMaxEndTime;
     }
 }
