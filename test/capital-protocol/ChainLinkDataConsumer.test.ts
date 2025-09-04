@@ -26,17 +26,17 @@ describe('ChainLinkDataConsumer', () => {
     {
       path: 'USDC/USD',
       addresses: [''],
-      delay: 1,
+      delay: 100,
     },
     {
       path: 'wBTC/BTC,BTC/USD',
       addresses: ['', ''],
-      delay: 2,
+      delay: 200,
     },
     {
       path: 'wBTC/BTC,BTC/ETH',
       addresses: ['', ''],
-      delay: 3,
+      delay: 300,
     },
   ];
   let paths: string[];
@@ -200,10 +200,10 @@ describe('ChainLinkDataConsumer', () => {
       await aggregator.setAnswerResult(wei(1.2345, 18));
       await aggregator.setUpdated(600);
 
-      await setTime(720);
+      await setTime(700);
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(1.2345, 18));
 
-      await setTime(721);
+      await setTime(701);
       expect(await dataConsumer.getChainLinkDataFeedLatestAnswer(pathId)).to.eq(wei(0, 18));
     });
     it('should return zero when result less then 0 or equals', async () => {
