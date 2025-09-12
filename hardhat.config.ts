@@ -36,8 +36,8 @@ const config: HardhatUserConfig = {
       gas: 'auto',
       // gasPrice: 500000000,
       // forking: {
-      // url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-      // blockNumber: 23266590,
+      //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+      //   blockNumber: 23266590,
       // },
       // forking: {
       //   url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,

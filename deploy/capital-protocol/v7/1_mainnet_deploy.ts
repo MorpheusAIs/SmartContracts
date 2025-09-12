@@ -255,7 +255,7 @@ const _deployAndSetupChainLinkDataConsumer = async (deployer: Deployer): Promise
       ['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8'],
       ['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'],
     ],
-    [86400, 86400, 3600, 3600, 86400], // https://data.chain.link/
+    [[86400], [86400], [3600], [3600], [86400, 3600]], // https://data.chain.link/
   );
 
   return contract;
