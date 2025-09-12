@@ -162,6 +162,9 @@ describe('ChainLinkDataConsumer', () => {
     it('should revert when empty feed array', async () => {
       await expect(dataConsumer.updateDataFeeds([], [], [])).to.be.revertedWith('CLDC: empty paths array');
     });
+    it('should revert when empty feed array', async () => {
+      await expect(dataConsumer.updateDataFeeds([''], [[]], [[]])).to.be.revertedWith('CLDC: empty feed array');
+    });
     it('should revert if caller is not owner', async () => {
       await expect(dataConsumer.connect(SECOND).updateDataFeeds([], [], [])).to.be.revertedWith(
         'Ownable: caller is not the owner',

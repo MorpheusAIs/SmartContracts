@@ -65,6 +65,7 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
         require(paths_.length == allowedPriceUpdateDelays_.length, "CLDC: mismatched array lengths (2)");
 
         for (uint256 i = 0; i < paths_.length; i++) {
+            require(feeds_[i].length > 0, "CLDC: empty feed array");
             require(feeds_[i].length == allowedPriceUpdateDelays_[i].length, "CLDC: mismatched array lengths (3)");
 
             bytes32 pathId_ = getPathId(paths_[i]);
