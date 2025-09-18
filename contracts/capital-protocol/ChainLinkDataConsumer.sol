@@ -19,7 +19,7 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
     mapping(bytes32 => address[]) public dataFeeds;
 
     /** @notice The maximum allowed delay in seconds for the price update between ChainLink and now. */
-    uint64 public allowedPriceUpdateDelay;
+    mapping(address => uint64) public allowedPriceUpdateDelay;
 
     /**********************************************************************************************/
     /*** Init, IERC165                                                                          ***/
@@ -42,8 +42,10 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
     /*** Functionality for the contract `owner()`                                               ***/
     /**********************************************************************************************/
 
-    function setAllowedPriceUpdateDelay(uint64 allowedPriceUpdateDelay_) external onlyOwner {
-        allowedPriceUpdateDelay = allowedPriceUpdateDelay_;
+    function setAllowedPriceUpdateDelay(address feed_, uint64 allowedPriceUpdateDelay_) external onlyOwner {
+        allowedPriceUpdateDelay[feed_] = allowedPriceUpdateDelay_;
+
+        emit PriceUpdateDelaySet(feed_, allowedPriceUpdateDelay_);
     }
 
     /**********************************************************************************************/
@@ -53,13 +55,26 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
     /**
      * @dev https://docs.chain.link/data-feeds/price-feeds/addresses?network=ethereum&page=1
      */
-    function updateDataFeeds(string[] calldata paths_, address[][] calldata feeds_) external onlyOwner {
-        require(paths_.length == feeds_.length, "CLDC: mismatched array lengths");
+    function updateDataFeeds(
+        string[] calldata paths_,
+        address[][] calldata feeds_,
+        uint64[][] calldata allowedPriceUpdateDelays_
+    ) external onlyOwner {
+        require(paths_.length > 0, "CLDC: empty paths array");
+        require(paths_.length == feeds_.length, "CLDC: mismatched array lengths (1)");
+        require(paths_.length == allowedPriceUpdateDelays_.length, "CLDC: mismatched array lengths (2)");
+
         for (uint256 i = 0; i < paths_.length; i++) {
             require(feeds_[i].length > 0, "CLDC: empty feed array");
-            dataFeeds[getPathId(paths_[i])] = feeds_[i];
+            require(feeds_[i].length == allowedPriceUpdateDelays_[i].length, "CLDC: mismatched array lengths (3)");
 
-            emit DataFeedSet(paths_[i], feeds_[i]);
+            bytes32 pathId_ = getPathId(paths_[i]);
+            dataFeeds[pathId_] = feeds_[i];
+            for (uint256 k = 0; k < feeds_[i].length; k++) {
+                allowedPriceUpdateDelay[feeds_[i][k]] = allowedPriceUpdateDelays_[i][k];
+            }
+
+            emit DataFeedSet(paths_[i], feeds_[i], allowedPriceUpdateDelays_[i]);
         }
     }
 
@@ -88,7 +103,10 @@ contract ChainLinkDataConsumer is IChainLinkDataConsumer, OwnableUpgradeable, UU
                     return 0;
                 }
 
-                if (block.timestamp < updatedAt_ || block.timestamp - updatedAt_ > allowedPriceUpdateDelay) {
+                if (
+                    block.timestamp < updatedAt_ ||
+                    block.timestamp - updatedAt_ > allowedPriceUpdateDelay[dataFeeds_[i]]
+                ) {
                     return 0;
                 }
 

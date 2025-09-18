@@ -11,6 +11,8 @@ import {
   DistributionV5,
   Distributor,
   ERC20Token,
+  IERC20__factory,
+  IPool__factory,
   L1Sender,
   L1SenderV2,
   RewardPool,
@@ -53,6 +55,8 @@ describe('CapitalProtocolV6 Fork', () => {
   const aavePoolAddress = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';
   // https://etherscan.io/address/0x497a1994c46d4f6C864904A9f1fac6328Cb7C8a6
   const aaveProtocolDataProvider = '0x497a1994c46d4f6C864904A9f1fac6328Cb7C8a6';
+  // https://etherscan.io/address/0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e
+  const aavePoolAddressesProvider = '0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e';
 
   const publicPoolUserAddress = '0x0302CB360862aB7A5670D5E9958E8766fA50418F';
   const privatePoolUserAddress = '0xe549A9c6429A021C4DAc675D18161953749c8786';
@@ -82,13 +86,65 @@ describe('CapitalProtocolV6 Fork', () => {
     l1SenderV2 = await upgradeL1SenderToL1SenderV2();
     distributor = await deployDistributor(
       chainLinkDataConsumer,
-      aavePoolAddress,
       aaveProtocolDataProvider,
+      aavePoolAddressesProvider,
       rewardPool,
       l1SenderV2,
     );
 
     await reverter.snapshot();
+  });
+
+  it('should withdraw from aave pool without approval', async () => {
+    const wETHAbi = [
+      {
+        constant: false,
+        inputs: [
+          { name: 'guy', type: 'address' },
+          { name: 'wad', type: 'uint256' },
+        ],
+        name: 'approve',
+        outputs: [{ name: '', type: 'bool' }],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+      },
+      {
+        constant: true,
+        inputs: [{ name: '', type: 'address' }],
+        name: 'balanceOf',
+        outputs: [{ name: '', type: 'uint256' }],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+      },
+      {
+        constant: false,
+        inputs: [],
+        name: 'deposit',
+        outputs: [],
+        payable: true,
+        stateMutability: 'payable',
+        type: 'function',
+      },
+    ];
+    const wETH = new ethers.Contract('0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', wETHAbi, OWNER);
+
+    const aavePool = IPool__factory.connect(aavePoolAddress, OWNER);
+
+    await wETH.deposit({ value: wei(1) });
+
+    await wETH.approve(aavePool, wei(99999999));
+    await aavePool.supply(wETH, wei(1), OWNER, 0);
+
+    const aToken = (await aavePool.getReserveData(wETH)).aTokenAddress;
+    const aTokenContract = IERC20__factory.connect(aToken, OWNER);
+    // await aTokenContract.approve(aavePool, wei(99999999));
+
+    expect(await aTokenContract.allowance(OWNER, aavePool)).to.eq(0);
+    const tx = await aavePool.withdraw(wETH, wei(1), OWNER);
+
+    await expect(tx).to.changeTokenBalance(wETH, OWNER, wei(1));
   });
 
   beforeEach(async () => {
@@ -151,11 +207,16 @@ describe('CapitalProtocolV6 Fork', () => {
 
       const stETH = await getStETH(depositPool);
       await stETH.connect(STETH_HOLDER).transfer(PUBLIC_POOL_USER_ADDRESS, wei(1));
+      await stETH.connect(PUBLIC_POOL_USER_ADDRESS).approve(distributor, wei(1));
 
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).stake(0, wei(0.5), 0, ZERO_ADDR);
 
-      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(72000000);
+      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
+        await chainLinkDataConsumer.getPathId('stETH/USD'),
+        72000000,
+      );
+
       await setTime((await getCurrentBlockTime()) + 100 * oneDay);
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).claim(0, PUBLIC_POOL_USER_ADDRESS, { value: wei(0.1) });
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).withdraw(0, wei(999));
@@ -175,8 +236,8 @@ describe('CapitalProtocolV6 Fork', () => {
     it('should distribute rewards with stETH, USDC, USDT, wBTC, cbBTC', async () => {
       const distributor_test = await deployDistributor(
         chainLinkDataConsumer,
-        aavePoolAddress,
         aaveProtocolDataProvider,
+        aavePoolAddressesProvider,
         rewardPool,
         l1SenderV2,
       );
@@ -221,8 +282,11 @@ describe('CapitalProtocolV6 Fork', () => {
         },
       ];
 
-      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(720000);
       for (let i = 0; i < pairs.length; i++) {
+        await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
+          await chainLinkDataConsumer.getPathId(pairs[i].pair),
+          720000,
+        );
         await chainLinkDataConsumer.updateDataFeeds([pairs[i].pair], [pairs[i].feed]);
         await distributor_test.addDepositPool(
           0,
@@ -420,7 +484,15 @@ describe('CapitalProtocolV6 Fork', () => {
       [['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c']],
     );
     await chainLinkDataConsumer.updateDataFeeds(['stETH/USD'], [['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8']]);
-    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(7200);
+
+    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('USDC/USD'), 7200);
+    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('USDT/USD'), 7200);
+    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('cbBTC/USD'), 7200);
+    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
+      await chainLinkDataConsumer.getPathId('wBTC/BTC,BTC/USD'),
+      7200,
+    );
+    await chainLinkDataConsumer.setAllowedPriceUpdateDelay(await chainLinkDataConsumer.getPathId('stETH/USD'), 7200);
 
     await l1SenderV2.setDistributor(distributor);
 

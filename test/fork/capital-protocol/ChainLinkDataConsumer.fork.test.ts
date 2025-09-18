@@ -11,45 +11,51 @@ describe('ChainLinkDataConsumer Fork', () => {
 
   let consumer: ChainLinkDataConsumer;
 
-  //
   const data = [
     {
       path: 'USDC/USD',
       addresses: ['0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6'],
+      delay: 86400,
     },
     {
       path: 'USDT/USD',
       addresses: ['0x3E7d1eAB13ad0104d2750B8863b489D65364e32D'],
+      delay: 86400,
     },
     {
       path: 'cbBTC/USD',
       addresses: ['0x2665701293fCbEB223D11A08D826563EDcCE423A'],
+      delay: 86400,
     },
     {
       path: 'wBTC/BTC,BTC/USD',
       addresses: ['0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23', '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'],
+      delay: 86400,
     },
     {
       path: 'stETH/USD',
       addresses: ['0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8'],
+      delay: 86400,
     },
   ];
   const paths = data.map((e) => e.path);
   const feeds = data.map((e) => e.addresses);
+  const delays = data.map((e) => e.delay);
 
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
       {
         forking: {
-          jsonRpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-          blockNumber: 22093000,
+          // jsonRpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+          jsonRpcUrl: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+          blockNumber: 23274800,
         },
       },
     ]);
 
     consumer = await deployChainLinkDataConsumer();
 
-    await consumer.updateDataFeeds(paths, feeds);
+    await consumer.updateDataFeeds(paths, feeds, delays);
 
     await reverter.snapshot();
   });
