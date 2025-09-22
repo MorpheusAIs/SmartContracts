@@ -8,9 +8,14 @@ import "../../tokens/ERC20Token.sol";
 
 contract AavePoolMock {
     address public aavePoolDataProviderMock;
+    uint256 public decreaseSupplyAmount;
 
     constructor(address aavePoolDataProviderMock_) {
         aavePoolDataProviderMock = aavePoolDataProviderMock_;
+    }
+
+    function setDecreaseSupplyAmount(uint256 decreaseSupplyAmount_) external {
+        decreaseSupplyAmount = decreaseSupplyAmount_;
     }
 
     function supply(address asset_, uint256 amount_, address onBehalfOf_, uint16 referralCode_) external {
@@ -18,7 +23,7 @@ contract AavePoolMock {
 
         address aToken_ = AavePoolDataProviderMock(aavePoolDataProviderMock).aTokenAddresses(asset_);
         ERC20Token(asset_).transferFrom(msg.sender, address(this), amount_);
-        ERC20Token(aToken_).mint(msg.sender, amount_ + preventWarnings_ - preventWarnings_);
+        ERC20Token(aToken_).mint(msg.sender, amount_ + preventWarnings_ - preventWarnings_ - decreaseSupplyAmount);
     }
 
     function withdraw(address asset_, uint256 amount_, address to_) external returns (uint256) {

@@ -123,7 +123,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function setL1Sender(address value_) public onlyOwner {
-        require(IERC165(value_).supportsInterface(type(IL1SenderV2).interfaceId), "DR: invalid L1Sender address");
+        require(IERC165(value_).supportsInterface(type(IL1SenderV2).interfaceId), "DR: invalid L1SenderV2 address");
 
         l1Sender = value_;
 
@@ -294,21 +294,23 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
         IERC20(depositPool.token).safeTransferFrom(holder_, address(this), amount_);
         uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
-
         amount_ = balanceAfter_ - balanceBefore_;
 
+        uint256 underlyingAmount_ = amount_;
         if (depositPool.strategy == Strategy.AAVE) {
             address aavePool_ = AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool();
-
             if (IERC20(depositPool.token).allowance(address(this), aavePool_) < amount_) {
                 IERC20(depositPool.token).safeApprove(aavePool_, type(uint256).max);
             }
 
+            uint256 underlyingBalanceBefore_ = IERC20(depositPool.aToken).balanceOf(address(this));
             AaveIPool(aavePool_).supply(depositPool.token, amount_, address(this), 0);
+            uint256 underlyingBalanceAfter_ = IERC20(depositPool.aToken).balanceOf(address(this));
+            underlyingAmount_ = underlyingBalanceAfter_ - underlyingBalanceBefore_;
         }
 
         depositPool.deposited += amount_;
-        depositPool.lastUnderlyingBalance += amount_;
+        depositPool.lastUnderlyingBalance += underlyingAmount_;
 
         return amount_;
     }
@@ -322,9 +324,10 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         distributeRewards(rewardPoolIndex_);
 
-        amount_ = amount_.min(depositPool.deposited);
+        amount_ = amount_.min(depositPool.deposited).min(depositPool.lastUnderlyingBalance);
         require(amount_ > 0, "DR: nothing to withdraw");
 
+        uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(receiver_);
         if (depositPool.strategy == Strategy.AAVE) {
             AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
                 depositPool.token,
@@ -332,12 +335,10 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
                 receiver_
             );
         } else {
-            uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
             IERC20(depositPool.token).safeTransfer(receiver_, amount_);
-            uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
-
-            amount_ = balanceBefore_ - balanceAfter_;
         }
+        uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(receiver_);
+        amount_ = balanceAfter_ - balanceBefore_;
 
         depositPool.deposited -= amount_;
         depositPool.lastUnderlyingBalance -= amount_;
@@ -509,8 +510,13 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     function _withdrawYield(uint256 rewardPoolIndex_, address depositPoolAddress_) private {
         DepositPool storage depositPool = depositPools[rewardPoolIndex_][depositPoolAddress_];
 
-        uint256 yield_ = depositPool.lastUnderlyingBalance - depositPool.deposited;
+        uint256 lastUnderlyingBalance_ = depositPool.lastUnderlyingBalance;
+        uint256 deposited_ = depositPool.deposited;
+        if (lastUnderlyingBalance_ < deposited_) {
+            return;
+        }
 
+        uint256 yield_ = lastUnderlyingBalance_ - deposited_;
         if (yield_ == 0) return;
 
         if (depositPool.strategy == Strategy.AAVE) {

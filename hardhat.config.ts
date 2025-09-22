@@ -32,13 +32,13 @@ function forceTypechain() {
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      initialDate: '1970-01-01T00:00:00Z',
-      gas: 'auto',
-      // gasPrice: 500000000,
-      // forking: {
-      //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-      //   blockNumber: 23266590,
-      // },
+      // initialDate: '1970-01-01T00:00:00Z',
+      // gas: 'auto',
+      gasPrice: 136008175,
+      forking: {
+        url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+        blockNumber: 23406900,
+      },
       // forking: {
       //   url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
@@ -189,7 +189,7 @@ const config: HardhatUserConfig = {
     // only: 1,
   },
   mocha: { timeout: 1000000 },
-  contractSizer: { alphaSort: false, disambiguatePaths: false, runOnCompile: true, strict: false },
+  contractSizer: { alphaSort: false, disambiguatePaths: false, runOnCompile: false, strict: false },
   gasReporter: { currency: 'USD', gasPrice: 50, enabled: false, coinmarketcap: `${process.env.COINMARKETCAP_KEY}` },
   typechain: {
     outDir: `generated-types/${typechainTarget().split('-')[0]}`,
