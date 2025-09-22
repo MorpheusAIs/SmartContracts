@@ -20,7 +20,7 @@ import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkD
 import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
 
-contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
+contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
     using DecimalsConverter for uint256;
     using Math for uint256;
@@ -86,7 +86,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function Distributor_init(
+    function DistributorV2_init(
         address chainLinkDataConsumer_,
         address aavePoolDataProvider_,
         address aavePoolAddressesProvider_,
@@ -552,7 +552,7 @@ contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
 
     function version() external pure returns (uint256) {
-        return 1;
+        return 2;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

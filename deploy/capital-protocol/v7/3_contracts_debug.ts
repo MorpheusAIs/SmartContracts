@@ -1,7 +1,7 @@
 import { Deployer } from '@solarity/hardhat-migrate';
 import { ethers } from 'hardhat';
 
-import { DepositPool__factory, Distributor__factory } from '@/generated-types/ethers';
+import { DepositPool__factory, DistributorV2__factory } from '@/generated-types/ethers';
 
 const distributorAddress = '0xDf1AC1AC255d91F5f4B1E3B4Aef57c5350F64C7A';
 
@@ -13,8 +13,8 @@ const msAddress = '0x1FE04BC15Cf2c5A2d41a0b3a96725596676eBa1E';
 module.exports = async function (deployer: Deployer) {
   const ms = await ethers.getImpersonatedSigner(msAddress);
 
-  const impl = await deployer.deploy(Distributor__factory);
-  const distributor = await deployer.deployed(Distributor__factory, distributorAddress);
+  const impl = await deployer.deploy(DistributorV2__factory);
+  const distributor = await deployer.deployed(DistributorV2__factory, distributorAddress);
   await distributor.connect(ms).upgradeTo(impl);
 
   // User steps
