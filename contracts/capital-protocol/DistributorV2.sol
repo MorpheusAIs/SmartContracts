@@ -291,10 +291,10 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         _withdrawYield(rewardPoolIndex_, depositPoolAddress_);
 
         // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
-        uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
+        uint256 depositTokenBalanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
         IERC20(depositPool.token).safeTransferFrom(holder_, address(this), amount_);
-        uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
-        amount_ = balanceAfter_ - balanceBefore_;
+        uint256 depositTokenBalanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
+        amount_ = depositTokenBalanceAfter_ - depositTokenBalanceBefore_;
 
         uint256 underlyingAmount_ = amount_;
         if (depositPool.strategy == Strategy.AAVE) {
@@ -303,10 +303,10 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
                 IERC20(depositPool.token).safeApprove(aavePool_, type(uint256).max);
             }
 
-            uint256 underlyingBalanceBefore_ = IERC20(depositPool.aToken).balanceOf(address(this));
+            uint256 underlyingTokenBalanceBefore_ = IERC20(depositPool.aToken).balanceOf(address(this));
             AaveIPool(aavePool_).supply(depositPool.token, amount_, address(this), 0);
-            uint256 underlyingBalanceAfter_ = IERC20(depositPool.aToken).balanceOf(address(this));
-            underlyingAmount_ = underlyingBalanceAfter_ - underlyingBalanceBefore_;
+            uint256 underlyingTokenBalanceAfter_ = IERC20(depositPool.aToken).balanceOf(address(this));
+            underlyingAmount_ = underlyingTokenBalanceAfter_ - underlyingTokenBalanceBefore_;
         }
 
         depositPool.deposited += amount_;
@@ -324,24 +324,28 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         distributeRewards(rewardPoolIndex_);
 
-        amount_ = amount_.min(depositPool.deposited).min(depositPool.lastUnderlyingBalance);
+        amount_ = amount_.min(depositPool.deposited);
         require(amount_ > 0, "DR: nothing to withdraw");
+        uint256 underlyingAmount_ = amount_;
 
-        uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(receiver_);
+        uint256 depositTokenBalanceBefore_ = IERC20(depositPool.token).balanceOf(receiver_);
         if (depositPool.strategy == Strategy.AAVE) {
+            uint256 underlyingTokenBalanceBefore_ = IERC20(depositPool.aToken).balanceOf(address(this));
             AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
                 depositPool.token,
                 amount_,
                 receiver_
             );
+            uint256 underlyingTokenBalanceAfter_ = IERC20(depositPool.aToken).balanceOf(address(this));
+            underlyingAmount_ = underlyingTokenBalanceBefore_ - underlyingTokenBalanceAfter_;
         } else {
             IERC20(depositPool.token).safeTransfer(receiver_, amount_);
         }
-        uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(receiver_);
-        amount_ = balanceAfter_ - balanceBefore_;
+        uint256 depositTokenBalanceAfter_ = IERC20(depositPool.token).balanceOf(receiver_);
+        amount_ = depositTokenBalanceAfter_ - depositTokenBalanceBefore_;
 
         depositPool.deposited -= amount_;
-        depositPool.lastUnderlyingBalance -= amount_;
+        depositPool.lastUnderlyingBalance -= underlyingAmount_;
 
         _withdrawYield(rewardPoolIndex_, depositPoolAddress_);
 
@@ -363,7 +367,6 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
             lastCalculatedTimestamp_,
             uint128(block.timestamp)
         );
-
         //// End
 
         // Stop execution when the reward pool is private
@@ -520,17 +523,20 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         if (yield_ == 0) return;
 
         if (depositPool.strategy == Strategy.AAVE) {
+            uint256 underlyingTokenBalanceBefore_ = IERC20(depositPool.aToken).balanceOf(address(this));
             AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
                 depositPool.token,
                 yield_,
                 l1Sender
             );
+            uint256 underlyingTokenBalanceAfter_ = IERC20(depositPool.aToken).balanceOf(address(this));
+            yield_ = underlyingTokenBalanceBefore_ - underlyingTokenBalanceAfter_;
         } else {
-            uint256 balanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
+            uint256 depositTokenBalanceBefore_ = IERC20(depositPool.token).balanceOf(address(this));
             IERC20(depositPool.token).safeTransfer(l1Sender, yield_);
-            uint256 balanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
+            uint256 depositTokenBalanceAfter_ = IERC20(depositPool.token).balanceOf(address(this));
 
-            yield_ = balanceBefore_ - balanceAfter_;
+            yield_ = depositTokenBalanceBefore_ - depositTokenBalanceAfter_;
         }
 
         depositPool.lastUnderlyingBalance -= yield_;

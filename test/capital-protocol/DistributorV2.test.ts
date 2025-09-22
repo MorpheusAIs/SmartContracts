@@ -838,22 +838,12 @@ describe('DistributorV2', () => {
       expect(dp1.deposited).to.eq(wei(30));
       expect(dp1.lastUnderlyingBalance).to.eq(wei(28));
 
-      await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999));
-      dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
-      expect(dp1.deposited).to.eq(wei(2));
-      expect(dp1.lastUnderlyingBalance).to.eq(wei(0));
-
-      await imitateYield([wei(1), wei(1)], wei(100), [wei(0), wei(3)]);
-      await distributor.distributeRewards(publicRewardPoolId);
-      dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
-      expect(dp1.deposited).to.eq(wei(2));
-      expect(dp1.lastUnderlyingBalance).to.eq(wei(3));
+      await aavePoolMock.setDecreaseSupplyAmount(wei(2));
 
       await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999));
       dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
       expect(dp1.deposited).to.eq(wei(0));
       expect(dp1.lastUnderlyingBalance).to.eq(wei(0));
-      expect(await dp1Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(1));
     });
     it('should revert when invalid strategy for the deposit pool', async () => {
       await expect(dp2Info.depositPool.connect(BOB).withdraw(privateRewardPoolId, BOB, wei(1, 6))).to.be.revertedWith(

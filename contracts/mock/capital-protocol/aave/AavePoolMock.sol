@@ -28,7 +28,7 @@ contract AavePoolMock {
 
     function withdraw(address asset_, uint256 amount_, address to_) external returns (uint256) {
         address aToken_ = AavePoolDataProviderMock(aavePoolDataProviderMock).aTokenAddresses(asset_);
-        ERC20Token(aToken_).burn(msg.sender, amount_);
+        ERC20Token(aToken_).burn(msg.sender, amount_ - decreaseSupplyAmount);
         ERC20Token(asset_).transfer(to_, amount_);
 
         return amount_;
