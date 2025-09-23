@@ -515,13 +515,11 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 lastUnderlyingBalance_ = depositPool.lastUnderlyingBalance;
         uint256 deposited_ = depositPool.deposited;
-        if (lastUnderlyingBalance_ < deposited_) {
+        if (lastUnderlyingBalance_ <= deposited_) {
             return;
         }
 
         uint256 yield_ = lastUnderlyingBalance_ - deposited_;
-        if (yield_ == 0) return;
-
         if (depositPool.strategy == Strategy.AAVE) {
             uint256 underlyingTokenBalanceBefore_ = IERC20(depositPool.aToken).balanceOf(address(this));
             AaveIPool(AaveIPoolAddressesProvider(aavePoolAddressesProvider).getPool()).withdraw(
