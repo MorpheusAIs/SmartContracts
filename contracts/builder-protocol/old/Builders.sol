@@ -9,7 +9,7 @@ import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
 import {IFeeConfig} from "../../interfaces/builder-protocol/IFeeConfig.sol";
 import {IBuilders, IERC165} from "../../interfaces/builder-protocol/old/IBuilders.sol";
-import {IBuildersTreasury} from "../../interfaces/builder-protocol/IBuildersTreasury.sol";
+import {IBuildersTreasury} from "../../interfaces/builder-protocol/old/IBuildersTreasury.sol";
 
 import {LockMultiplierMath} from "../../libs/LockMultiplierMath.sol";
 

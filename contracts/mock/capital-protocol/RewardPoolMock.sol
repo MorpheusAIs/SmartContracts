@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IRewardPool, IERC165} from "../../interfaces/capital-protocol/IRewardPool.sol";
+import {IRewardPool, IERC165} from "../../interfaces/IRewardPool.sol";
 
 contract RewardPoolMock is IERC165 {
     uint256 periodRewardAnswer;
