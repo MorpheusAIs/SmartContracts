@@ -21,14 +21,12 @@ contract DepositPoolMock is IERC165 {
         return interfaceId_ == type(IDepositPool).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     }
 
-    function supply(uint256 rewardPoolIndex_, uint256 amount_) external {
-        IERC20(depositToken).transferFrom(msg.sender, address(this), amount_);
-        IDistributor(distributor).supply(rewardPoolIndex_, amount_);
+    function supply(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
+        return IDistributor(distributor).supply(rewardPoolIndex_, user_, amount_);
     }
 
-    function withdraw(uint256 rewardPoolIndex_, uint256 amount_) external {
-        uint256 withdrawn_ = IDistributor(distributor).withdraw(rewardPoolIndex_, amount_);
-        IERC20(depositToken).transfer(msg.sender, withdrawn_);
+    function withdraw(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
+        return IDistributor(distributor).withdraw(rewardPoolIndex_, user_, amount_);
     }
 
     function sendMintMessage(

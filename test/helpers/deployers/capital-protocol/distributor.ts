@@ -1,8 +1,8 @@
 import { ethers } from 'hardhat';
 
 import {
+  AavePoolAddressesProviderMock,
   AavePoolDataProviderMock,
-  AavePoolMock,
   ChainLinkDataConsumer,
   ChainLinkDataConsumerMock,
   Distributor,
@@ -15,8 +15,8 @@ import '@/generated-types/ethers/contracts/mock';
 
 export const deployDistributor = async (
   chainLinkDataConsumer: ChainLinkDataConsumer | ChainLinkDataConsumerMock,
-  aavePool: string | AavePoolMock,
   aavePoolDataProvider: string | AavePoolDataProviderMock,
+  aavePoolAddressesProvider: string | AavePoolAddressesProviderMock,
   rewardPool: RewardPool | RewardPoolMock,
   l1Sender: L1SenderV2 | L1SenderMock,
 ): Promise<Distributor> => {
@@ -29,7 +29,13 @@ export const deployDistributor = async (
   const proxy = await proxyFactory.deploy(impl, '0x');
   const contract = impl.attach(proxy) as Distributor;
 
-  await contract.Distributor_init(chainLinkDataConsumer, aavePool, aavePoolDataProvider, rewardPool, l1Sender);
+  await contract.Distributor_init(
+    chainLinkDataConsumer,
+    aavePoolDataProvider,
+    aavePoolAddressesProvider,
+    rewardPool,
+    l1Sender,
+  );
 
   return contract;
 };

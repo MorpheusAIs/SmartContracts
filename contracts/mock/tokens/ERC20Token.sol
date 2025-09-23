@@ -29,4 +29,8 @@ contract ERC20Token is ERC20, ERC20Capped {
     function decimals() public view override returns (uint8) {
         return decimalsValue;
     }
+
+    function burn(address account_, uint256 amount_) external {
+        _burn(account_, amount_);
+    }
 }

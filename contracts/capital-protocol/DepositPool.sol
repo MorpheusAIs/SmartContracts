@@ -103,11 +103,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     function setDistributor(address value_) public onlyOwner {
         require(IERC165(value_).supportsInterface(type(IDistributor).interfaceId), "DR: invalid distributor address");
 
-        if (distributor != address(0)) {
-            IERC20(depositToken).approve(distributor, 0);
-        }
-        IERC20(depositToken).approve(value_, type(uint256).max);
-
         distributor = value_;
 
         emit DistributorSet(value_);
@@ -154,7 +149,8 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         require(remainder_ > 0, "DS: yield for token is zero");
         IERC20(depositToken).transfer(distributor, remainder_);
 
-        IDistributor(distributor).supply(rewardPoolIndex_, totalDepositedInPublicPools);
+        IERC20(depositToken).approve(distributor, totalDepositedInPublicPools);
+        IDistributor(distributor).supply(rewardPoolIndex_, address(this), totalDepositedInPublicPools);
 
         isMigrationOver = true;
 
@@ -378,15 +374,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         if (IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolPublic(rewardPoolIndex_)) {
             require(amount_ > 0, "DS: nothing to stake");
 
-            // https://docs.lido.fi/guides/lido-tokens-integration-guide/#steth-internals-share-mechanics
-            uint256 balanceBefore_ = IERC20(depositToken).balanceOf(address(this));
-            IERC20(depositToken).safeTransferFrom(_msgSender(), address(this), amount_);
-            uint256 balanceAfter_ = IERC20(depositToken).balanceOf(address(this));
-
-            amount_ = balanceAfter_ - balanceBefore_;
-
-            IDistributor(distributor).supply(rewardPoolIndex_, amount_);
-
+            amount_ = IDistributor(distributor).supply(rewardPoolIndex_, user_, amount_);
             require(userData.deposited + amount_ >= rewardPoolProtocolDetails.minimalStake, "DS: amount too low");
 
             totalDepositedInPublicPools += amount_;
@@ -447,6 +435,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             amount_ = deposited_;
         }
 
+        if (IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolPublic(rewardPoolIndex_)) {
+            amount_ = IDistributor(distributor).withdraw(rewardPoolIndex_, user_, amount_);
+
+            totalDepositedInPublicPools -= amount_;
+        }
+
         uint256 newDeposited_;
         if (IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolPublic(rewardPoolIndex_)) {
             require(
@@ -457,8 +451,12 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             newDeposited_ = deposited_ - amount_;
 
             require(amount_ > 0, "DS: nothing to withdraw");
+
+            // `newDeposited_ < 10`, where `10` is the minimal gap for the stETH token,
+            // as the `IDistributor(distributor).withdraw(...)` allows that the actual
+            // withdrawal amount may be less than the declared initial `amount_` due to rounding.
             require(
-                newDeposited_ >= rewardPoolProtocolDetails.minimalStake || newDeposited_ == 0,
+                newDeposited_ >= rewardPoolProtocolDetails.minimalStake || newDeposited_ < 10,
                 "DS: invalid withdraw amount"
             );
         } else {
@@ -501,13 +499,6 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         userData.deposited = newDeposited_;
         userData.virtualDeposited = virtualDeposited_;
         userData.claimLockStart = uint128(block.timestamp);
-
-        if (IRewardPool(IDistributor(distributor).rewardPool()).isRewardPoolPublic(rewardPoolIndex_)) {
-            totalDepositedInPublicPools -= amount_;
-
-            IDistributor(distributor).withdraw(rewardPoolIndex_, amount_);
-            IERC20(depositToken).safeTransfer(user_, amount_);
-        }
 
         emit UserWithdrawn(rewardPoolIndex_, user_, amount_);
     }

@@ -7,13 +7,14 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract StETHMock is ERC20, Ownable {
     uint256 public totalShares;
     uint256 public totalPooledEther;
+    uint8 public decimalsValue = 18;
 
     mapping(address => uint256) private shares;
 
     constructor() ERC20("Staked Ether Mock", "stETHMock") {
-        _mintShares(address(this), 10 ** decimals());
+        _mintShares(address(this), 10 ** decimalsValue);
 
-        totalPooledEther = 10 ** decimals();
+        totalPooledEther = 10 ** decimalsValue;
     }
 
     function mint(address _account, uint256 _amount) external {
@@ -61,6 +62,10 @@ contract StETHMock is ERC20, Ownable {
         _spendAllowance(_sender, msg.sender, tokensAmount);
         _transferShares(_sender, _recipient, _sharesAmount);
         return tokensAmount;
+    }
+
+    function setDecimals(uint8 decimals_) external onlyOwner {
+        decimalsValue = decimals_;
     }
 
     function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
