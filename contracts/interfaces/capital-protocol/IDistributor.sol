@@ -231,18 +231,18 @@ interface IDistributor is IERC165 {
     /**
      * @notice Claims rewards from Aave protocol for the specified assets.
      * @dev Only for the contract `owner()`.
-     * @param assets Array of aToken addresses to claim rewards for
-     * @param amount Amount of rewards to claim (use type(uint256).max for all available)
-     * @param to Address that will receive the rewards
-     * @param reward Address of the reward token
-     * @return claimedAmount The amount of rewards actually claimed
+     * @param assets_ Array of aToken addresses to claim rewards for
+     * @param amount_ Amount of rewards to claim (use type(uint256).max for all available)
+     * @param to_ Address that will receive the rewards
+     * @param reward_ Address of the reward token
+     * @return claimedAmount_ The amount of rewards actually claimed
      */
     function claimAaveRewards(
-        address[] calldata assets,
-        uint256 amount,
-        address to,
-        address reward
-    ) external returns (uint256 claimedAmount);
+        address[] calldata assets_,
+        uint256 amount_,
+        address to_,
+        address reward_
+    ) external returns (uint256 claimedAmount_);
 
     /**
      * @notice The function to get the contract version.

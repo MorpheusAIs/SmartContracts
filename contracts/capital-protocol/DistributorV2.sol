@@ -468,25 +468,25 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     /**
      * @dev Claims rewards from Aave protocol for the specified assets.
      * Only the owner can call this function.
-     * @param assets Array of aToken addresses to claim rewards for
-     * @param amount Amount of rewards to claim (use type(uint256).max for all available)
-     * @param to Address that will receive the rewards
-     * @param reward Address of the reward token
-     * @return claimedAmount The amount of rewards actually claimed
+     * @param assets_ Array of aToken addresses to claim rewards for
+     * @param amount_ Amount of rewards to claim (use type(uint256).max for all available)
+     * @param to_ Address that will receive the rewards
+     * @param reward_ Address of the reward token
+     * @return claimedAmount_ The amount of rewards actually claimed
      */
     function claimAaveRewards(
-        address[] calldata assets,
-        uint256 amount,
-        address to,
-        address reward
-    ) external onlyOwner returns (uint256 claimedAmount) {
+        address[] calldata assets_,
+        uint256 amount_,
+        address to_,
+        address reward_
+    ) external onlyOwner returns (uint256 claimedAmount_) {
         require(aaveRewardsController != address(0), "DR: rewards controller not set");
-        require(to != address(0), "DR: invalid recipient address");
-        require(assets.length > 0, "DR: no assets provided");
+        require(to_ != address(0), "DR: invalid recipient address");
+        require(assets_.length > 0, "DR: no assets provided");
 
-        claimedAmount = IRewardsController(aaveRewardsController).claimRewards(assets, amount, to, reward);
+        claimedAmount_ = IRewardsController(aaveRewardsController).claimRewards(assets_, amount_, to_, reward_);
 
-        emit AaveRewardsClaimed(assets, amount, to, reward, claimedAmount);
+        emit AaveRewardsClaimed(assets_, amount_, to_, reward_, claimedAmount_);
     }
 
     /**
