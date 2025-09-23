@@ -217,7 +217,6 @@ describe('CapitalProtocolV6 Fork', () => {
         72000000,
       );
 
-      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(72000000);
       await setTime((await getCurrentBlockTime()) + 100 * oneDay);
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).claim(0, PUBLIC_POOL_USER_ADDRESS, { value: wei(0.1) });
       await depositPool.connect(PUBLIC_POOL_USER_ADDRESS).withdraw(0, wei(999));
@@ -283,7 +282,6 @@ describe('CapitalProtocolV6 Fork', () => {
         },
       ];
 
-      await chainLinkDataConsumer.setAllowedPriceUpdateDelay(720000);
       for (let i = 0; i < pairs.length; i++) {
         await chainLinkDataConsumer.setAllowedPriceUpdateDelay(
           await chainLinkDataConsumer.getPathId(pairs[i].pair),
