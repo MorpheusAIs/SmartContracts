@@ -113,30 +113,62 @@ describe('DistributorV2 Fork', () => {
       );
 
       // wETH
+      let depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressWETH);
+      expect(depositPoolsData.deposited).to.eq(wei(0.05));
+      expect(depositPoolsData.lastUnderlyingBalance).to.eq('50002359572482856');
+
       await wETH.connect(userWETH).approve(distributorProxyAddress, wei(1000));
       await depositPoolWETH.connect(userWETH).stake(0, wei(0.1), 0, userWETH);
       await expect(depositPoolWETH.connect(userWETH).withdraw(0, wei(999))).to.be.revertedWith(
         'DS: pool withdraw is locked',
       );
 
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressWETH);
+      expect(depositPoolsData.deposited).to.eq(wei(0.15));
+      expect(depositPoolsData.lastUnderlyingBalance).to.closeTo(wei(0.15), 2);
+
       // USDC
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressUSDC);
+      expect(depositPoolsData.deposited).to.eq(wei(59.000003, 6));
+      expect(depositPoolsData.lastUnderlyingBalance).to.eq('59008605');
+
       await USDC.connect(userWETH).approve(distributorProxyAddress, wei(1000, 6));
       await depositPoolUSDC.connect(userWETH).stake(0, wei(0.1, 6), 0, userWETH);
       await expect(depositPoolUSDC.connect(userWETH).withdraw(0, wei(999))).to.be.revertedWith(
         'DS: pool withdraw is locked',
       );
 
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressUSDC);
+      expect(depositPoolsData.deposited).to.eq(wei(59.100003, 6));
+      expect(depositPoolsData.lastUnderlyingBalance).to.closeTo(wei(59.100003, 6), 2);
+
       // USDT
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressUSDT);
+      expect(depositPoolsData.deposited).to.eq(wei(31.975287, 6));
+      expect(depositPoolsData.lastUnderlyingBalance).to.eq('31975287');
+
       await USDT.connect(userUSDT).approve(distributorProxyAddress, wei(1000, 6));
       await depositPoolUSDT.connect(userUSDT).stake(0, wei(10, 6), 0, userUSDT);
       await expect(depositPoolUSDT.connect(userUSDT).withdraw(0, wei(999))).to.be.revertedWith(
         'DS: pool withdraw is locked',
       );
 
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressUSDT);
+      expect(depositPoolsData.deposited).to.eq(wei(41.975287, 6));
+      expect(depositPoolsData.lastUnderlyingBalance).to.closeTo(wei(41.975287, 6), 2);
+
       // stETH
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressStETH);
+      expect(depositPoolsData.deposited).to.eq('14416233049565929672611');
+      expect(depositPoolsData.lastUnderlyingBalance).to.eq('14416233049565929672612');
+
       await stETH.connect(userStETH).approve(distributorProxyAddress, wei(1000, 6));
       await depositPoolStETH.connect(userStETH).withdraw(0, wei(0.0001, 6));
       await depositPoolStETH.connect(userStETH).stake(0, wei(0.0001, 6), 0, userStETH);
+
+      depositPoolsData = await distributorV2.depositPools(0, depositPoolProxyAddressStETH);
+      expect(depositPoolsData.deposited).to.eq('14416233049565929672611');
+      expect(depositPoolsData.lastUnderlyingBalance).to.closeTo('14416233049565929672611', 2);
     });
   });
 
