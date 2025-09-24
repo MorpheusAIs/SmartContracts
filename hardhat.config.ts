@@ -85,20 +85,6 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
       timeout: 1000000000000000,
     },
-    arbitrum_local: {
-      url: 'http://127.0.0.1:8545',
-      chainId: 42161,
-      accounts: ['0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'],
-      gasMultiplier: 1.2,
-      timeout: 60000,
-    },
-    base_local: {
-      url: 'http://127.0.0.1:8546',
-      chainId: 8453,
-      accounts: ['0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'],
-      gasMultiplier: 1.1,
-      timeout: 60000,
-    },
     goerli: {
       url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
