@@ -4,10 +4,12 @@ import { ethers } from 'hardhat';
 
 import { setNextTime } from '../helpers/block-helper';
 import {
+  deployAavePoolAddressesProviderMock,
   deployAavePoolDataProviderMock,
   deployAavePoolMock,
+  deployChainLinkDataConsumerMock,
   deployDepositPoolMock,
-  deployDistributor,
+  deployDistributorV2,
   deployERC20Token,
   deployInterfaceMock,
   deployL1SenderMock,
@@ -15,8 +17,6 @@ import {
   deployRewardPoolMock,
   deployStETHMock,
 } from '../helpers/deployers';
-import { deployAavePoolAddressesProviderMock } from '../helpers/deployers/mock/capital-protocol/aave-pool-addresses-provider-mock';
-import { deployChainLinkDataConsumerMock } from '../helpers/deployers/mock/capital-protocol/chain-link-data-consumer-mock';
 import { oneDay } from '../helpers/distribution-helper';
 
 import {
@@ -25,7 +25,7 @@ import {
   AavePoolMock,
   ChainLinkDataConsumerMock,
   DepositPoolMock,
-  Distributor,
+  DistributorV2,
   ERC20Token,
   L1SenderMock,
   RewardPoolMock,
@@ -35,7 +35,7 @@ import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 
-describe('Distributor', () => {
+describe('DistributorV2', () => {
   enum Strategy {
     NONE,
     NO_YIELD,
@@ -62,7 +62,7 @@ describe('Distributor', () => {
   let aavePoolAddressesProviderMock: AavePoolAddressesProviderMock;
   let aavePoolMock: AavePoolMock;
   let rewardPoolMock: RewardPoolMock;
-  let distributor: Distributor;
+  let distributor: DistributorV2;
   let l1SenderMock: L1SenderMock;
 
   let dp0Info: DepositPoolTestOnlyInfo;
@@ -84,7 +84,7 @@ describe('Distributor', () => {
     await aavePoolAddressesProviderMock.setPool(aavePoolMock);
     rewardPoolMock = await deployRewardPoolMock();
     l1SenderMock = await deployL1SenderMock();
-    distributor = await deployDistributor(
+    distributor = await deployDistributorV2(
       chainLinkDataConsumerMock,
       aavePoolDataProviderMock,
       aavePoolAddressesProviderMock,
@@ -148,7 +148,7 @@ describe('Distributor', () => {
         const reason = 'Initializable: contract is already initialized';
 
         await expect(
-          distributor.connect(OWNER).Distributor_init(ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR),
+          distributor.connect(OWNER).DistributorV2_init(ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR),
         ).to.be.revertedWith(reason);
       });
     });
@@ -180,7 +180,7 @@ describe('Distributor', () => {
 
     describe('#version()', () => {
       it('should return correct version', async () => {
-        expect(await distributor.version()).to.eq(1);
+        expect(await distributor.version()).to.eq(2);
       });
     });
   });
@@ -227,7 +227,7 @@ describe('Distributor', () => {
       expect(await distributor.l1Sender()).to.eq(await newValue.getAddress());
     });
     it('should revert when invalid data consumer', async () => {
-      await expect(distributor.setL1Sender(rewardPoolMock)).to.be.revertedWith('DR: invalid L1Sender address');
+      await expect(distributor.setL1Sender(rewardPoolMock)).to.be.revertedWith('DR: invalid L1SenderV2 address');
     });
     it('should revert if caller is not owner', async () => {
       await expect(distributor.connect(BOB).setL1Sender(OWNER)).to.be.revertedWith('Ownable: caller is not the owner');
@@ -767,7 +767,6 @@ describe('Distributor', () => {
       expect(await dp0Info.depositToken.balanceOf(distributor)).to.eq(wei(0, 6));
       expect(await dp0Info.depositToken.balanceOf(BOB)).to.eq(wei(1000, 6));
     });
-
     it('should correctly withdraw, without yield', async () => {
       await dp0Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20, 6));
       await dp0Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999, 6));
@@ -825,6 +824,26 @@ describe('Distributor', () => {
       expect(await dp1Info.aToken.balanceOf(distributor)).to.eq(wei(0));
       expect(await dp1Info.depositToken.balanceOf(BOB)).to.eq(wei(1000));
       expect(await dp1Info.depositToken.balanceOf(l1SenderMock)).to.eq(wei(3));
+    });
+    it('should correctly withdraw, full, without yield, Strategy.AAVE, less aToken then expected', async () => {
+      await aavePoolMock.setDecreaseSupplyAmount(wei(1));
+
+      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(20));
+      let dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
+      expect(dp1.deposited).to.eq(wei(20));
+      expect(dp1.lastUnderlyingBalance).to.eq(wei(19));
+
+      await dp1Info.depositPool.connect(BOB).supply(publicRewardPoolId, BOB, wei(10));
+      dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
+      expect(dp1.deposited).to.eq(wei(30));
+      expect(dp1.lastUnderlyingBalance).to.eq(wei(28));
+
+      await aavePoolMock.setDecreaseSupplyAmount(wei(2));
+
+      await dp1Info.depositPool.connect(BOB).withdraw(publicRewardPoolId, BOB, wei(999));
+      dp1 = await distributor.depositPools(publicRewardPoolId, dp1Info.depositPool);
+      expect(dp1.deposited).to.eq(wei(0));
+      expect(dp1.lastUnderlyingBalance).to.eq(wei(0));
     });
     it('should revert when invalid strategy for the deposit pool', async () => {
       await expect(dp2Info.depositPool.connect(BOB).withdraw(privateRewardPoolId, BOB, wei(1, 6))).to.be.revertedWith(
@@ -1030,5 +1049,5 @@ describe('Distributor', () => {
   };
 });
 
-// npx hardhat test "test/capital-protocol/Distributor.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/Distributor.test.ts"
+// npx hardhat test "test/capital-protocol/DistributorV2.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/DistributorV2.test.ts"

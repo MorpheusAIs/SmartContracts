@@ -10,15 +10,15 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPool as AaveIPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolDataProvider as AaveIPoolDataProvider} from "@aave/core-v3/contracts/interfaces/IPoolDataProvider.sol";
 import {IPoolAddressesProvider as AaveIPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
-import {IRewardsController} from "../interfaces/aave/IRewardsController.sol";
+import {IRewardsController} from "../../interfaces/aave/IRewardsController.sol";
 
 import {DecimalsConverter} from "@solarity/solidity-lib/libs/decimals/DecimalsConverter.sol";
 
-import {IDistributor, IERC165} from "../interfaces/capital-protocol/IDistributor.sol";
-import {IL1SenderV2} from "../interfaces/capital-protocol/IL1SenderV2.sol";
-import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
-import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
-import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
+import {IDistributor, IERC165} from "../../interfaces/capital-protocol/IDistributor.sol";
+import {IL1SenderV2} from "../../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IChainLinkDataConsumer} from "../../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
+import {IDepositPool} from "../../interfaces/capital-protocol/IDepositPool.sol";
+import {IRewardPool} from "../../interfaces/capital-protocol/IRewardPool.sol";
 
 contract Distributor is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
