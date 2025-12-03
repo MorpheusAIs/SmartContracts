@@ -3,10 +3,10 @@ import { expect } from 'chai';
 import { encodeBytes32String } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { getCurrentBlockTime, setNextTime, setTime } from '../helpers/block-helper';
-import { getDefaultBuilderPool } from '../helpers/builders-helper';
-import { oneDay, oneHour } from '../helpers/distribution-helper';
-import { Reverter } from '../helpers/reverter';
+import { getCurrentBlockTime, setNextTime, setTime } from '../../helpers/block-helper';
+import { getDefaultBuilderPool } from '../../helpers/builders-helper';
+import { oneDay, oneHour } from '../../helpers/distribution-helper';
+import { Reverter } from '../../helpers/reverter';
 
 import { BuildersTreasury, BuildersV2, FeeConfig, IBuilders, MOROFT } from '@/generated-types/ethers';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';
@@ -1162,5 +1162,5 @@ describe('BuildersV2', () => {
   });
 });
 
-// npx hardhat test "test/builders/BuildersV2.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builders/BuildersV2.test.ts"
+// npx hardhat test "test/builders/old/BuildersV2.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builders/old/BuildersV2.test.ts"

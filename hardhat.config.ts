@@ -29,11 +29,6 @@ function forceTypechain() {
   return process.env.TYPECHAIN_FORCE === 'false';
 }
 
-// 19183235 - 64607378777276381331
-// 19183263 - 502357441883879637000
-// 19183265 --
-// 19183274 - -
-
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
@@ -165,11 +160,11 @@ const config: HardhatUserConfig = {
       polygon: `${process.env.POLYGONSCAN_KEY}`,
       avalancheFujiTestnet: `${process.env.AVALANCHE_KEY}`,
       avalanche: `${process.env.AVALANCHE_KEY}`,
-      arbitrumOne: `${process.env.ARBITRUM_KEY}`,
+      arbitrum: `${process.env.ARBITRUM_KEY}`,
       arbitrumGoerli: `${process.env.ETHERSCAN_KEY}`,
       arbitrum_sepolia: `${process.env.ARBITRUM_KEY}`,
       base_sepolia: `${process.env.BASE_KEY}`,
-      base: `${process.env.BASE_KEY}`,
+      base: `${process.env.ETHERSCAN_KEY}`,
     },
     customChains: [
       {
@@ -186,6 +181,22 @@ const config: HardhatUserConfig = {
         network: 'polygonAmoy',
         chainId: 80002,
         urls: { apiURL: 'https://api-amoy.polygonscan.com/api', browserURL: 'https://amoy.polygonscan.com' },
+      },
+      {
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=8453&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://basescan.org',
+        },
+      },
+      {
+        network: 'arbitrum',
+        chainId: 42161,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=42161&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://arbiscan.io',
+        },
       },
     ],
   },

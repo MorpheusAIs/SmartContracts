@@ -2,15 +2,15 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { setNextTime } from '../helpers/block-helper';
+import { setNextTime } from '../../helpers/block-helper';
 import {
   getDefaultBuilderPool,
   getDefaultBuildersPoolData,
   getDefaultSubnetMetadata,
-} from '../helpers/builders-helper';
-import { deployBuilderSubnets, deployBuilders, deployFeeConfig, deployMOROFT } from '../helpers/deployers';
-import { oneDay, oneHour } from '../helpers/distribution-helper';
-import { Reverter } from '../helpers/reverter';
+} from '../../helpers/builders-helper';
+import { deployBuilderSubnets, deployBuilders, deployFeeConfig, deployMOROFT } from '../../helpers/deployers';
+import { oneDay, oneHour } from '../../helpers/distribution-helper';
+import { Reverter } from '../../helpers/reverter';
 
 import { Builders, BuildersTreasury, BuildersV3, FeeConfig, MOROFT } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
@@ -370,4 +370,4 @@ describe('BuildersV3', () => {
   };
 });
 
-// npx hardhat test "test/builders/BuildersV3.test.ts"
+// npx hardhat test "test/builders/old/BuildersV3.test.ts"

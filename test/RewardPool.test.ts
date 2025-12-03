@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { deployInterfaceMock, deployRewardPool } from '../helpers/deployers';
-import { oneDay } from '../helpers/distribution-helper';
+import { deployInterfaceMock, deployRewardPool } from './helpers/deployers';
+import { oneDay } from './helpers/distribution-helper';
 
 import { IRewardPool, RewardPool } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
@@ -193,5 +193,5 @@ describe('RewardPool', () => {
   });
 });
 
-// npx hardhat test "test/capital-protocol/RewardPool.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/RewardPool.test.ts"
+// npx hardhat test "test/RewardPool.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/RewardPool.test.ts"

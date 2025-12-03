@@ -4,4 +4,3 @@ export * from './distributor';
 export * from './distributor-v2';
 export * from './l1-sender-v2';
 export * from './l2-message-receiver';
-export * from './reward-pool';

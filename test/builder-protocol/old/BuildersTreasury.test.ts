@@ -2,14 +2,13 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { setNextTime } from '../helpers/block-helper';
-import { getDefaultBuilderPool } from '../helpers/builders-helper';
-import { oneDay } from '../helpers/distribution-helper';
-import { Reverter } from '../helpers/reverter';
-
 import { Builders, BuildersTreasury, FeeConfig, IBuilders, MOROFT } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
+import { setNextTime } from '@/test/helpers/block-helper';
+import { getDefaultBuilderPool } from '@/test/helpers/builders-helper';
+import { oneDay } from '@/test/helpers/distribution-helper';
+import { Reverter } from '@/test/helpers/reverter';
 
 describe('BuildersTreasury', () => {
   const reverter = new Reverter();
@@ -249,5 +248,5 @@ describe('BuildersTreasury', () => {
   });
 });
 
-// npx hardhat test "test/builders/BuildersTreasury.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builders/BuildersTreasury.test.ts"
+// npx hardhat test "test/builders/old/BuildersTreasury.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builders/old/BuildersTreasury.test.ts"

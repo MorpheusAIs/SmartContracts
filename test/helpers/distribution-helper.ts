@@ -66,3 +66,43 @@ export const getDefaultRewardsPools = () => {
     },
   ];
 };
+
+export const getRealRewardsPools = () => {
+  return [
+    {
+      payoutStart: 1707393600,
+      decreaseInterval: 86400,
+      initialReward: wei(3456),
+      rewardDecrease: wei(0.59255872824),
+      isPublic: true,
+    },
+    {
+      payoutStart: 1707393600,
+      decreaseInterval: 86400,
+      initialReward: wei(3456),
+      rewardDecrease: wei(0.59255872824),
+      isPublic: false,
+    },
+    {
+      payoutStart: 1707393600,
+      decreaseInterval: 86400,
+      initialReward: wei(3456),
+      rewardDecrease: wei(0.59255872824),
+      isPublic: false,
+    },
+    {
+      payoutStart: 1707393600,
+      decreaseInterval: 86400,
+      initialReward: wei(3456),
+      rewardDecrease: wei(0.59255872824),
+      isPublic: false,
+    },
+    {
+      payoutStart: 1707393600,
+      decreaseInterval: 86400,
+      initialReward: wei(576),
+      rewardDecrease: wei(0.09875978804),
+      isPublic: false,
+    },
+  ];
+};

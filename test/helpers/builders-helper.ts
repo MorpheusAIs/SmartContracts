@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { oneDay } from './distribution-helper';
 
-import { IBuilderSubnets, IBuilders } from '@/generated-types/ethers';
+import { IBuilderSubnets, IBuilders, IBuildersV4 } from '@/generated-types/ethers';
 import { wei } from '@/scripts/utils/utils';
 
 export const getDefaultBuilderPool = (admin: SignerWithAddress): IBuilders.BuilderPoolStruct => {
@@ -32,7 +32,21 @@ export const getDefaultSubnet = (
   };
 };
 
-export const getDefaultSubnetMetadata = (): IBuilderSubnets.BuildersSubnetMetadataStruct => {
+export const getDefaultSubnetV4 = (owner: SignerWithAddress): IBuildersV4.SubnetStruct => {
+  return {
+    name: 'Test Pool #1',
+    admin: owner,
+    unusedStorage1_V4Update: 0,
+    withdrawLockPeriodAfterDeposit: 10 * oneDay,
+    unusedStorage2_V4Update: 0,
+    minimalDeposit: wei(1),
+    claimAdmin: owner,
+  };
+};
+
+export const getDefaultSubnetMetadata = ():
+  | IBuilderSubnets.BuildersSubnetMetadataStruct
+  | IBuildersV4.SubnetMetadataStruct => {
   return {
     slug: 'Slug',
     description: 'Description',

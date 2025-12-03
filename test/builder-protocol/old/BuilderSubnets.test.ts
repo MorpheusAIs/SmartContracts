@@ -3,11 +3,11 @@ import { expect } from 'chai';
 import { encodeBytes32String } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { setNextTime, setTime } from '../helpers/block-helper';
-import { getDefaultBuildersPoolData, getDefaultSubnet, getDefaultSubnetMetadata } from '../helpers/builders-helper';
-import { deployBuilderSubnets, deployFeeConfig, deployInterfaceMock, deployMOROFT } from '../helpers/deployers';
-import { oneDay, oneHour } from '../helpers/distribution-helper';
-import { Reverter } from '../helpers/reverter';
+import { setNextTime, setTime } from '../../helpers/block-helper';
+import { getDefaultBuildersPoolData, getDefaultSubnet, getDefaultSubnetMetadata } from '../../helpers/builders-helper';
+import { deployBuilderSubnets, deployFeeConfig, deployInterfaceMock, deployMOROFT } from '../../helpers/deployers';
+import { oneDay, oneHour } from '../../helpers/distribution-helper';
+import { Reverter } from '../../helpers/reverter';
 
 import { BuilderSubnets, FeeConfig, IBuilderSubnets, MOROFT } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
@@ -1050,5 +1050,5 @@ describe('BuilderSubnets', () => {
   });
 });
 
-// npx hardhat test "test/builder-subnets/BuilderSubnets.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builder-subnets/BuilderSubnets.test.ts"
+// npx hardhat test "test/builder-subnets/old/BuilderSubnets.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/builder-subnets/old/BuilderSubnets.test.ts"
