@@ -29,11 +29,6 @@ function forceTypechain() {
   return process.env.TYPECHAIN_FORCE === 'false';
 }
 
-// 19183235 - 64607378777276381331
-// 19183263 - 502357441883879637000
-// 19183265 --
-// 19183274 - -
-
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
@@ -42,7 +37,6 @@ const config: HardhatUserConfig = {
       // gasPrice: 624381666,
       // forking: {
       //   url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      //   blockNumber: 23444760,
       // },
       // forking: {
       //   url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
@@ -90,53 +84,18 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
       timeout: 1000000000000000,
     },
-    goerli: {
-      url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.1,
     },
-    chapel: {
-      url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-      timeout: 60000,
-    },
-    mumbai: { url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`, accounts: privateKey(), gasMultiplier: 1.1 },
-    polygonAmoy: {
-      url: `https://polygon-amoy.blockpi.network/v1/rpc/public`,
-      accounts: privateKey(),
-      gasMultiplier: 1.1,
-    },
-    fuji: {
-      url: `https://avalanche-fuji.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    bsc: { url: 'https://bsc-dataseed.binance.org/', accounts: privateKey(), gasMultiplier: 1.2 },
-    ethereum: {
+    mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.2,
     },
-    polygon: { url: `https://matic-mainnet.chainstacklabs.com`, accounts: privateKey(), gasMultiplier: 1.2 },
-    avalanche: {
-      url: `https://api.avax.network/ext/bc/C/rpc`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-      timeout: 60000,
-    },
     arbitrum: {
       url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    arbitrum_goerli: {
-      url: `https://arbitrum-goerli.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.2,
     },
@@ -187,7 +146,26 @@ const config: HardhatUserConfig = {
         chainId: 80002,
         urls: { apiURL: 'https://api-amoy.polygonscan.com/api', browserURL: 'https://amoy.polygonscan.com' },
       },
+      {
+        network: 'mainnet',
+        chainId: 1,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=1&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://etherscan.io',
+        },
+      },
+      {
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=8453&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://basescan.org',
+        },
+      },
     ],
+  },
+  sourcify: {
+    enabled: true,
   },
   migrate: {
     pathToMigrations: './deploy/',

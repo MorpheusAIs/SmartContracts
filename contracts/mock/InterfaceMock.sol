@@ -6,7 +6,8 @@ import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
 import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
 import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
-import {IL1SenderV2} from "../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IL1SenderV2} from "../interfaces/capital-protocol/old/IL1SenderV2.sol";
+import {IL1SenderV3} from "../interfaces/capital-protocol/IL1SenderV3.sol";
 
 contract InterfaceMock {
     function getIBuilderSubnetsInterfaceId() public pure returns (bytes4) {
@@ -31,6 +32,10 @@ contract InterfaceMock {
 
     function getIL1SenderV2InterfaceId() public pure returns (bytes4) {
         return type(IL1SenderV2).interfaceId;
+    }
+
+    function getIL1SenderV3InterfaceId() public pure returns (bytes4) {
+        return type(IL1SenderV3).interfaceId;
     }
 
     function getIERC165InterfaceId() public pure returns (bytes4) {
