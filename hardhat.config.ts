@@ -42,40 +42,12 @@ const config: HardhatUserConfig = {
       // gasPrice: 624381666,
       // forking: {
       //   url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      //   blockNumber: 23444760,
-      // },
-      // forking: {
-      //   url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       // },
       // forking: {
       //   url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
       // forking: {
-      //   url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
-      // },
-      // forking: {
-      //   url: `https://arb-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      // },
-      // forking: {
-      //   url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      //   // blockNumber: 8310175,
-      // },
-      // forking: {
-      //   url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`,
-      // },
-      // forking: {
       //   url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      // },
-      // forking: {
-      //   url: `https://sepolia.base.org`,
-      // },
-      // forking: {
-      //   url: `https://base-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-      //   // blockNumber: 25936700,
-      // },
-      // forking: {
-      //   url: `https://base.llamarpc.com`,
-      //   blockNumber: 25164000,
       // },
       // accounts: [
       //   {

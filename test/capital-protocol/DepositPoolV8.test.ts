@@ -6,9 +6,9 @@ import { ethers } from 'hardhat';
 import {
   deployAavePoolDataProviderMock,
   deployAavePoolMock,
-  deployDepositPool,
+  deployDepositPoolV8,
   deployDistributionV5,
-  deployDistributorMock,
+  deployDistributorV3Mock,
   deployERC20Token,
   deployInterfaceMock,
   deployRewardPoolMock,
@@ -16,13 +16,13 @@ import {
 } from '../helpers/deployers';
 import { getDefaultPool, getDefaultReferrerTiers, oneDay, oneHour } from '../helpers/distribution-helper';
 
-import { DepositPool, DistributorMock, ERC20Token, RewardPoolMock, StETHMock } from '@/generated-types/ethers';
+import { DepositPoolV8, DistributorV3Mock, ERC20Token, RewardPoolMock, StETHMock } from '@/generated-types/ethers';
 import { PRECISION, ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { getCurrentBlockTime, setNextTime, setTime } from '@/test/helpers/block-helper';
 import { Reverter } from '@/test/helpers/reverter';
 
-describe('DepositPool', () => {
+describe('DepositPoolV8', () => {
   const reverter = new Reverter();
 
   enum Strategy {
@@ -36,11 +36,11 @@ describe('DepositPool', () => {
   let REFERRER_1: SignerWithAddress;
   let REFERRER_2: SignerWithAddress;
 
-  let depositPool: DepositPool;
+  let depositPool: DepositPoolV8;
   let rewardPoolMock: RewardPoolMock;
   let depositToken: StETHMock;
   let rewardToken: ERC20Token;
-  let distributorMock: DistributorMock;
+  let distributorMock: DistributorV3Mock;
 
   const rewardPoolId = 0;
 
@@ -50,8 +50,8 @@ describe('DepositPool', () => {
     depositToken = await deployStETHMock();
     rewardToken = await deployERC20Token();
     rewardPoolMock = await deployRewardPoolMock();
-    distributorMock = await deployDistributorMock(rewardPoolMock, rewardToken);
-    depositPool = await deployDepositPool(depositToken, distributorMock);
+    distributorMock = await deployDistributorV3Mock(rewardPoolMock, rewardToken);
+    depositPool = await deployDepositPoolV8(depositToken, distributorMock);
 
     await depositToken.mint(OWNER.address, wei(1000));
     await depositToken.mint(SECOND.address, wei(1000));
@@ -73,11 +73,11 @@ describe('DepositPool', () => {
       it('should disable initialize function', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        await expect(depositPool.DepositPool_init(OWNER, OWNER)).to.be.revertedWith(reason);
+        await expect(depositPool.DepositPoolV8_init(OWNER, OWNER)).to.be.revertedWith(reason);
       });
     });
 
-    describe('#DepositPool_init', () => {
+    describe('#DepositPoolV8_init', () => {
       it('should set correct data after creation', async () => {
         expect(await depositPool.depositToken()).to.eq(depositToken);
         expect(await depositPool.distributor()).to.eq(distributorMock);
@@ -106,9 +106,9 @@ describe('DepositPool', () => {
   });
 
   describe('supportsInterface', () => {
-    it('should support IDepositPool', async () => {
+    it('should support IDepositPoolV8', async () => {
       const interfaceMock = await deployInterfaceMock();
-      expect(await depositPool.supportsInterface(await interfaceMock.getIDepositPoolInterfaceId())).to.be.true;
+      expect(await depositPool.supportsInterface(await interfaceMock.getIDepositPoolV8InterfaceId())).to.be.true;
     });
     it('should support IERC165', async () => {
       const interfaceMock = await deployInterfaceMock();
@@ -120,7 +120,7 @@ describe('DepositPool', () => {
     it('should set `Distributor`', async () => {
       expect(await depositToken.allowance(depositPool, distributorMock)).to.eq(0);
 
-      const newDistributor = await deployDistributorMock(rewardPoolMock, rewardToken);
+      const newDistributor = await deployDistributorV3Mock(rewardPoolMock, rewardToken);
       await depositPool.setDistributor(newDistributor);
 
       expect(await depositToken.allowance(depositPool, distributorMock)).to.eq(0);
@@ -155,15 +155,15 @@ describe('DepositPool', () => {
       // Upgrade
       const lib1 = await (await ethers.getContractFactory('ReferrerLib')).deploy();
       const lib2 = await (await ethers.getContractFactory('LockMultiplierMath')).deploy();
-      const newDepositPoolImplFactory = await ethers.getContractFactory('DepositPool', {
+      const newDepositPoolImplFactory = await ethers.getContractFactory('DepositPoolV8', {
         libraries: { ReferrerLib: await lib1.getAddress(), LockMultiplierMath: await lib2.getAddress() },
       });
       const newDepositPoolImpl = await newDepositPoolImplFactory.deploy();
       await distributionV5.upgradeTo(newDepositPoolImpl);
 
-      const newDepositPool = newDepositPoolImpl.attach(distributionV5) as DepositPool;
+      const newDepositPool = newDepositPoolImpl.attach(distributionV5) as DepositPoolV8;
 
-      expect(await newDepositPool.version()).to.eq(7);
+      expect(await newDepositPool.version()).to.eq(8);
       expect(await newDepositPool.getAddress()).to.eq(await distributionV5.getAddress());
 
       await newDepositPool.setDistributor(distributorMock);
@@ -281,8 +281,8 @@ describe('DepositPool', () => {
       await setNextTime(oneDay + oneDay * 1);
       await distributorMock.setDistributedRewardsAnswer(wei(100));
 
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(20));
@@ -324,7 +324,7 @@ describe('DepositPool', () => {
       expect(userData.virtualDeposited).to.eq(wei(0));
       expect(userData.pendingRewards).to.closeTo(wei(78.4), wei(0.001));
 
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
     });
     it('should correctly calculate rewards after partial stake', async () => {
       let userData;
@@ -368,8 +368,8 @@ describe('DepositPool', () => {
       await setNextTime(oneDay + oneDay * 2);
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98));
 
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(20 + 49));
@@ -399,8 +399,8 @@ describe('DepositPool', () => {
       await setNextTime(oneDay * 20000);
       await distributorMock.setDistributedRewardsAnswer(wei(2550));
 
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(510));
@@ -431,8 +431,8 @@ describe('DepositPool', () => {
       await setNextTime(oneDay * 20000);
       await distributorMock.setDistributedRewardsAnswer(wei(650));
 
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(130));
@@ -558,8 +558,8 @@ describe('DepositPool', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 1);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(20));
@@ -586,8 +586,8 @@ describe('DepositPool', () => {
         [0, 0],
         [ZERO_ADDR, ZERO_ADDR],
       );
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(39.6), wei(0.001));
@@ -725,8 +725,8 @@ describe('DepositPool', () => {
         await setTime(claimLockEnd);
         await distributorMock.setDistributedRewardsAnswer(wei(4570722));
 
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
         expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(4570722 / 5), wei(0.001));
@@ -926,8 +926,8 @@ describe('DepositPool', () => {
         await setTime(oneDay * 2);
         await distributorMock.setDistributedRewardsAnswer(wei(100));
 
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
         const totalReward = wei(100);
         const secondPart = 1n * (await depositPool.getCurrentUserMultiplier(rewardPoolId, SECOND));
         const ownerPart = 4n * (await depositPool.getCurrentUserMultiplier(rewardPoolId, OWNER));
@@ -1144,8 +1144,8 @@ describe('DepositPool', () => {
         await setTime(claimLockEnd);
         await distributorMock.setDistributedRewardsAnswer(wei(4570722));
 
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
         expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
         expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(
@@ -1669,11 +1669,55 @@ describe('DepositPool', () => {
 
   describe('#claim', () => {
     before(async () => {
-      await expect(depositPool.claim(rewardPoolId, SECOND)).to.be.revertedWith("DS: migration isn't over");
+      await expect(depositPool['claim(uint256,address)'](rewardPoolId, SECOND)).to.be.revertedWith(
+        "DS: migration isn't over",
+      );
     });
 
     beforeEach(async () => {
       await depositPool.migrate(rewardPoolId);
+    });
+
+    describe('with destination chain id', () => {
+      const dstChainId = 30184; // Base
+
+      beforeEach(async () => {
+        await setNextTime(oneHour * 2);
+        await depositPool.connect(SECOND).stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
+
+        await distributorMock.setDistributedRewardsAnswer(wei(198));
+
+        await setNextTime(oneDay + oneDay * 2);
+      });
+
+      it('should correctly forward the destination chain id to `Distributor`', async () => {
+        await depositPool
+          .connect(SECOND)
+          ['claim(uint256,address,uint32)'](rewardPoolId, SECOND, dstChainId, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(198));
+        expect(await distributorMock.mintedChainId(SECOND.address)).to.eq(dstChainId);
+      });
+      it('should treat `0` as the default chain id (same as the legacy signature)', async () => {
+        await depositPool
+          .connect(SECOND)
+          ['claim(uint256,address,uint32)'](rewardPoolId, SECOND, 0, { value: wei(0.5) });
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(198));
+        expect(await distributorMock.mintedChainId(SECOND.address)).to.eq(0);
+      });
+      it('should correctly forward the destination chain id via `claimFor`', async () => {
+        await depositPool.connect(SECOND).setClaimSender(rewardPoolId, [OWNER.address], [true]);
+
+        await depositPool
+          .connect(OWNER)
+          ['claimFor(uint256,address,address,uint32)'](rewardPoolId, SECOND, SECOND, dstChainId, {
+            value: wei(0.5),
+          });
+
+        expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(198));
+        expect(await distributorMock.mintedChainId(SECOND.address)).to.eq(dstChainId);
+      });
     });
 
     it('should correctly claim, one user, without redeposits', async () => {
@@ -1687,7 +1731,7 @@ describe('DepositPool', () => {
 
       // Claim after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(198));
       userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -1700,7 +1744,7 @@ describe('DepositPool', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 3);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(294));
       userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -1713,7 +1757,7 @@ describe('DepositPool', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 6);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(570));
       userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -1745,7 +1789,7 @@ describe('DepositPool', () => {
 
       // Claim after 1.5 days
       await setNextTime(oneDay + oneDay * 1.5);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(149));
       userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -1771,7 +1815,7 @@ describe('DepositPool', () => {
 
       // Claim after 5.25 days
       await setNextTime(oneDay + oneDay * 5.25);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(149 + 353.5), wei(0.000001));
       userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -1788,7 +1832,7 @@ describe('DepositPool', () => {
 
       // Claim after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(98));
       const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -1813,8 +1857,8 @@ describe('DepositPool', () => {
 
       // Claim after 2 days
       await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) }); // The reward will be slightly larger since the calculation is a second later.
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) }); // The reward will be slightly larger since the calculation is a second later.
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -1833,8 +1877,8 @@ describe('DepositPool', () => {
 
       // Claim after 1 day
       await setNextTime(oneDay + oneDay * 3);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 72), wei(0.01));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -1853,8 +1897,8 @@ describe('DepositPool', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 6);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 72 + 207), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -1898,8 +1942,8 @@ describe('DepositPool', () => {
 
       // Claim after 2 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(36.75 + 24.5), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -1931,8 +1975,8 @@ describe('DepositPool', () => {
 
       // Claim after 7 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 7);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(36.75 + 24.5 + 141 + 124.6), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -1979,8 +2023,8 @@ describe('DepositPool', () => {
 
       // Claim after 2 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(36.75 + 24.5), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2012,8 +2056,8 @@ describe('DepositPool', () => {
 
       // Claim after 7 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 7);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(36.75 + 24.5 + 141 + 124.6), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2047,8 +2091,8 @@ describe('DepositPool', () => {
 
       // Claim after 3 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 4);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2082,8 +2126,8 @@ describe('DepositPool', () => {
 
       // Claim after 3 days after the start of reward payment
       await setNextTime(oneDay + oneDay * 4);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5 + 70.5), wei(0.01));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2103,7 +2147,7 @@ describe('DepositPool', () => {
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98));
 
       await setNextTime(oneDay + oneDay * 2);
-      await depositPool.connect(SECOND).claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.eq(wei(198));
       expect(await rewardToken.balanceOf(SECOND.address)).to.eq(0);
@@ -2126,7 +2170,9 @@ describe('DepositPool', () => {
         await depositPool.connect(SECOND).setClaimSender(rewardPoolId, [OWNER], [true]);
         // Claim after 1.5 days
         await setNextTime(oneDay + oneDay * 1.5);
-        await depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, SECOND, { value: wei(0.5) });
+        await depositPool
+          .connect(OWNER)
+          ['claimFor(uint256,address,address)'](rewardPoolId, SECOND, SECOND, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.eq(wei(149));
         const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -2139,7 +2185,9 @@ describe('DepositPool', () => {
 
         // Claim after 1.5 days
         await setNextTime(oneDay + oneDay * 1.5);
-        await depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, ZERO_ADDR, { value: wei(0.5) });
+        await depositPool
+          .connect(OWNER)
+          ['claimFor(uint256,address,address)'](rewardPoolId, SECOND, ZERO_ADDR, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(REFERRER_1.address)).to.eq(wei(149));
         const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -2149,7 +2197,9 @@ describe('DepositPool', () => {
       });
       it('should revert if invalid caller', async () => {
         await expect(
-          depositPool.connect(OWNER).claimFor(rewardPoolId, SECOND, OWNER, { value: wei(0.5) }),
+          depositPool
+            .connect(OWNER)
+            ['claimFor(uint256,address,address)'](rewardPoolId, SECOND, OWNER, { value: wei(0.5) }),
         ).to.be.revertedWith('DS: invalid caller');
       });
     });
@@ -2170,7 +2220,7 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(4570722));
 
         await setTime(claimLockEnd);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei(4570722), wei(0.000001));
         const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -2198,7 +2248,7 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(4570722));
 
         await setTime(claimLockEnd);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
         multiplier = await depositPool.getCurrentUserMultiplier(rewardPoolId, SECOND);
         expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei(4570722), wei(0.000001));
@@ -2217,7 +2267,7 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(2894918));
 
         await setTime(claimLockEnd);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei(2894918), wei(0.000001));
         const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -2239,8 +2289,8 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(2904750));
 
         await setTime(claimLockEnd);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) }); // The reward will be slightly larger since the calculation is a second later.
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) }); // The reward will be slightly larger since the calculation is a second later.
 
         expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(2904750 * 0.75), wei(0.1));
         userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2275,7 +2325,7 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(100));
 
         await setNextTime(oneDay + oneDay);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei((100 * 101) / 102), wei(0.000001));
         const userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -2317,7 +2367,7 @@ describe('DepositPool', () => {
         expect(referralData.virtualAmountStaked).to.eq(wei(0.02));
         expect(referralData.pendingRewards).to.be.closeTo(wei((50 * 1) / 102), wei(0.000001));
 
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(SECOND.address)).to.be.closeTo(wei((100 * 101) / 102), wei(0.000001));
         userData = await depositPool.usersData(SECOND.address, rewardPoolId);
@@ -2353,8 +2403,8 @@ describe('DepositPool', () => {
         // Claim after 1 days
         await ethers.provider.send('evm_setAutomine', [false]);
         await depositPool.connect(OWNER).stake(rewardPoolId, wei(3), 0, OWNER);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claimReferrerTier(rewardPoolId, REFERRER_1, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, REFERRER_1, { value: wei(0.5) });
         await ethers.provider.send('evm_setAutomine', [true]);
         await ethers.provider.send('evm_mine');
 
@@ -2383,9 +2433,9 @@ describe('DepositPool', () => {
         await setNextTime(oneDay + oneDay * 2);
 
         await ethers.provider.send('evm_setAutomine', [false]);
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
-        await depositPool.claimReferrerTier(rewardPoolId, REFERRER_1, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, REFERRER_1, { value: wei(0.5) });
         await ethers.provider.send('evm_setAutomine', [true]);
         await ethers.provider.send('evm_mine');
 
@@ -2433,9 +2483,9 @@ describe('DepositPool', () => {
         secondAmount += (rewardPerPart * secondPart) / PRECISION;
         referrerAmount += (rewardPerPart * referrerPart) / PRECISION;
 
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
-        await depositPool.claimReferrerTier(rewardPoolId, REFERRER_1, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, REFERRER_1, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(ownerAmount, wei(0.001));
         userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2471,9 +2521,9 @@ describe('DepositPool', () => {
         secondAmount += (rewardPerPart * secondPart) / PRECISION;
         referrerAmount += (rewardPerPart * referrerPart) / PRECISION;
 
-        await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
-        await depositPool.claimReferrerTier(rewardPoolId, REFERRER_1, { value: wei(0.5) });
+        await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, REFERRER_1, { value: wei(0.5) });
 
         expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(ownerAmount, wei(0.001));
         userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2495,14 +2545,18 @@ describe('DepositPool', () => {
       });
     });
     it('should revert if claim caller is invalid', async () => {
-      await expect(depositPool.claimFor(rewardPoolId, OWNER, OWNER)).to.be.revertedWith('DS: invalid caller');
+      await expect(depositPool['claimFor(uint256,address,address)'](rewardPoolId, OWNER, OWNER)).to.be.revertedWith(
+        'DS: invalid caller',
+      );
     });
     it("should revert if `claimLockPeriodAfterStake` didn't pass", async () => {
       await setTime(oneDay + oneDay);
       await depositPool.stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
       await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 999999, 3, 4);
 
-      await expect(depositPool.claim(rewardPoolId, OWNER)).to.be.revertedWith('DS: pool claim is locked (S)');
+      await expect(depositPool['claim(uint256,address)'](rewardPoolId, OWNER)).to.be.revertedWith(
+        'DS: pool claim is locked (S)',
+      );
     });
     it("should revert if `claimLockPeriodAfterClaim` didn't pass", async () => {
       await depositPool.setRewardPoolProtocolDetails(rewardPoolId, 1, 0, 60, 4);
@@ -2517,8 +2571,8 @@ describe('DepositPool', () => {
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96));
 
       await setTime(oneDay * 3);
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
-      await expect(depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
+      await expect(depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
         'DS: pool claim is locked (C)',
       );
 
@@ -2526,21 +2580,25 @@ describe('DepositPool', () => {
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96 + 1));
 
       await setTime(oneDay * 3 + 61);
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
     });
     it('should revert if nothing to claim', async () => {
       await setNextTime(oneHour * 2);
       await depositPool.connect(SECOND).stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
 
       await setNextTime(oneDay + oneDay);
-      await expect(depositPool.connect(SECOND).claim(rewardPoolId, SECOND)).to.be.revertedWith('DS: nothing to claim');
+      await expect(depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND)).to.be.revertedWith(
+        'DS: nothing to claim',
+      );
     });
     it('should revert if personal claim is locked', async () => {
       await depositPool.stake(rewardPoolId, wei(1), 0, ZERO_ADDR);
       await depositPool.lockClaim(rewardPoolId, oneDay + oneDay);
 
       await setNextTime(oneDay + oneDay);
-      await expect(depositPool.claim(rewardPoolId, OWNER)).to.be.revertedWith('DS: user claim is locked');
+      await expect(depositPool['claim(uint256,address)'](rewardPoolId, OWNER)).to.be.revertedWith(
+        'DS: user claim is locked',
+      );
     });
   });
 
@@ -2572,7 +2630,7 @@ describe('DepositPool', () => {
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
       await depositPool.connect(OWNER).withdraw(rewardPoolId, wei(999));
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5), wei(0.001));
@@ -2586,7 +2644,7 @@ describe('DepositPool', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5), wei(0.000001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2604,7 +2662,7 @@ describe('DepositPool', () => {
       // Withdraw after 4 days
       await setNextTime(oneDay + oneDay * 4);
       await depositPool.connect(SECOND).withdraw(rewardPoolId, wei(999));
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(100 + 24.5 + 96 + 94), wei(0.000001));
@@ -2614,8 +2672,12 @@ describe('DepositPool', () => {
       expect(await depositPool.totalDepositedInPublicPools()).to.eq(wei(0));
 
       await setNextTime(oneDay + oneDay * 4 + 100);
-      await expect(depositPool.claim(rewardPoolId, OWNER)).to.be.revertedWith('DS: nothing to claim');
-      await expect(depositPool.connect(SECOND).claim(rewardPoolId, SECOND)).to.be.revertedWith('DS: nothing to claim');
+      await expect(depositPool['claim(uint256,address)'](rewardPoolId, OWNER)).to.be.revertedWith(
+        'DS: nothing to claim',
+      );
+      await expect(depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND)).to.be.revertedWith(
+        'DS: nothing to claim',
+      );
     });
 
     it('should correctly withdraw, withdraw all with deposit token rebalance', async () => {
@@ -2664,7 +2726,7 @@ describe('DepositPool', () => {
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
       await depositPool.connect(OWNER).withdraw(rewardPoolId, wei(2));
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000 - 6 + 2));
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(58.8), wei(0.001));
@@ -2677,8 +2739,8 @@ describe('DepositPool', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(58.8 + 48), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2696,7 +2758,7 @@ describe('DepositPool', () => {
       // Withdraw after 4 days
       await setNextTime(oneDay + oneDay * 4);
       await depositPool.connect(SECOND).withdraw(rewardPoolId, wei(2));
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000 - 4 + 2));
       expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(100 + 39.2 + 48 + 47), wei(0.001));
@@ -2709,8 +2771,8 @@ describe('DepositPool', () => {
 
       // Claim after 5 days
       await setNextTime(oneDay + oneDay * 5);
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(58.8 + 48 + 47 + 61.33333), wei(0.001));
       userData = await depositPool.usersData(OWNER.address, rewardPoolId);
@@ -2746,7 +2808,7 @@ describe('DepositPool', () => {
       const usdc = await deployERC20Token();
       const aUsdc = await deployERC20Token();
 
-      const depositPoolUsdc = await deployDepositPool(usdc, distributorMock);
+      const depositPoolUsdc = await deployDepositPoolV8(usdc, distributorMock);
 
       await usdc.mint(OWNER.address, wei(1000));
       await usdc.mint(SECOND.address, wei(1000));
@@ -2785,7 +2847,7 @@ describe('DepositPool', () => {
       // Withdraw after 2 days
       await setNextTime(oneDay + oneDay * 2);
       await depositPoolUsdc.connect(OWNER).withdraw(rewardPoolId, wei(999));
-      await depositPoolUsdc.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPoolUsdc['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(OWNER.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5), wei(0.001));
@@ -2799,7 +2861,7 @@ describe('DepositPool', () => {
 
       // Claim after 3 days
       await setNextTime(oneDay + oneDay * 3);
-      await depositPoolUsdc.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPoolUsdc.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await rewardToken.balanceOf(OWNER.address)).to.closeTo(wei(73.5), wei(0.000001));
       userData = await depositPoolUsdc.usersData(OWNER.address, rewardPoolId);
@@ -2817,7 +2879,7 @@ describe('DepositPool', () => {
       // Withdraw after 4 days
       await setNextTime(oneDay + oneDay * 4);
       await depositPoolUsdc.connect(SECOND).withdraw(rewardPoolId, wei(999));
-      await depositPoolUsdc.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPoolUsdc.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       expect(await depositToken.balanceOf(SECOND.address)).to.eq(wei(1000));
       expect(await rewardToken.balanceOf(SECOND.address)).to.closeTo(wei(100 + 24.5 + 96 + 94), wei(0.000001));
@@ -2827,8 +2889,10 @@ describe('DepositPool', () => {
       expect(await depositPoolUsdc.totalDepositedInPublicPools()).to.eq(wei(0));
 
       await setNextTime(oneDay + oneDay * 4 + 100);
-      await expect(depositPoolUsdc.claim(rewardPoolId, OWNER)).to.be.revertedWith('DS: nothing to claim');
-      await expect(depositPoolUsdc.connect(SECOND).claim(rewardPoolId, SECOND)).to.be.revertedWith(
+      await expect(depositPoolUsdc['claim(uint256,address)'](rewardPoolId, OWNER)).to.be.revertedWith(
+        'DS: nothing to claim',
+      );
+      await expect(depositPoolUsdc.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND)).to.be.revertedWith(
         'DS: nothing to claim',
       );
     });
@@ -2917,7 +2981,7 @@ describe('DepositPool', () => {
       expect(userData.claimLockEnd).to.eq(claimLockEnd * 2);
 
       await setTime(claimLockEnd * 2);
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       await depositPool.lockClaim(rewardPoolId, claimLockEnd * 3);
       userData = await depositPool.usersData(OWNER, rewardPoolId);
@@ -2965,7 +3029,7 @@ describe('DepositPool', () => {
       expect(userData.claimLockEnd).to.eq(claimLockEnd * 2);
 
       await setTime(claimLockEnd * 2);
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       await depositPool.lockClaim(rewardPoolId, claimLockEnd * 3);
       userData = await depositPool.usersData(OWNER, rewardPoolId);
@@ -3062,11 +3126,48 @@ describe('DepositPool', () => {
 
     describe('#claimReferrerTier', () => {
       before(async () => {
-        await expect(depositPool.claimReferrerTier(rewardPoolId, OWNER)).to.be.revertedWith("DS: migration isn't over");
+        await expect(depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER)).to.be.revertedWith(
+          "DS: migration isn't over",
+        );
       });
 
       beforeEach(async () => {
         await depositPool.editReferrerTiers(rewardPoolId, referrerTiers);
+      });
+
+      describe('with destination chain id', () => {
+        const dstChainId = 30184; // Base
+
+        beforeEach(async () => {
+          await depositPool.connect(SECOND).stake(rewardPoolId, wei(10), 0, OWNER);
+          await distributorMock.setDistributedRewardsAnswer(wei(100));
+          await setNextTime(oneDay + oneDay);
+        });
+
+        it('should correctly forward the destination chain id to `Distributor`', async () => {
+          await depositPool['claimReferrerTier(uint256,address,uint32)'](rewardPoolId, OWNER, dstChainId, {
+            value: wei(0.5),
+          });
+
+          expect(await distributorMock.mintedChainId(OWNER.address)).to.eq(dstChainId);
+        });
+        it('should treat `0` as the default chain id (same as the legacy signature)', async () => {
+          await depositPool['claimReferrerTier(uint256,address,uint32)'](rewardPoolId, OWNER, 0, {
+            value: wei(0.5),
+          });
+
+          expect(await distributorMock.mintedChainId(OWNER.address)).to.eq(0);
+        });
+        it('should correctly forward the destination chain id via `claimReferrerTierFor`', async () => {
+          await depositPool.setClaimSender(rewardPoolId, [SECOND], [true]);
+          await depositPool
+            .connect(SECOND)
+            ['claimReferrerTierFor(uint256,address,address,uint32)'](rewardPoolId, OWNER, OWNER, dstChainId, {
+              value: wei(0.5),
+            });
+
+          expect(await distributorMock.mintedChainId(OWNER.address)).to.eq(dstChainId);
+        });
       });
 
       it('should claim referrer tier correctly', async () => {
@@ -3077,7 +3178,7 @@ describe('DepositPool', () => {
 
         await setNextTime(oneDay + oneDay);
 
-        await depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
         const poolData = await depositPool.rewardPoolsData(rewardPoolId);
         expect(poolData.lastUpdate).to.eq(await getCurrentBlockTime());
@@ -3097,11 +3198,15 @@ describe('DepositPool', () => {
           await setNextTime(oneDay + oneDay);
 
           await depositPool.setClaimSender(rewardPoolId, [SECOND], [true]);
-          await depositPool.connect(SECOND).claimReferrerTierFor(rewardPoolId, OWNER, OWNER, { value: wei(0.5) });
+          await depositPool
+            .connect(SECOND)
+            ['claimReferrerTierFor(uint256,address,address)'](rewardPoolId, OWNER, OWNER, { value: wei(0.5) });
         });
         it('should revert if invalid caller', async () => {
           await expect(
-            depositPool.connect(OWNER).claimReferrerTierFor(rewardPoolId, SECOND, OWNER, { value: wei(0.5) }),
+            depositPool
+              .connect(OWNER)
+              ['claimReferrerTierFor(uint256,address,address)'](rewardPoolId, SECOND, OWNER, { value: wei(0.5) }),
           ).to.be.revertedWith('DS: invalid caller');
         });
       });
@@ -3115,23 +3220,23 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(100 + 98));
 
         await setTime(oneDay * 3);
-        await depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) });
-        await expect(depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
-          'DS: pool claim is locked (C)',
-        );
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
+        await expect(
+          depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) }),
+        ).to.be.revertedWith('DS: pool claim is locked (C)');
 
         await setTime(oneDay * 3 + 61);
-        await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
       });
       it('should revert if nothing to claim', async () => {
         await setNextTime(oneDay + oneDay);
-        await expect(depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) })).to.be.revertedWith(
-          'DS: nothing to claim',
-        );
+        await expect(
+          depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) }),
+        ).to.be.revertedWith('DS: nothing to claim');
       });
       it('should revert if nothing to claim', async () => {
         await expect(
-          depositPool.claimReferrerTierFor(rewardPoolId, OWNER, OWNER, { value: wei(0.5) }),
+          depositPool['claimReferrerTierFor(uint256,address,address)'](rewardPoolId, OWNER, OWNER, { value: wei(0.5) }),
         ).to.be.revertedWith('DS: invalid caller');
       });
     });
@@ -3181,7 +3286,7 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96));
 
         await depositPool.connect(SECOND).withdraw(rewardPoolId, wei(1));
-        await depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
         await setTime(oneDay + oneDay * 4);
         // Add rewards
@@ -3197,7 +3302,7 @@ describe('DepositPool', () => {
         await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96 + 94 + 92));
 
         await depositPool.connect(SECOND).withdraw(rewardPoolId, wei(1));
-        await depositPool.claimReferrerTier(rewardPoolId, OWNER, { value: wei(0.5) });
+        await depositPool['claimReferrerTier(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
         reward = await depositPool.getLatestReferrerReward(rewardPoolId, OWNER);
         expect(reward).to.eq(0);
       });
@@ -3272,7 +3377,7 @@ describe('DepositPool', () => {
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96));
 
       await depositPool.withdraw(rewardPoolId, wei(1));
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
 
       await setTime(oneDay + oneDay * 4);
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96 + 94));
@@ -3284,7 +3389,7 @@ describe('DepositPool', () => {
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96 + 94 + 92));
 
       await depositPool.withdraw(rewardPoolId, wei(1));
-      await depositPool.claim(rewardPoolId, OWNER, { value: wei(0.5) });
+      await depositPool['claim(uint256,address)'](rewardPoolId, OWNER, { value: wei(0.5) });
       reward = await depositPool.getLatestUserReward(rewardPoolId, OWNER);
       expect(reward).to.eq(wei(0));
 
@@ -3342,7 +3447,7 @@ describe('DepositPool', () => {
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96));
 
       await depositPool.connect(SECOND).withdraw(rewardPoolId, wei(1));
-      await depositPool.connect(SECOND).claim(rewardPoolId, SECOND, { value: wei(0.5) });
+      await depositPool.connect(SECOND)['claim(uint256,address)'](rewardPoolId, SECOND, { value: wei(0.5) });
 
       await setTime(oneDay + oneDay * 4);
       await distributorMock.setDistributedRewardsAnswer(wei(100 + 98 + 96 + 94));
@@ -3476,5 +3581,5 @@ describe('DepositPool', () => {
   });
 });
 
-// npx hardhat test "test/capital-protocol/DepositPool.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/DepositPool.test.ts"
+// npx hardhat test "test/capital-protocol/DepositPoolV8.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/DepositPoolV8.test.ts"

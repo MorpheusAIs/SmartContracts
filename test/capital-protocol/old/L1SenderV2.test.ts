@@ -14,7 +14,7 @@ import {
   deployStETHMock,
   deployUniswapSwapRouterMock,
   deployWstETHMock,
-} from '../helpers/deployers';
+} from '../../helpers/deployers';
 
 import {
   ArbitrumBridgeGatewayRouterMock,

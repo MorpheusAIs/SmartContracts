@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { setNextTime } from '../helpers/block-helper';
+import { setNextTime } from '../../helpers/block-helper';
 import {
   deployAavePoolAddressesProviderMock,
   deployAavePoolDataProviderMock,
@@ -16,8 +16,8 @@ import {
   deployL1SenderV2,
   deployRewardPoolMock,
   deployStETHMock,
-} from '../helpers/deployers';
-import { oneDay } from '../helpers/distribution-helper';
+} from '../../helpers/deployers';
+import { oneDay } from '../../helpers/distribution-helper';
 
 import {
   AavePoolAddressesProviderMock,

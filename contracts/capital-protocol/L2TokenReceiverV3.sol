@@ -5,19 +5,18 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
-import {IL2TokenReceiverV2, IERC165, IERC721Receiver} from "../interfaces/capital-protocol/IL2TokenReceiverV2.sol";
+import {IL2TokenReceiverV3, IERC165, IERC721Receiver} from "../interfaces/capital-protocol/IL2TokenReceiverV3.sol";
 import {INonfungiblePositionManager} from "../interfaces/uniswap-v3/INonfungiblePositionManager.sol";
+import {IV3SwapRouter} from "../interfaces/uniswap-v3/IV3SwapRouter.sol";
 
-contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgradeable {
+contract L2TokenReceiverV3 is IL2TokenReceiverV3, OwnableUpgradeable, UUPSUpgradeable {
     address public router;
     address public nonfungiblePositionManager;
 
     SwapParams public secondSwapParams;
 
-    // Storage changes for L2TokenReceiverV2
     SwapParams public firstSwapParams;
 
     constructor() {
@@ -42,7 +41,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
         return
-            interfaceId_ == type(IL2TokenReceiverV2).interfaceId ||
+            interfaceId_ == type(IL2TokenReceiverV3).interfaceId ||
             interfaceId_ == type(IERC721Receiver).interfaceId ||
             interfaceId_ == type(IERC165).interfaceId;
     }
@@ -70,26 +69,32 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
         IERC721(token_).safeTransferFrom(address(this), recipient_, tokenId_);
     }
 
+    /**
+     * @dev `router` is Uniswap's `SwapRouter02`, not the original `SwapRouter` -- its
+     * `exactInputSingle` has no `deadline` field (see `IV3SwapRouter`), so `deadline_` is enforced
+     * here instead, preserving the same protection the original router gave atomically.
+     */
     function swap(
         uint256 amountIn_,
         uint256 amountOutMinimum_,
         uint256 deadline_,
         bool isUseFirstSwapParams_
     ) external onlyOwner returns (uint256) {
+        require(block.timestamp <= deadline_, "L2TR: expired");
+
         SwapParams memory params_ = _getSwapParams(isUseFirstSwapParams_);
 
-        ISwapRouter.ExactInputSingleParams memory swapParams_ = ISwapRouter.ExactInputSingleParams({
+        IV3SwapRouter.ExactInputSingleParams memory swapParams_ = IV3SwapRouter.ExactInputSingleParams({
             tokenIn: params_.tokenIn,
             tokenOut: params_.tokenOut,
             fee: params_.fee,
             recipient: address(this),
-            deadline: deadline_,
             amountIn: amountIn_,
             amountOutMinimum: amountOutMinimum_,
             sqrtPriceLimitX96: params_.sqrtPriceLimitX96
         });
 
-        uint256 amountOut_ = ISwapRouter(router).exactInputSingle(swapParams_);
+        uint256 amountOut_ = IV3SwapRouter(router).exactInputSingle(swapParams_);
 
         emit TokensSwapped(params_.tokenIn, params_.tokenOut, amountIn_, amountOut_, amountOutMinimum_);
 
@@ -134,7 +139,7 @@ contract L2TokenReceiverV2 is IL2TokenReceiverV2, OwnableUpgradeable, UUPSUpgrad
     }
 
     function version() external pure returns (uint256) {
-        return 2;
+        return 3;
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {

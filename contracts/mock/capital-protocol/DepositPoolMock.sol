@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IDistributor, IERC165} from "../../interfaces/capital-protocol/IDistributor.sol";
-import {IDepositPool} from "../../interfaces/capital-protocol/IDepositPool.sol";
+import {IDistributor, IERC165} from "../../interfaces/capital-protocol/old/IDistributor.sol";
+import {IDepositPool} from "../../interfaces/capital-protocol/old/IDepositPool.sol";
 
 contract DepositPoolMock is IERC165 {
     address public distributor;
