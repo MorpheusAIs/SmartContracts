@@ -26,7 +26,6 @@ contract L2TokenReceiverV3 is IL2TokenReceiverV3, OwnableUpgradeable, UUPSUpgrad
     function L2TokenReceiver__init(
         address router_,
         address nonfungiblePositionManager_,
-        // SwapParams memory firstSwapParams_,
         SwapParams memory secondSwapParams_
     ) external initializer {
         __Ownable_init();
@@ -35,7 +34,6 @@ contract L2TokenReceiverV3 is IL2TokenReceiverV3, OwnableUpgradeable, UUPSUpgrad
         router = router_;
         nonfungiblePositionManager = nonfungiblePositionManager_;
 
-        // _addAllowanceUpdateSwapParams(firstSwapParams_, true);
         _addAllowanceUpdateSwapParams(secondSwapParams_, false);
     }
 

@@ -11,7 +11,7 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {ILayerZeroEndpointV2, MessagingParams} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 import {IGatewayRouter} from "@arbitrum/token-bridge-contracts/contracts/tokenbridge/libraries/gateway/IGatewayRouter.sol";
-import {IL1StandardBridge} from "../interfaces/base/IL1StandardBridge.sol";
+import {ILidoL1ERC20TokenBridge} from "../interfaces/base/ILidoL1ERC20TokenBridge.sol";
 
 import {IL1SenderV3, IERC165} from "../interfaces/capital-protocol/IL1SenderV3.sol";
 import {IDistributorV3} from "../interfaces/capital-protocol/IDistributorV3.sol";
@@ -44,10 +44,10 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
     /** @dev LayerZero V2 `EndpointV2` address for this chain. See https://docs.layerzero.network/v2/deployments/deployed-contracts */
     address public lzEndpointV2;
 
-    /** @dev Destination chain id used by `sendMintMessage()` when the caller doesn't specify one (i.e. passes `0`). */
+    /** @dev Destination chain id (real EVM chain id) used by `sendMintMessage()` when the caller doesn't specify one (i.e. passes `0`). */
     uint32 public defaultChainId;
 
-    /** @dev Per-destination-chain LayerZero V2 config (receiver + execution options). Keyed by chain id. */
+    /** @dev Per-destination-chain LayerZero V2 config (LZ eid + receiver + execution options). Keyed by real EVM chain id, not LZ eid. */
     mapping(uint32 => LayerZeroV2Config) public lzV2Configs;
 
     /** @dev UPGRADE `L1SenderV2` storage updates, add Base (OP Stack) wstETH bridge */
@@ -120,18 +120,36 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
         emit LzEndpointV2Set(value_);
     }
 
+    /**
+     * @dev Call once after `setLzEndpointV2`, with `delegate_ = owner()`.
+     */
+    function setLzDelegate(address delegate_) external onlyOwner {
+        require(lzEndpointV2 != address(0), "L1S: lzEndpointV2 not set");
+
+        ILayerZeroEndpointV2(lzEndpointV2).setDelegate(delegate_);
+
+        emit LzDelegateSet(delegate_);
+    }
+
     function setDefaultChainId(uint32 chainId_) external onlyOwner {
+        require(lzV2Configs[chainId_].receiver != bytes32(0), "L1S: no LZ V2 config for `chainId_`");
+
         defaultChainId = chainId_;
 
         emit DefaultChainIdSet(chainId_);
     }
 
     /**
-     * @dev `config_.receiver` is the `L2MessageReceiverV2` address on `chainId_`, left-padded to
-     * `bytes32` (same convention as `OAppCore.peers`).
+     * @dev `chainId_` is the real EVM chain id (e.g. `42161` for Arbitrum, `8453` for Base), NOT the
+     * LayerZero endpoint id -- `config_.eid` is where that resolves to. `config_.receiver` is the
+     * `L2MessageReceiverV2` address on that chain, left-padded to `bytes32` (same convention as
+     * `OAppCore.peers`).
      */
     function setLzV2Config(uint32 chainId_, LayerZeroV2Config calldata config_) external onlyOwner {
+        require(chainId_ != 0, "L1S: invalid `chainId_`");
+        require(config_.eid != 0, "L1S: invalid eid");
         require(config_.receiver != bytes32(0), "L1S: invalid receiver");
+        require(config_.options.length > 0, "L1S: empty options");
 
         lzV2Configs[chainId_] = config_;
 
@@ -156,6 +174,7 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
 
     function _sendMintMessage(address user_, uint256 amount_, address refundTo_, uint32 chainId_) private {
         require(_msgSender() == distributor, "L1S: the `msg.sender` isn't `distributor`");
+        require(lzEndpointV2 != address(0), "L1S: lzEndpointV2 not set");
 
         if (chainId_ == 0) {
             chainId_ = defaultChainId;
@@ -168,7 +187,7 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
 
         // https://docs.layerzero.network/v2/developers/evm/oapp/overview#sending-a-message
         ILayerZeroEndpointV2(lzEndpointV2).send{value: msg.value}(
-            MessagingParams(chainId_, config_.receiver, message_, config_.options, false),
+            MessagingParams(config_.eid, config_.receiver, message_, config_.options, false),
             payable(refundTo_)
         );
 
@@ -243,14 +262,17 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
 
     /**
-     * @dev https://docs.base.org/base-chain/network-information/base-contracts
+     * @dev https://docs.lido.fi/deployed-contracts/ (Base section)
      * wstETH - the L1 wstETH token address (same token as `arbitrumBridgeConfig.wstETH`)
      * remoteWstETH - the bridged wstETH address on Base
-     * bridge - `L1StandardBridge` ("Base: Base Bridge")
-     * Receiver - `L2TokenReceiverV2` address on Base
+     * bridge - Lido's own "L1ERC20TokenBridge"
+     * Receiver - `L2TokenReceiverV3` address on Base
      */
     function setBaseBridgeConfig(BaseBridgeConfig calldata newConfig_) external onlyOwner {
         require(stETH != address(0), "L1S: stETH is not set");
+        require(newConfig_.wstETH != address(0), "L1S: invalid wstETH");
+        require(newConfig_.remoteWstETH != address(0), "L1S: invalid remoteWstETH");
+        require(newConfig_.bridge != address(0), "L1S: invalid bridge");
         require(newConfig_.receiver != address(0), "L1S: invalid receiver");
 
         BaseBridgeConfig memory oldConfig_ = baseBridgeConfig;
@@ -269,11 +291,10 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /**
-     * @dev Unlike `sendWstETH` (Arbitrum retryable tickets), the OP Stack bridge relays L1 deposits
-     * without a prepaid L2 gas fee from the sender -- no `msg.value`, no `maxFeePerGas_`/
-     * `maxSubmissionCost_` equivalent. `minGasLimit_` only caps the L2-side execution.
+     * @dev Unlike `sendWstETH` (Arbitrum retryable tickets), Lido's bridge doesn't need a prepaid L2
+     * gas fee from the sender -- no `msg.value`, no `maxFeePerGas_`/`maxSubmissionCost_` equivalent.
      */
-    function sendWstETHToBase(uint32 minGasLimit_, bytes calldata extraData_) external onlyOwner {
+    function sendWstETHToBase(uint32 l2Gas_, bytes calldata extraData_) external onlyOwner {
         BaseBridgeConfig memory config_ = baseBridgeConfig;
         require(config_.wstETH != address(0), "L1S: wstETH isn't set");
 
@@ -284,16 +305,16 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 amount_ = IWStETH(config_.wstETH).balanceOf(address(this));
 
-        IL1StandardBridge(config_.bridge).bridgeERC20To(
+        ILidoL1ERC20TokenBridge(config_.bridge).depositERC20To(
             config_.wstETH,
             config_.remoteWstETH,
             config_.receiver,
             amount_,
-            minGasLimit_,
+            l2Gas_,
             extraData_
         );
 
-        emit WstETHSentToBase(amount_, minGasLimit_, extraData_);
+        emit WstETHSentToBase(amount_, l2Gas_, extraData_);
     }
 
     /**********************************************************************************************/
@@ -320,6 +341,7 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
         require(amountIn_ != 0, "L1S: invalid `amountIn_` value");
         require(amountOutMinimum_ != 0, "L1S: invalid `amountOutMinimum_` value");
 
+        TransferHelper.safeApprove(tokens_[0], uniswapSwapRouter, 0);
         TransferHelper.safeApprove(tokens_[0], uniswapSwapRouter, amountIn_);
 
         // START create the `path`

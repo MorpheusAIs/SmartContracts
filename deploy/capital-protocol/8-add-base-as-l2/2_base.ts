@@ -54,6 +54,12 @@ const _step1 = async (deployer: Deployer) => {
 
   await l2MessageReceiver.setPeer(ethereumEid, ethers.zeroPadValue(l1SenderAddress, 32));
 
+  // `OAppCore`'s constructor only calls `endpoint.setDelegate(delegate_)` -- it does NOT touch
+  // `Ownable` ownership, so `endpoint.delegates(receiver)` would otherwise stay the deployer even
+  // after `transferOwnership` hands off `owner()` below -- a leftover privilege, not just an
+  // oversight (the deployer could still change this OApp's receive library/DVN set).
+  await l2MessageReceiver.setDelegate(baseAdminAddress);
+
   // Hand off ownership to the real admin -- MUST be the last call in this step.
   await l2MessageReceiver.transferOwnership(baseAdminAddress);
 

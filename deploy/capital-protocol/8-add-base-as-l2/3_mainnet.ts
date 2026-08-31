@@ -39,6 +39,12 @@ const lockMultiplierMathAddress = '0x345B8B23c38F70f1d77560C60493Bb583f012Cb0';
 // https://docs.layerzero.network/v2/deployments/deployed-contracts -- RE-VERIFY before running for real.
 const lzEndpointV2Address = '0x1a44076050125825900e736c501f859c50fE728c';
 
+// `chainId_` everywhere below is the real EVM chain id -- `L1SenderV3` resolves it to the LZ eid
+// internally via `lzV2Configs[chainId_].eid`, callers (including this script) never pass an eid
+// directly.
+const arbitrumChainId = 42161;
+const baseChainId = 8453;
+
 const arbitrumEid = 30110;
 const baseEid = 30184;
 
@@ -46,9 +52,11 @@ const baseEid = 30184;
 // (both files' `_step1`, the deploy step -- that's all this needs, the address is known as soon as
 // the receiver is deployed).
 // TODO: placeholder values for fork dry-runs (non-zero so `setLzV2Config`'s `receiver != bytes32(0)`
-// check passes) -- REPLACE with the real deployed addresses before running for real.
-const arbitrumReceiverAddress = '0x0000000000000000000000000000000000000001';
-const baseReceiverAddress = '0x0000000000000000000000000000000000000001';
+// check passes) -- REPLACE with the real deployed addresses before running for real; `_step2` refuses
+// to run while either is still this placeholder.
+const PLACEHOLDER_ADDRESS = '0x0000000000000000000000000000000000000001';
+const arbitrumReceiverAddress = PLACEHOLDER_ADDRESS;
+const baseReceiverAddress = PLACEHOLDER_ADDRESS;
 
 // Generous fixed gas for `L2MessageReceiverV2._lzReceive` (abi.decode + one `IMOROFT.mint` call +
 // one event -- cheap, well under 100k gas in practice) with headroom for gas-price/opcode-cost
@@ -101,7 +109,12 @@ const _step1 = async (deployer: Deployer) => {
 };
 
 const _step2 = async (deployer: Deployer) => {
-  if (!arbitrumReceiverAddress || !baseReceiverAddress) {
+  if (
+    !arbitrumReceiverAddress ||
+    !baseReceiverAddress ||
+    arbitrumReceiverAddress.toLowerCase() === PLACEHOLDER_ADDRESS ||
+    baseReceiverAddress.toLowerCase() === PLACEHOLDER_ADDRESS
+  ) {
     throw new Error('Set `arbitrumReceiverAddress` / `baseReceiverAddress` from steps 1 and 2 first.');
   }
 
@@ -112,15 +125,20 @@ const _step2 = async (deployer: Deployer) => {
   await l1Sender.connect(ms).upgradeTo(l1SenderV3ImplAddress);
 
   await l1Sender.connect(ms).setLzEndpointV2(lzEndpointV2Address);
-  await l1Sender.connect(ms).setDefaultChainId(arbitrumEid); // Arbitrum stays the default network.
-  await l1Sender.connect(ms).setLzV2Config(arbitrumEid, {
+  await l1Sender.connect(ms).setLzDelegate(msAddress);
+  // `setLzV2Config` for `arbitrumChainId` MUST run before `setDefaultChainId(arbitrumChainId)` --
+  // the latter now requires a config to already exist for the chain id it's pointed at.
+  await l1Sender.connect(ms).setLzV2Config(arbitrumChainId, {
+    eid: arbitrumEid,
     receiver: ethers.zeroPadValue(arbitrumReceiverAddress, 32),
     options: lzReceiveOptions,
   });
-  await l1Sender.connect(ms).setLzV2Config(baseEid, {
+  await l1Sender.connect(ms).setLzV2Config(baseChainId, {
+    eid: baseEid,
     receiver: ethers.zeroPadValue(baseReceiverAddress, 32),
     options: lzReceiveOptions,
   });
+  await l1Sender.connect(ms).setDefaultChainId(arbitrumChainId); // Arbitrum stays the default network.
 
   // 2. Distributor: upgrade.
   const distributor = await deployer.deployed(DistributorV3__factory, distributorAddress);
@@ -134,8 +152,8 @@ const _step2 = async (deployer: Deployer) => {
 };
 
 // Before running `4_arbitrum_phase_2.ts`: do a real, small claim with an explicit destination
-// chain id on both Arbitrum (`chainId_ = 30110`, or omit -- it's now the default) and Base
-// (`chainId_ = 30184`) and confirm MOR actually lands on each L2. Reverts here are safe (no funds
+// chain id on both Arbitrum (`chainId_ = 42161`, or omit -- it's now the default) and Base
+// (`chainId_ = 8453`) and confirm MOR actually lands on each L2. Reverts here are safe (no funds
 // move on a revert) -- but don't remove the old Arbitrum minter until this has actually been seen
 // to work end-to-end.
 

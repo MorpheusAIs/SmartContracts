@@ -8,9 +8,9 @@ import {
   deployERC20Token,
   deployInterfaceMock,
   deployL1SenderV3,
-  deployL1StandardBridgeMock,
   deployL2MessageReceiverV2,
   deployLayerZeroEndpointV2Mock,
+  deployLidoL1ERC20TokenBridgeMock,
   deployMOROFT,
   deployRewardPoolMock,
   deploySimpleMessageLib,
@@ -23,7 +23,7 @@ import {
   ArbitrumBridgeGatewayRouterMock,
   DistributorV3Mock,
   L1SenderV3,
-  L1StandardBridgeMock,
+  LidoL1ERC20TokenBridgeMock,
   StETHMock,
   UniswapSwapRouterMock,
   WStETHMock,
@@ -43,7 +43,7 @@ describe('L1SenderV3', () => {
   let l1Sender: L1SenderV3;
   let distributor: DistributorV3Mock;
   let arbitrumBridgeGatewayRouterMock: ArbitrumBridgeGatewayRouterMock;
-  let l1StandardBridgeMock: L1StandardBridgeMock;
+  let lidoL1ERC20TokenBridgeMock: LidoL1ERC20TokenBridgeMock;
   let uniswapSwapRouterMock: UniswapSwapRouterMock;
 
   before(async () => {
@@ -53,7 +53,7 @@ describe('L1SenderV3', () => {
     wstETH = await deployWstETHMock(stETH);
     distributor = await deployDistributorV3Mock(await deployRewardPoolMock(), await deployERC20Token());
     arbitrumBridgeGatewayRouterMock = await deployArbitrumBridgeGatewayRouterMock();
-    l1StandardBridgeMock = await deployL1StandardBridgeMock();
+    lidoL1ERC20TokenBridgeMock = await deployLidoL1ERC20TokenBridgeMock();
     uniswapSwapRouterMock = await deployUniswapSwapRouterMock();
     l1Sender = await deployL1SenderV3();
 
@@ -169,58 +169,110 @@ describe('L1SenderV3', () => {
     });
   });
 
-  describe('#setDefaultChainId', () => {
-    it('should correctly set new value', async () => {
-      await l1Sender.setDefaultChainId(30110);
+  describe('#setLzDelegate', () => {
+    it('should correctly set the delegate on the endpoint', async () => {
+      const endpoint = await deployLayerZeroEndpointV2Mock(1, await OWNER.getAddress());
+      await l1Sender.setLzEndpointV2(endpoint);
 
-      expect(await l1Sender.defaultChainId()).to.eq(30110);
+      await l1Sender.setLzDelegate(BOB);
+
+      expect(await endpoint.delegates(l1Sender)).to.eq(await BOB.getAddress());
     });
-    it('should correctly reset to zero', async () => {
-      await l1Sender.setDefaultChainId(30110);
-      await l1Sender.setDefaultChainId(0);
-
-      expect(await l1Sender.defaultChainId()).to.eq(0);
+    it("should revert when lzEndpointV2 isn't set", async () => {
+      await expect(l1Sender.setLzDelegate(BOB)).to.be.revertedWith('L1S: lzEndpointV2 not set');
     });
     it('should revert if not called by the owner', async () => {
-      await expect(l1Sender.connect(BOB).setDefaultChainId(30110)).to.be.revertedWith(
+      await expect(l1Sender.connect(BOB).setLzDelegate(BOB)).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  describe('#setDefaultChainId', () => {
+    // `chainId_` (the key) is the real EVM chain id; `eid` inside the config is the separate
+    // LayerZero endpoint id it resolves to. Arbitrum's real values, to keep the two distinct.
+    const arbitrumChainId = 42161;
+    const config = {
+      eid: 30110,
+      receiver: ethers.zeroPadValue('0x000000000000000000000000000000000000dEaD', 32),
+      options: '0x1234',
+    };
+
+    it('should correctly set new value', async () => {
+      await l1Sender.setLzV2Config(arbitrumChainId, config);
+      await l1Sender.setDefaultChainId(arbitrumChainId);
+
+      expect(await l1Sender.defaultChainId()).to.eq(arbitrumChainId);
+    });
+    it("should revert when there's no LZ V2 config for `chainId_`", async () => {
+      await expect(l1Sender.setDefaultChainId(arbitrumChainId)).to.be.revertedWith(
+        'L1S: no LZ V2 config for `chainId_`',
+      );
+    });
+    it('should revert when trying to reset to zero', async () => {
+      await l1Sender.setLzV2Config(arbitrumChainId, config);
+      await l1Sender.setDefaultChainId(arbitrumChainId);
+
+      await expect(l1Sender.setDefaultChainId(0)).to.be.revertedWith('L1S: no LZ V2 config for `chainId_`');
+    });
+    it('should revert if not called by the owner', async () => {
+      await expect(l1Sender.connect(BOB).setDefaultChainId(arbitrumChainId)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
   });
 
   describe('#setLzV2Config', () => {
+    const arbitrumChainId = 42161;
+    const baseChainId = 8453;
     const config = {
+      eid: 30110,
       receiver: ethers.zeroPadValue('0x000000000000000000000000000000000000dEaD', 32),
-      options: '0x',
+      options: '0x1234',
     };
 
     it('should correctly set new value', async () => {
-      await l1Sender.setLzV2Config(30110, config);
+      await l1Sender.setLzV2Config(arbitrumChainId, config);
 
-      const stored = await l1Sender.lzV2Configs(30110);
+      const stored = await l1Sender.lzV2Configs(arbitrumChainId);
+      expect(stored.eid).to.eq(config.eid);
       expect(stored.receiver).to.eq(config.receiver);
       expect(stored.options).to.eq(config.options);
     });
     it('should correctly set different configs per chain id', async () => {
       const configBase = {
+        eid: 30184,
         receiver: ethers.zeroPadValue('0x000000000000000000000000000000000000bEEF', 32),
         options: '0x1234',
       };
 
-      await l1Sender.setLzV2Config(30110, config);
-      await l1Sender.setLzV2Config(30184, configBase);
+      await l1Sender.setLzV2Config(arbitrumChainId, config);
+      await l1Sender.setLzV2Config(baseChainId, configBase);
 
-      expect((await l1Sender.lzV2Configs(30110)).receiver).to.eq(config.receiver);
-      expect((await l1Sender.lzV2Configs(30184)).receiver).to.eq(configBase.receiver);
-      expect((await l1Sender.lzV2Configs(30184)).options).to.eq(configBase.options);
+      expect((await l1Sender.lzV2Configs(arbitrumChainId)).eid).to.eq(config.eid);
+      expect((await l1Sender.lzV2Configs(arbitrumChainId)).receiver).to.eq(config.receiver);
+      expect((await l1Sender.lzV2Configs(baseChainId)).eid).to.eq(configBase.eid);
+      expect((await l1Sender.lzV2Configs(baseChainId)).receiver).to.eq(configBase.receiver);
+      expect((await l1Sender.lzV2Configs(baseChainId)).options).to.eq(configBase.options);
+    });
+    it('should revert when chainId_ is zero', async () => {
+      await expect(l1Sender.setLzV2Config(0, config)).to.be.revertedWith('L1S: invalid `chainId_`');
+    });
+    it('should revert when eid is zero', async () => {
+      await expect(l1Sender.setLzV2Config(arbitrumChainId, { ...config, eid: 0 })).to.be.revertedWith(
+        'L1S: invalid eid',
+      );
     });
     it('should revert when receiver is zero bytes32', async () => {
-      await expect(l1Sender.setLzV2Config(30110, { receiver: ethers.ZeroHash, options: '0x' })).to.be.revertedWith(
-        'L1S: invalid receiver',
+      await expect(
+        l1Sender.setLzV2Config(arbitrumChainId, { ...config, receiver: ethers.ZeroHash }),
+      ).to.be.revertedWith('L1S: invalid receiver');
+    });
+    it('should revert when options is empty', async () => {
+      await expect(l1Sender.setLzV2Config(arbitrumChainId, { ...config, options: '0x' })).to.be.revertedWith(
+        'L1S: empty options',
       );
     });
     it('should revert if not called by the owner', async () => {
-      await expect(l1Sender.connect(BOB).setLzV2Config(30110, config)).to.be.revertedWith(
+      await expect(l1Sender.connect(BOB).setLzV2Config(arbitrumChainId, config)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -358,7 +410,7 @@ describe('L1SenderV3', () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: BOB,
       };
 
@@ -367,12 +419,12 @@ describe('L1SenderV3', () => {
       expect(await l1Sender.baseBridgeConfig()).to.be.deep.equal([
         await wstETH.getAddress(),
         await OWNER.getAddress(),
-        await l1StandardBridgeMock.getAddress(),
+        await lidoL1ERC20TokenBridgeMock.getAddress(),
         await BOB.getAddress(),
       ]);
 
       expect(await stETH.allowance(l1Sender, wstETH)).to.be.equal(ethers.MaxUint256);
-      expect(await wstETH.allowance(l1Sender, l1StandardBridgeMock)).to.be.equal(ethers.MaxUint256);
+      expect(await wstETH.allowance(l1Sender, lidoL1ERC20TokenBridgeMock)).to.be.equal(ethers.MaxUint256);
     });
     it('should correctly reset new config', async () => {
       await l1Sender.setStETh(stETH);
@@ -380,14 +432,14 @@ describe('L1SenderV3', () => {
       const config1 = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: BOB,
       };
       await l1Sender.setBaseBridgeConfig(config1);
 
       const config2 = { ...config1 };
       config2.wstETH = await deployWstETHMock(await deployStETHMock());
-      config2.bridge = await deployL1StandardBridgeMock();
+      config2.bridge = await deployLidoL1ERC20TokenBridgeMock();
       config2.receiver = OWNER;
       await l1Sender.setBaseBridgeConfig(config2);
 
@@ -399,7 +451,7 @@ describe('L1SenderV3', () => {
       ]);
 
       expect(await stETH.allowance(l1Sender, wstETH)).to.be.equal(0);
-      expect(await wstETH.allowance(l1Sender, l1StandardBridgeMock)).to.be.equal(0);
+      expect(await wstETH.allowance(l1Sender, lidoL1ERC20TokenBridgeMock)).to.be.equal(0);
 
       expect(await stETH.allowance(l1Sender, config2.wstETH)).to.be.equal(ethers.MaxUint256);
       expect(await config2.wstETH.allowance(l1Sender, config2.bridge)).to.be.equal(ethers.MaxUint256);
@@ -408,11 +460,47 @@ describe('L1SenderV3', () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: ZERO_ADDR,
       };
 
       await expect(l1Sender.setBaseBridgeConfig(config)).to.be.revertedWith('L1S: stETH is not set');
+    });
+    it('should revert when invalid wstETH', async () => {
+      await l1Sender.setStETh(stETH);
+
+      const config = {
+        wstETH: ZERO_ADDR,
+        remoteWstETH: OWNER,
+        bridge: lidoL1ERC20TokenBridgeMock,
+        receiver: BOB,
+      };
+
+      await expect(l1Sender.setBaseBridgeConfig(config)).to.be.revertedWith('L1S: invalid wstETH');
+    });
+    it('should revert when invalid remoteWstETH', async () => {
+      await l1Sender.setStETh(stETH);
+
+      const config = {
+        wstETH: wstETH,
+        remoteWstETH: ZERO_ADDR,
+        bridge: lidoL1ERC20TokenBridgeMock,
+        receiver: BOB,
+      };
+
+      await expect(l1Sender.setBaseBridgeConfig(config)).to.be.revertedWith('L1S: invalid remoteWstETH');
+    });
+    it('should revert when invalid bridge', async () => {
+      await l1Sender.setStETh(stETH);
+
+      const config = {
+        wstETH: wstETH,
+        remoteWstETH: OWNER,
+        bridge: ZERO_ADDR,
+        receiver: BOB,
+      };
+
+      await expect(l1Sender.setBaseBridgeConfig(config)).to.be.revertedWith('L1S: invalid bridge');
     });
     it('should revert when invalid receiver', async () => {
       await l1Sender.setStETh(stETH);
@@ -420,7 +508,7 @@ describe('L1SenderV3', () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: ZERO_ADDR,
       };
 
@@ -430,7 +518,7 @@ describe('L1SenderV3', () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: BOB,
       };
 
@@ -449,7 +537,7 @@ describe('L1SenderV3', () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: BOB,
       };
       await l1Sender.setBaseBridgeConfig(config);
@@ -465,7 +553,7 @@ describe('L1SenderV3', () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
-        bridge: l1StandardBridgeMock,
+        bridge: lidoL1ERC20TokenBridgeMock,
         receiver: BOB,
       };
       await l1Sender.setBaseBridgeConfig(config);
@@ -526,7 +614,7 @@ describe('L1SenderV3', () => {
       await l2MessageReceiver.connect(OWNER).setPeer(l1Eid, l1SenderAddress);
 
       await l1Sender.setLzEndpointV2(l1Endpoint);
-      await l1Sender.setLzV2Config(l2Eid, { receiver: l2ReceiverAddress, options: '0x' });
+      await l1Sender.setLzV2Config(l2Eid, { eid: l2Eid, receiver: l2ReceiverAddress, options: '0x1234' });
       await l1Sender.setDefaultChainId(l2Eid);
 
       const distributorMock = await deployDistributorV3Mock(await deployRewardPoolMock(), await deployERC20Token());
@@ -562,6 +650,14 @@ describe('L1SenderV3', () => {
       await expect(
         l1Sender['sendMintMessage(address,uint256,address)'](BOB, '999', OWNER, { value: ethers.parseEther('0.1') }),
       ).to.be.revertedWith("L1S: the `msg.sender` isn't `distributor`");
+    });
+    it("should revert when lzEndpointV2 isn't set", async () => {
+      const distributorMock = await deployDistributorV3Mock(await deployRewardPoolMock(), await deployERC20Token());
+      await l1Sender.setDistributor(distributorMock);
+
+      await expect(
+        distributorMock.sendMintMessageToL1Sender(l1Sender, BOB, wei(1), OWNER, { value: wei(1) }),
+      ).to.be.revertedWith('L1S: lzEndpointV2 not set');
     });
   });
 

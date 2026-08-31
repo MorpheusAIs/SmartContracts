@@ -24,6 +24,12 @@ interface IL1SenderV3 is IERC165 {
     event LzEndpointV2Set(address lzEndpointV2);
 
     /**
+     * @notice The event that is emitted when the LayerZero V2 endpoint delegate is set.
+     * @param delegate The delegate address.
+     */
+    event LzDelegateSet(address delegate);
+
+    /**
      * @notice The event that is emitted when the default destination endpoint id is set.
      * @param defaultChainId The default destination endpoint id, used when `sendMintMessage()`
      * is called without an explicit `chainId_` (i.e. through the legacy 3-argument signature).
@@ -54,10 +60,10 @@ interface IL1SenderV3 is IERC165 {
     /**
      * @notice The event that is emitted when wstETH is sent to Base.
      * @param amount The amount of wstETH sent.
-     * @param minGasLimit The minimum L2 execution gas limit passed to the bridge.
+     * @param l2Gas The L2 finalization gas limit passed to the bridge.
      * @param extraData The extra data passed to the bridge.
      */
-    event WstETHSentToBase(uint256 amount, uint32 minGasLimit, bytes extraData);
+    event WstETHSentToBase(uint256 amount, uint32 l2Gas, bytes extraData);
 
     /**
      * @notice The structure that stores the deposit token's (stETH) data.
@@ -73,11 +79,10 @@ interface IL1SenderV3 is IERC165 {
 
     /**
      * @notice The structure that stores the deposit token's (stETH) data for the Base bridge.
-     * @param wstETH The address of wrapped deposit token on Ethereum (`_localToken` for
-     * `IL1StandardBridge.bridgeERC20To` -- same underlying token as `ArbitrumBridgeConfig.wstETH`,
-     * kept separate here so this config doesn't depend on the Arbitrum one being set).
-     * @param remoteWstETH The address of the bridged wrapped deposit token on Base (`_remoteToken`).
-     * @param bridge The address of the OP Stack `L1StandardBridge` ("Base Bridge").
+     * @param wstETH The address of wrapped deposit token on Ethereum.
+     * @param remoteWstETH The address of the bridged wrapped deposit token on Base.
+     * @param bridge The address of Lido's own "L1ERC20TokenBridge" -- NOT the generic OP Stack
+     * `L1StandardBridge`; Base's bridged wstETH is only mintable by Lido's own bridge.
      * @param receiver The address of wrapped token's receiver on Base.
      */
     struct BaseBridgeConfig {
@@ -108,12 +113,16 @@ interface IL1SenderV3 is IERC165 {
 
     /**
      * @notice The structure that stores the LayerZero V2 config for one destination network.
+     * `lzV2Configs` is keyed by the real EVM chain id (e.g. `42161` for Arbitrum, `8453` for Base) --
+     * `eid` is where that resolves to on the LayerZero side; callers never need to know LZ eids.
+     * @param eid The LayerZero V2 destination endpoint id for this chain.
      * @param receiver The `L2MessageReceiverV2` address on the destination network, as `bytes32`
      * (see `OAppCore.peers`/`setPeer` — left-padded address).
      * @param options The LayerZero V2 execution options for the destination (replaces the V1
      * `adapterParams`).
      */
     struct LayerZeroV2Config {
+        uint32 eid;
         bytes32 receiver;
         bytes options;
     }
@@ -145,9 +154,10 @@ interface IL1SenderV3 is IERC165 {
     function lzEndpointV2() external view returns (address);
 
     /**
-     * @notice The function to receive the default destination endpoint id, used by
-     * `sendMintMessage(address,uint256,address)` (the legacy 3-argument signature).
-     * @return The default destination endpoint id.
+     * @notice The function to receive the default destination chain id (real EVM chain id, e.g.
+     * `42161` for Arbitrum), used by `sendMintMessage(address,uint256,address)` (the legacy
+     * 3-argument signature).
+     * @return The default destination chain id.
      */
     function defaultChainId() external view returns (uint32);
 
@@ -180,17 +190,26 @@ interface IL1SenderV3 is IERC165 {
     function setLzEndpointV2(address value_) external;
 
     /**
-     * @notice The function to set the default destination endpoint id, used by
-     * `sendMintMessage(address,uint256,address)` (the legacy 3-argument signature).
+     * @notice The function to set the delegate on the LayerZero V2 endpoint.
      * @dev Only for the contract `owner()`.
-     * @param chainId_ The default destination endpoint id.
+     * @param delegate_ The delegate address.
+     */
+    function setLzDelegate(address delegate_) external;
+
+    /**
+     * @notice The function to set the default destination chain id (real EVM chain id, e.g. `42161`
+     * for Arbitrum), used by `sendMintMessage(address,uint256,address)` (the legacy 3-argument
+     * signature). Must already have a `lzV2Configs` entry.
+     * @dev Only for the contract `owner()`.
+     * @param chainId_ The default destination chain id.
      */
     function setDefaultChainId(uint32 chainId_) external;
 
     /**
      * @notice The function to set the LayerZero V2 config for a destination network.
      * @dev Only for the contract `owner()`.
-     * @param chainId_ The destination endpoint id.
+     * @param chainId_ The destination chain id (real EVM chain id, e.g. `42161` for Arbitrum,
+     * `8453` for Base) -- NOT the LayerZero endpoint id. `config_.eid` is where that resolves to.
      * @param config_ The config.
      */
     function setLzV2Config(uint32 chainId_, LayerZeroV2Config calldata config_) external;
@@ -210,7 +229,8 @@ interface IL1SenderV3 is IERC165 {
      * @param user_ The user's address receiver.
      * @param amount_ The amount of reward token to mint.
      * @param refundTo_ The address to refund the overpaid gas.
-     * @param chainId_ The destination endpoint id (e.g. Arbitrum, Base). See `lzV2Configs`.
+     * @param chainId_ The destination chain id (real EVM chain id, e.g. `42161` for Arbitrum,
+     * `8453` for Base) -- NOT the LayerZero endpoint id. See `lzV2Configs`.
      */
     function sendMintMessage(address user_, uint256 amount_, address refundTo_, uint32 chainId_) external payable;
 
@@ -242,15 +262,14 @@ interface IL1SenderV3 is IERC165 {
     function setBaseBridgeConfig(BaseBridgeConfig calldata newConfig_) external;
 
     /**
-     * @notice The function to send all current balance of the deposit token to Base.
-     * @dev Unlike `sendWstETH` (Arbitrum retryable tickets), the OP Stack bridge doesn't need a
-     * prepaid L2 gas fee from the sender, so this isn't `payable` and there's no
-     * `maxFeePerGas_`/`maxSubmissionCost_` equivalent.
-     * @param minGasLimit_ The minimum gas limit for the L2 relay of the deposit.
-     * @param extraData_ Extra data forwarded to the bridge (not used for anything on-chain besides
-     * being emitted in an event).
+     * @notice The function to send all current balance of wstETH to Base via Lido's own bridge.
+     * @dev Unlike `sendWstETH` (Arbitrum retryable tickets), Lido's bridge doesn't need a prepaid L2
+     * gas fee from the sender, so this isn't `payable` and there's no `maxFeePerGas_`/
+     * `maxSubmissionCost_` equivalent.
+     * @param l2Gas_ The gas limit for the L2 finalization of the deposit.
+     * @param extraData_ Extra data forwarded to the bridge.
      */
-    function sendWstETHToBase(uint32 minGasLimit_, bytes calldata extraData_) external;
+    function sendWstETHToBase(uint32 l2Gas_, bytes calldata extraData_) external;
 
     /**
      * @notice The function to swap the tokens on the contract.

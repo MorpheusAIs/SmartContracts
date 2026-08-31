@@ -16,9 +16,10 @@ Two independent flows:
   (Arbitrum by default). Delivery is a LayerZero V2 message to a new receiver contract (one per
   network) that mints MOR.
 - **Flow B — yield transfer (wstETH).** The protocol owner can choose a destination network when
-  withdrawing accumulated yield from Ethereum. Delivery goes through each network's native bridge
-  (Arbitrum — unchanged, retryable tickets as before; Base — new, the canonical OP Stack bridge) to
-  a receiver contract that can optionally swap the token via Uniswap V3.
+  withdrawing accumulated yield from Ethereum. Delivery goes through each network's bridge for this
+  specific token (Arbitrum — unchanged, retryable tickets as before; Base — new, Lido's own bridge,
+  not the generic OP Stack one) to a receiver contract that can optionally swap the token via
+  Uniswap V3.
 
 ## Roles
 
@@ -121,15 +122,21 @@ lands and mints MOR on both networks.
 ### 6. Ethereum — wire up the Base bridge (Flow B)
 
 **Multisig:**
-- `L1Sender.setBaseBridgeConfig()` — sets the OP Stack bridge address and the Base receiver address
-  (from step 5) that `sendWstETHToBase()` then uses. Run after step 3 — `L1Sender` needs to already
-  be on the new version, otherwise this function doesn't exist yet.
+- `L1Sender.setBaseBridgeConfig()` — sets the bridge address and the Base receiver address (from
+  step 5) that `sendWstETHToBase()` then uses. Run after step 3 — `L1Sender` needs to already be on
+  the new version, otherwise this function doesn't exist yet.
 
 Before relying on this in production: first test-transfer a small amount of wstETH and confirm it
 actually reaches the receiver on Base.
 
 ## Nuances and constraints
 
+- **`chainId_` (in `claim`, `sendMintMessage`, `setLzV2Config`, `setDefaultChainId`) is the real EVM
+  chain id — `42161` for Arbitrum, `8453` for Base — never the LayerZero endpoint id.** Callers
+  (including the frontend) only ever deal in real chain ids. `L1SenderV3` resolves the LZ eid
+  internally: `LayerZeroV2Config` now carries its own `eid` field, keyed in `lzV2Configs` by chain
+  id, and `_sendMintMessage` reads `lzV2Configs[chainId_].eid` when calling the LayerZero endpoint.
+  `setLzV2Config` requires both `chainId_` and `config_.eid` to be non-zero.
 - **Why `L2MessageReceiverV2` is a new contract instead of an upgrade of the old one.** The old
   `L2MessageReceiver` on Arbitrum is `UUPSUpgradeable` — upgrading it is technically possible. But
   the LayerZero V2 OApp contracts (which the new receiver is built on) use their own,
@@ -164,11 +171,18 @@ actually reaches the receiver on Base.
   existing proxy, or just deploy a fresh `L2TokenReceiverV3` on Arbitrum (same pattern we already use
   for the message receiver) — then `router` points at `SwapRouter02` from `init` right away, no
   upgrade and no new setter needed.
-- **The wstETH bridge route to Base is confirmed** — it's the official, native OP Stack Standard
-  Bridge (the same one "Base Bridge" uses), not a third-party bridge. The existence of both Uniswap
-  V3 pools (wstETH/WETH, WETH/MOR) on Base that the yield receiver needs was also verified directly
-  on-chain against the pool factory, not just from docs — both genuinely exist and have active
-  liquidity at the same fee tiers as on Arbitrum.
+- **The wstETH bridge to Base is Lido's own bridge, not the generic OP Stack `L1StandardBridge`.**
+  Base's bridged wstETH is only mintable by Lido's own `L2ERC20TokenBridge` — confirmed on-chain via
+  the token's own `bridge()` getter, which points at Lido's bridge, not the generic
+  `L2StandardBridge`. Depositing through the generic `L1StandardBridge` would escrow the wstETH on L1
+  successfully and then fail to mint on L2 — the deposit would be stuck with no clean way back. The
+  correct L1 contract is Lido's own "Base L1 ERC20 Token Bridge" (publicly tagged as such on
+  Etherscan, and listed on Lido's own [deployed contracts
+  docs](https://docs.lido.fi/deployed-contracts/)), method `depositERC20To`, not `bridgeERC20To`.
+  The existence of both Uniswap V3 pools
+  (wstETH/WETH, WETH/MOR) on Base that the yield receiver needs was also verified directly on-chain
+  against the pool factory, not just from docs — both genuinely exist and have active liquidity at
+  the same fee tiers as on Arbitrum.
 - **`L2MessageReceiverV2` isn't upgradeable at all, by design.** A deliberate tradeoff. If the
   receiver's logic ever needs to change in the future, that's another fresh deploy + minter cutover,
   not an upgrade. Cheaper and safer for this task, but the next logic change will mean repeating the

@@ -10,7 +10,7 @@ export * from './distributor-mock';
 export * from './distributor-v3-mock';
 export * from './l1-sender-mock';
 export * from './l1-sender-v3-mock';
-export * from './l1-standard-bridge-mock';
+export * from './lido-l1-erc20-token-bridge-mock';
 export * from './lz-endpoint-mock';
 export * from './lz-endpoint-v2-mock';
 export * from './reward-pool-mock';
