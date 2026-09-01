@@ -8,12 +8,34 @@ import '@typechain/hardhat';
 import * as dotenv from 'dotenv';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from 'hardhat/builtin-tasks/task-names';
+import { subtask } from 'hardhat/config';
 import { HardhatUserConfig } from 'hardhat/config';
 import 'solidity-coverage';
 import 'solidity-docgen';
 import 'tsconfig-paths/register';
 
 dotenv.config();
+
+// Skips builder-protocol and legacy "old" contracts -- not part of the current capital-protocol
+// Base-L2 work. NOTE: keeps `contracts/interfaces/**/old/**` -- the *interfaces*, not the old
+// implementations -- because current-version mocks (`L1SenderMock`, `DistributorMock`,
+// `DepositPoolMock`, still used by e.g. `L1SenderV3.test.ts`) import types from there.
+const EXCLUDED_COMPILE_PATTERNS = [
+  /\/contracts\/builder-protocol\//,
+  /\/contracts\/interfaces\/builder-protocol\//,
+  /\/contracts\/extensions\//,
+  /\/contracts\/interfaces\/extensions\//,
+  /\/contracts\/capital-protocol\/old\//,
+  /\/contracts\/old\//,
+  /\/contracts\/interfaces\/old\//,
+];
+
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
+  const paths: string[] = await runSuper();
+
+  return paths.filter((p) => !EXCLUDED_COMPILE_PATTERNS.some((re) => re.test(p)));
+});
 
 function privateKey() {
   return process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [];
@@ -29,95 +51,26 @@ function forceTypechain() {
   return process.env.TYPECHAIN_FORCE === 'false';
 }
 
-// 19183235 - 64607378777276381331
-// 19183263 - 502357441883879637000
-// 19183265 --
-// 19183274 - -
-
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       initialDate: '1970-01-01T00:00:00Z',
-      gas: 'auto',
-      // gasPrice: 624381666,
       // forking: {
       //   url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+      //   // url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+      //   // url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       // },
-      // forking: {
-      //   url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      // },
-      // forking: {
-      //   url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      // },
-      // accounts: [
-      //   {
-      //     privateKey: `${process.env.PRIVATE_KEY}`,
-      //     balance: '1000000000000000000000',
-      //   },
-      // ],
     },
-    localhost: {
-      url: 'http://127.0.0.1:8545',
-      initialDate: '1970-01-01T00:00:00Z',
-      gasMultiplier: 1.2,
-      timeout: 1000000000000000,
-    },
-    goerli: {
-      url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    sepolia: {
-      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.1,
-    },
-    chapel: {
-      url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-      timeout: 60000,
-    },
-    mumbai: { url: `https://polygon-mumbai.blockpi.network/v1/rpc/public`, accounts: privateKey(), gasMultiplier: 1.1 },
-    polygonAmoy: {
-      url: `https://polygon-amoy.blockpi.network/v1/rpc/public`,
-      accounts: privateKey(),
-      gasMultiplier: 1.1,
-    },
-    fuji: {
-      url: `https://avalanche-fuji.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    bsc: { url: 'https://bsc-dataseed.binance.org/', accounts: privateKey(), gasMultiplier: 1.2 },
     ethereum: {
-      url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
+      url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    polygon: { url: `https://matic-mainnet.chainstacklabs.com`, accounts: privateKey(), gasMultiplier: 1.2 },
-    avalanche: {
-      url: `https://api.avax.network/ext/bc/C/rpc`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-      timeout: 60000,
+      gasMultiplier: 1.1,
     },
     arbitrum: {
-      url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    arbitrum_goerli: {
-      url: `https://arbitrum-goerli.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: privateKey(),
-      gasMultiplier: 1.2,
-    },
-    arbitrum_sepolia: {
-      url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
       gasMultiplier: 1.1,
     },
-    base_sepolia: { url: `https://sepolia.base.org`, accounts: privateKey(), gasMultiplier: 1.1 },
     base: {
       url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
       accounts: privateKey(),
@@ -127,43 +80,39 @@ const config: HardhatUserConfig = {
   solidity: { version: '0.8.20', settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: 'paris' } },
   etherscan: {
     apiKey: {
-      goerli: `${process.env.ETHERSCAN_KEY}`,
-      sepolia: `${process.env.ETHERSCAN_KEY}`,
-      mainnet: `${process.env.ETHERSCAN_KEY}`,
-      bscTestnet: `${process.env.BSCSCAN_KEY}`,
-      bsc: `${process.env.BSCSCAN_KEY}`,
-      polygonMumbai: `${process.env.POLYGONSCAN_KEY}`,
-      polygonAmoy: `${process.env.POLYGONSCAN_KEY}`,
-      polygon: `${process.env.POLYGONSCAN_KEY}`,
-      avalancheFujiTestnet: `${process.env.AVALANCHE_KEY}`,
-      avalanche: `${process.env.AVALANCHE_KEY}`,
-      arbitrumOne: `${process.env.ARBITRUM_KEY}`,
-      arbitrumGoerli: `${process.env.ETHERSCAN_KEY}`,
-      arbitrum_sepolia: `${process.env.ARBITRUM_KEY}`,
-      base_sepolia: `${process.env.BASE_KEY}`,
-      base: `${process.env.BASE_KEY}`,
+      ethereum: `${process.env.ETHERSCAN_KEY}`,
+      arbitrum: `${process.env.ETHERSCAN_KEY}`,
+      base: `${process.env.ETHERSCAN_KEY}`,
     },
     customChains: [
       {
-        network: 'arbitrum_sepolia',
-        chainId: 421614,
-        urls: { apiURL: 'https://api-sepolia.arbiscan.io/api', browserURL: 'https://sepolia.arbiscan.io/' },
+        network: 'ethereum',
+        chainId: 1,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=1&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://etherscan.io',
+        },
       },
       {
-        network: 'base_sepolia',
-        chainId: 84532,
-        urls: { apiURL: 'https://api-sepolia.basescan.org/api', browserURL: 'https://sepolia.base.io/' },
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=8453&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://basescan.org',
+        },
       },
       {
-        network: 'polygonAmoy',
-        chainId: 80002,
-        urls: { apiURL: 'https://api-amoy.polygonscan.com/api', browserURL: 'https://amoy.polygonscan.com' },
+        network: 'arbitrum',
+        chainId: 42161,
+        urls: {
+          apiURL: `https://api.etherscan.io/v2/api?chainid=42161&apikey=${process.env.ETHERSCAN_KEY}`,
+          browserURL: 'https://arbiscan.io',
+        },
       },
     ],
   },
   migrate: {
     pathToMigrations: './deploy/',
-    // only: 1,
   },
   mocha: { timeout: 1000000 },
   contractSizer: { alphaSort: false, disambiguatePaths: false, runOnCompile: false, strict: false },
@@ -187,6 +136,9 @@ const config: HardhatUserConfig = {
       'builder-protocol/old',
       'capital-protocol/old',
     ],
+  },
+  sourcify: {
+    enabled: false,
   },
 };
 

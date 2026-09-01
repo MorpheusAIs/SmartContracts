@@ -83,6 +83,14 @@ module.exports = async function (deployer: Deployer) {
   // exists on `DistributorV3`. Upgrading out of order would make `claim()` revert for whichever
   // contract gets upgraded first, until the one it calls into catches up. So: L1Sender, then
   // Distributor, then the DepositPools (order among the 5 pools doesn't matter).
+  //
+  // MUST SHIP AS ONE ATOMIC SAFE BATCH (multi-send), not as separate sequential Safe transactions.
+  // Between `L1Sender.upgradeTo(V3)` and `setLzV2Config`, every `claim()` reverts (no LZ V2 config
+  // yet) -- if the multisig executes these one Safe tx at a time instead of one batch, that window
+  // is real downtime, not just a fork-simulation artifact. This function uses
+  // `ethers.getImpersonatedSigner(msAddress)`, which only works on a fork -- it's a spec/rehearsal
+  // of the calls and their order, not how the real multisig run happens. For real: build one Safe
+  // Transaction Builder batch (or `MultiSendCallOnly`) covering every call below, in this order.
   await _step2(deployer);
 };
 

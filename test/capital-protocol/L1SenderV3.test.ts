@@ -181,6 +181,12 @@ describe('L1SenderV3', () => {
     it("should revert when lzEndpointV2 isn't set", async () => {
       await expect(l1Sender.setLzDelegate(BOB)).to.be.revertedWith('L1S: lzEndpointV2 not set');
     });
+    it('should revert when delegate_ is zero', async () => {
+      const endpoint = await deployLayerZeroEndpointV2Mock(1, await OWNER.getAddress());
+      await l1Sender.setLzEndpointV2(endpoint);
+
+      await expect(l1Sender.setLzDelegate(ZERO_ADDR)).to.be.revertedWith('L1S: invalid delegate');
+    });
     it('should revert if not called by the owner', async () => {
       await expect(l1Sender.connect(BOB).setLzDelegate(BOB)).to.be.revertedWith('Ownable: caller is not the owner');
     });
@@ -531,9 +537,7 @@ describe('L1SenderV3', () => {
   describe('#sendWstETHToBase', () => {
     beforeEach(async () => {
       await l1Sender.setStETh(stETH);
-    });
 
-    it('should send stETH tokens to another address', async () => {
       const config = {
         wstETH: wstETH,
         remoteWstETH: OWNER,
@@ -541,35 +545,59 @@ describe('L1SenderV3', () => {
         receiver: BOB,
       };
       await l1Sender.setBaseBridgeConfig(config);
+    });
 
+    it('should wrap stETH and send everything when amount_ is `type(uint256).max`', async () => {
       await stETH.mint(l1Sender, wei(100));
 
-      await l1Sender.sendWstETHToBase(1, '0x');
+      await l1Sender.sendWstETHToBase(ethers.MaxUint256, 1, '0x');
 
       expect(await stETH.balanceOf(l1Sender)).to.eq(0);
       expect(await wstETH.balanceOf(BOB)).to.eq(wei(100));
     });
-    it('should send wstETH tokens to another address', async () => {
-      const config = {
-        wstETH: wstETH,
-        remoteWstETH: OWNER,
-        bridge: lidoL1ERC20TokenBridgeMock,
-        receiver: BOB,
-      };
-      await l1Sender.setBaseBridgeConfig(config);
+    it('should cap amount_ to the post-wrap balance and send everything when amount_ is more than available', async () => {
+      await stETH.mint(l1Sender, wei(100));
 
+      await l1Sender.sendWstETHToBase(wei(1000), 1, '0x');
+
+      expect(await stETH.balanceOf(l1Sender)).to.eq(0);
+      expect(await wstETH.balanceOf(l1Sender)).to.eq(0);
+      expect(await wstETH.balanceOf(BOB)).to.eq(wei(100));
+    });
+    it('should send only the requested amount_, wrapping stETH first, and keep the rest as wstETH', async () => {
+      await stETH.mint(l1Sender, wei(100));
+
+      await l1Sender.sendWstETHToBase(wei(40), 1, '0x');
+
+      expect(await stETH.balanceOf(l1Sender)).to.eq(0);
+      expect(await wstETH.balanceOf(l1Sender)).to.eq(wei(60));
+      expect(await wstETH.balanceOf(BOB)).to.eq(wei(40));
+    });
+    it('should send already-wrapped wstETH without needing any stETH', async () => {
       await wstETH.mint(l1Sender, wei(100));
 
-      await l1Sender.sendWstETHToBase(1, '0x');
+      await l1Sender.sendWstETHToBase(ethers.MaxUint256, 1, '0x');
 
-      expect(await stETH.balanceOf(l1Sender)).to.eq(0);
       expect(await wstETH.balanceOf(BOB)).to.eq(wei(100));
     });
+    it('should revert when there is nothing to send', async () => {
+      await expect(l1Sender.sendWstETHToBase(ethers.MaxUint256, 1, '0x')).to.be.revertedWith('L1S: nothing to send');
+    });
+    it('should revert when l2Gas_ is zero', async () => {
+      await stETH.mint(l1Sender, wei(100));
+
+      await expect(l1Sender.sendWstETHToBase(ethers.MaxUint256, 0, '0x')).to.be.revertedWith('L1S: invalid l2Gas');
+    });
     it("should revert when wstETH isn't set", async () => {
-      await expect(l1Sender.sendWstETHToBase(1, '0x')).to.be.revertedWith("L1S: wstETH isn't set");
+      const freshL1Sender = await deployL1SenderV3();
+      await freshL1Sender.setStETh(stETH);
+
+      await expect(freshL1Sender.sendWstETHToBase(ethers.MaxUint256, 1, '0x')).to.be.revertedWith(
+        "L1S: wstETH isn't set",
+      );
     });
     it('should revert if not called by the owner', async () => {
-      await expect(l1Sender.connect(BOB).sendWstETHToBase(1, '0x')).to.be.revertedWith(
+      await expect(l1Sender.connect(BOB).sendWstETHToBase(ethers.MaxUint256, 1, '0x')).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -658,6 +686,14 @@ describe('L1SenderV3', () => {
       await expect(
         distributorMock.sendMintMessageToL1Sender(l1Sender, BOB, wei(1), OWNER, { value: wei(1) }),
       ).to.be.revertedWith('L1S: lzEndpointV2 not set');
+    });
+    it('should revert when user_ is zero', async () => {
+      const distributorMock = await deployDistributorV3Mock(await deployRewardPoolMock(), await deployERC20Token());
+      await l1Sender.setDistributor(distributorMock);
+
+      await expect(
+        distributorMock.sendMintMessageToL1Sender(l1Sender, ZERO_ADDR, wei(1), OWNER, { value: wei(1) }),
+      ).to.be.revertedWith('L1S: invalid user');
     });
   });
 

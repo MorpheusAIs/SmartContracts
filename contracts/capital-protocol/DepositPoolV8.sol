@@ -289,12 +289,7 @@ contract DepositPoolV8 is IDepositPoolV8, OwnableUpgradeable, UUPSUpgradeable {
         _claimFor(rewardPoolIndex_, staker_, receiver_, 0);
     }
 
-    function claimFor(
-        uint256 rewardPoolIndex_,
-        address staker_,
-        address receiver_,
-        uint32 chainId_
-    ) external payable {
+    function claimFor(uint256 rewardPoolIndex_, address staker_, address receiver_, uint32 chainId_) external payable {
         _claimFor(rewardPoolIndex_, staker_, receiver_, chainId_);
     }
 

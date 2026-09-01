@@ -125,6 +125,7 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
      */
     function setLzDelegate(address delegate_) external onlyOwner {
         require(lzEndpointV2 != address(0), "L1S: lzEndpointV2 not set");
+        require(delegate_ != address(0), "L1S: invalid delegate");
 
         ILayerZeroEndpointV2(lzEndpointV2).setDelegate(delegate_);
 
@@ -174,6 +175,7 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
 
     function _sendMintMessage(address user_, uint256 amount_, address refundTo_, uint32 chainId_) private {
         require(_msgSender() == distributor, "L1S: the `msg.sender` isn't `distributor`");
+        require(user_ != address(0), "L1S: invalid user");
         require(lzEndpointV2 != address(0), "L1S: lzEndpointV2 not set");
 
         if (chainId_ == 0) {
@@ -293,17 +295,24 @@ contract L1SenderV3 is IL1SenderV3, OwnableUpgradeable, UUPSUpgradeable {
     /**
      * @dev Unlike `sendWstETH` (Arbitrum retryable tickets), Lido's bridge doesn't need a prepaid L2
      * gas fee from the sender -- no `msg.value`, no `maxFeePerGas_`/`maxSubmissionCost_` equivalent.
+     * @param amount_ wstETH to send, capped to the post-wrap balance -- if less is available, sends
+     * whatever there is instead of reverting. `type(uint256).max` sends the full balance.
      */
-    function sendWstETHToBase(uint32 l2Gas_, bytes calldata extraData_) external onlyOwner {
+    function sendWstETHToBase(uint256 amount_, uint32 l2Gas_, bytes calldata extraData_) external onlyOwner {
         BaseBridgeConfig memory config_ = baseBridgeConfig;
         require(config_.wstETH != address(0), "L1S: wstETH isn't set");
+        require(l2Gas_ > 0, "L1S: invalid l2Gas");
 
         uint256 stETHBalance_ = IERC20(stETH).balanceOf(address(this));
         if (stETHBalance_ > 0) {
             IWStETH(config_.wstETH).wrap(stETHBalance_);
         }
 
-        uint256 amount_ = IWStETH(config_.wstETH).balanceOf(address(this));
+        uint256 wstETHBalance_ = IWStETH(config_.wstETH).balanceOf(address(this));
+        if (amount_ > wstETHBalance_) {
+            amount_ = wstETHBalance_;
+        }
+        require(amount_ > 0, "L1S: nothing to send");
 
         ILidoL1ERC20TokenBridge(config_.bridge).depositERC20To(
             config_.wstETH,

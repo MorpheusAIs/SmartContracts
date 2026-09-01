@@ -262,14 +262,16 @@ interface IL1SenderV3 is IERC165 {
     function setBaseBridgeConfig(BaseBridgeConfig calldata newConfig_) external;
 
     /**
-     * @notice The function to send all current balance of wstETH to Base via Lido's own bridge.
+     * @notice The function to send wstETH to Base via Lido's own bridge.
      * @dev Unlike `sendWstETH` (Arbitrum retryable tickets), Lido's bridge doesn't need a prepaid L2
      * gas fee from the sender, so this isn't `payable` and there's no `maxFeePerGas_`/
      * `maxSubmissionCost_` equivalent.
+     * @param amount_ The amount of wstETH to send, capped to the post-wrap balance -- if less is
+     * available, sends whatever there is instead of reverting. `type(uint256).max` sends everything.
      * @param l2Gas_ The gas limit for the L2 finalization of the deposit.
      * @param extraData_ Extra data forwarded to the bridge.
      */
-    function sendWstETHToBase(uint32 l2Gas_, bytes calldata extraData_) external;
+    function sendWstETHToBase(uint256 amount_, uint32 l2Gas_, bytes calldata extraData_) external;
 
     /**
      * @notice The function to swap the tokens on the contract.
