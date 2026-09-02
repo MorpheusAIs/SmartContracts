@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract L2MessageReceiverV2 is UUPSUpgradeable {
+contract L2MessageReceiverV2Mock is UUPSUpgradeable {
     function version() external pure returns (uint256) {
         return 2;
     }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /**
  * @title IReferrer
- * @notice Defines the basic interface for the IDepositPool and IDistributor
+ * @notice Defines the basic interface for the IDepositPoolV8 and IDistributorV3
  */
 interface IReferrer {
     /**

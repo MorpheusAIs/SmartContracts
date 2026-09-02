@@ -5,10 +5,10 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IReferrer} from "./IReferrer.sol";
 
 /**
- * @title IDistributor
- * @notice Defines the basic interface for the Distributor
+ * @title IDistributorV3
+ * @notice Defines the basic interface for the DistributorV3
  */
-interface IDistributor is IERC165 {
+interface IDistributorV3 is IERC165 {
     event ChainLinkDataConsumerSet(address chainLinkDataConsumer);
     event L1SenderSet(address l1Sender);
     event AavePoolDataProviderSet(address aavePoolDataProvider);
@@ -216,6 +216,8 @@ interface IDistributor is IERC165 {
 
     /**
      * @notice The function to send the reward token mint message to the `L1SenderV2`.
+     * @dev Sends to `L1SenderV2.defaultChainId()`. Equivalent to
+     * `sendMintMessage(rewardPoolIndex_, user_, amount_, refundTo_, 0)`.
      * @param rewardPoolIndex_ The reward pool index.
      * @param user_ The user's address receiver .
      * @param amount_ The amount of reward token to mint.
@@ -226,6 +228,24 @@ interface IDistributor is IERC165 {
         address user_,
         uint256 amount_,
         address refundTo_
+    ) external payable;
+
+    /**
+     * @notice The function to send the reward token mint message to the `L1SenderV2`, for the
+     * specified destination network.
+     * @param rewardPoolIndex_ The reward pool index.
+     * @param user_ The user's address receiver.
+     * @param amount_ The amount of reward token to mint.
+     * @param refundTo_ The address to refund the overpaid gas.
+     * @param chainId_ The destination endpoint id (e.g. Arbitrum, Base). `0` means
+     * `L1SenderV2.defaultChainId()`.
+     */
+    function sendMintMessage(
+        uint256 rewardPoolIndex_,
+        address user_,
+        uint256 amount_,
+        address refundTo_,
+        uint32 chainId_
     ) external payable;
 
     /**

@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import {IL1SenderV2, IERC165} from "../../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IL1SenderV2, IERC165} from "../../interfaces/capital-protocol/old/IL1SenderV2.sol";
 
 contract L1SenderMock is UUPSUpgradeable, IERC165 {
     mapping(address => uint256) public minted;

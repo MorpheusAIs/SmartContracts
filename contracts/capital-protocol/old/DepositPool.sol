@@ -7,12 +7,12 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {PRECISION} from "@solarity/solidity-lib/utils/Globals.sol";
 
-import {IDepositPool, IERC165} from "../interfaces/capital-protocol/IDepositPool.sol";
-import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
-import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
+import {IDepositPool, IERC165} from "../../interfaces/capital-protocol/old/IDepositPool.sol";
+import {IRewardPool} from "../../interfaces/capital-protocol/IRewardPool.sol";
+import {IDistributor} from "../../interfaces/capital-protocol/old/IDistributor.sol";
 
-import {LockMultiplierMath} from "../libs/LockMultiplierMath.sol";
-import {ReferrerLib} from "../libs/ReferrerLib.sol";
+import {LockMultiplierMath} from "../../libs/LockMultiplierMath.sol";
+import {ReferrerLib} from "../../libs/ReferrerLib.sol";
 
 contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
