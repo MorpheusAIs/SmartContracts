@@ -49,9 +49,11 @@ const _step1 = async (deployer: Deployer) => {
   });
 };
 
-// Before relying on this in production: call `sendWstETHToBase(200_000, "0x")` and confirm it
-// lands as the bridged wstETH on `L2TokenReceiverV3` on Base. Reverts here are safe (no funds move
-// on a revert).
+// Before relying on this in production: call `sendWstETHToBase(probeWstETHWei, 200_000, "0x")` and
+// confirm it lands as the bridged wstETH on `L2TokenReceiverV3` on Base. `amount_` is capped to the
+// post-wrap balance -- a value larger than the balance is silently capped to it, not reverted, so a
+// real probe amount (not `type(uint256).max`) actually sends only that much. Reverts here are safe
+// (no funds move on a revert).
 
 // npx hardhat migrate --path-to-migrations ./deploy/capital-protocol/8-add-base-as-l2 --only 6 --network ethereum
 // npx hardhat migrate --path-to-migrations ./deploy/capital-protocol/8-add-base-as-l2 --only 6 --network ethereum --verify --continue

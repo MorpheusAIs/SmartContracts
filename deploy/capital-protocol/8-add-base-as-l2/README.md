@@ -87,14 +87,20 @@ through this path before.
 - Deploys the new implementations `L1SenderV3`, `DistributorV3`, `DepositPoolV8` — just code, has no
   effect on the live system until the proxies are actually switched over.
 
-**Multisig** (strictly in this order — otherwise claiming temporarily breaks, see the explanation in
-the migration file itself):
+**Multisig** — strictly in this order (matches `3_mainnet.ts`'s `_step2`, not the reverse):
+otherwise claiming temporarily breaks, see the explanation in the migration file itself. Must ship
+as **one atomic Safe batch** (Transaction Builder / `MultiSendCallOnly`), not as separate sequential
+Safe transactions — between `upgradeTo(V3)` and `setLzV2Config`, every `claim()` reverts, and that
+window is real downtime if the calls land as separate transactions instead of one bundle.
 - `L1Sender.upgradeTo(...)` — points the proxy at the new implementation.
 - `L1Sender.setLzEndpointV2()` — sets the LayerZero V2 endpoint address on Ethereum.
+- `L1Sender.setLzDelegate()` — sets the delegate on the LZ endpoint (call once, right after
+  `setLzEndpointV2`).
+- `L1Sender.setLzV2Config()` × 2 (Arbitrum, Base) — exactly where to send the LZ message on each
+  network (receiver addresses from steps 1-2). Must run **before** `setDefaultChainId` — that setter
+  now requires a config to already exist for the chain id it's pointed at.
 - `L1Sender.setDefaultChainId()` — which network is used when the user doesn't specify one
   explicitly (Arbitrum).
-- `L1Sender.setLzV2Config()` × 2 (Arbitrum, Base) — exactly where to send the LZ message on each
-  network (receiver addresses from steps 1-2).
 - `Distributor.upgradeTo(...)`.
 - `DepositPool.upgradeTo(...)` × 5 — one per pool (stETH/wETH/wBTC/USDC/USDT).
 
