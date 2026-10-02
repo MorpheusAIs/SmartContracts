@@ -75,6 +75,13 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
 
     /** @dev UPGRADE `DepositPool`, v7 end. */
 
+    /** @dev UPGRADE `DepositPool`, v8. Fix Issue #63: per-pool deposit tracking for multi-pool migration. */
+    mapping(uint256 => uint256) public depositedPerPublicPool;
+    mapping(uint256 => bool) public poolMigrationDone;
+    uint256 public totalMigratedPublicPools;
+    bool public isYieldTransferred;
+    /** @dev UPGRADE `DepositPool`, v8 end. */
+
     /**********************************************************************************************/
     /*** Init, IERC165                                                                          ***/
     /**********************************************************************************************/
@@ -130,7 +137,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
         );
     }
 
-    function migrate(uint256 rewardPoolIndex_) external onlyOwner {
+    function migrate(uint256 rewardPoolIndex_) public onlyOwner {
         require(!isMigrationOver, "DS: the migration is over");
         if (totalDepositedInPublicPools == 0) {
             isMigrationOver = true;
@@ -139,21 +146,46 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             return;
         }
 
+        require(!poolMigrationDone[rewardPoolIndex_], "DS: pool already migrated");
+
         IRewardPool rewardPool_ = IRewardPool(IDistributor(distributor).rewardPool());
         rewardPool_.onlyExistedRewardPool(rewardPoolIndex_);
         rewardPool_.onlyPublicRewardPool(rewardPoolIndex_);
 
-        // Transfer yield to prevent the reward loss
-        uint256 remainder_ = IERC20(depositToken).balanceOf(address(this)) - totalDepositedInPublicPools;
-        require(remainder_ > 0, "DS: yield for token is zero");
-        IERC20(depositToken).transfer(distributor, remainder_);
+        // Transfer yield once across all pools to prevent reward loss
+        if (!isYieldTransferred) {
+            uint256 currentBalance_ = IERC20(depositToken).balanceOf(address(this));
+            require(currentBalance_ > totalDepositedInPublicPools, "DS: yield for token is zero");
+            uint256 remainder_ = currentBalance_ - totalDepositedInPublicPools;
+            IERC20(depositToken).transfer(distributor, remainder_);
+            isYieldTransferred = true;
+        }
 
-        IERC20(depositToken).approve(distributor, totalDepositedInPublicPools);
-        IDistributor(distributor).supply(rewardPoolIndex_, address(this), totalDepositedInPublicPools);
+        uint256 poolDeposited_ = depositedPerPublicPool[rewardPoolIndex_];
+        if (poolDeposited_ == 0) {
+            // Backward-compatibility: if upgraded from single-pool contract or tracking uninitialized
+            poolDeposited_ = totalDepositedInPublicPools - totalMigratedPublicPools;
+        }
 
-        isMigrationOver = true;
+        require(poolDeposited_ > 0, "DS: nothing to migrate for pool");
+
+        IERC20(depositToken).approve(distributor, poolDeposited_);
+        IDistributor(distributor).supply(rewardPoolIndex_, address(this), poolDeposited_);
+
+        poolMigrationDone[rewardPoolIndex_] = true;
+        totalMigratedPublicPools += poolDeposited_;
+
+        if (totalMigratedPublicPools >= totalDepositedInPublicPools) {
+            isMigrationOver = true;
+        }
 
         emit Migrated(rewardPoolIndex_);
+    }
+
+    function migrateMultiple(uint256[] calldata rewardPoolIndices_) external onlyOwner {
+        for (uint256 i = 0; i < rewardPoolIndices_.length; ++i) {
+            migrate(rewardPoolIndices_[i]);
+        }
     }
 
     function editReferrerTiers(uint256 rewardPoolIndex_, ReferrerTier[] calldata referrerTiers_) external onlyOwner {
@@ -377,6 +409,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             require(userData.deposited + amount_ >= rewardPoolProtocolDetails.minimalStake, "DS: amount too low");
 
             totalDepositedInPublicPools += amount_;
+            depositedPerPublicPool[rewardPoolIndex_] += amount_;
         }
 
         userData.pendingRewards = _getCurrentUserReward(currentPoolRate_, userData);
@@ -438,6 +471,7 @@ contract DepositPool is IDepositPool, OwnableUpgradeable, UUPSUpgradeable {
             amount_ = IDistributor(distributor).withdraw(rewardPoolIndex_, user_, amount_);
 
             totalDepositedInPublicPools -= amount_;
+            depositedPerPublicPool[rewardPoolIndex_] -= amount_;
         }
 
         uint256 newDeposited_;
