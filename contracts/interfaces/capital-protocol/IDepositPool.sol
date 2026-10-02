@@ -251,6 +251,27 @@ interface IDepositPool is IERC165, IReferrer {
     function migrate(uint256 rewardPoolIndex_) external;
 
     /**
+     * @notice The function to migrate multiple public reward pools in a single transaction.
+     * @dev Only for the contract `owner()`.
+     * @param rewardPoolIndices_ Array of reward pool indices to migrate.
+     */
+    function migrateMultiple(uint256[] calldata rewardPoolIndices_) external;
+
+    /**
+     * @notice The function to query deposits per public pool.
+     * @param rewardPoolIndex_ The reward pool index.
+     * @return The deposited amount in this pool.
+     */
+    function depositedPerPublicPool(uint256 rewardPoolIndex_) external view returns (uint256);
+
+    /**
+     * @notice The function to query if a public pool migration is done.
+     * @param rewardPoolIndex_ The reward pool index.
+     * @return True if pool is migrated.
+     */
+    function poolMigrationDone(uint256 rewardPoolIndex_) external view returns (bool);
+
+    /**
      * @notice The function to update the referrer tiers.
      * @dev Only for the contract `owner()`.
      * @param rewardPoolIndex_ The reward pool index.
