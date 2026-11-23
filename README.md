@@ -2,6 +2,8 @@
 
 Smart Contracts For The Morpheus Network
 
+**Community:** questions and ideas go in [Morpheus Discussions](https://github.com/orgs/MorpheusAIs/discussions).
+
 This repository contains following smart contracts for the Morpheus Network.
 
 ### Token
