@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import {IReferrer} from "./IReferrer.sol";
+import {IReferrer} from "../IReferrer.sol";
 
 /**
  * @title IDepositPool

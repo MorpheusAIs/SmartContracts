@@ -1,0 +1,149 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {AavePoolDataProviderMock} from "./aave/AavePoolDataProviderMock.sol";
+import {AavePoolMock} from "./aave/AavePoolMock.sol";
+
+import {IDistributorV3, IERC165} from "../../interfaces/capital-protocol/IDistributorV3.sol";
+import {IL1SenderV3} from "../../interfaces/capital-protocol/IL1SenderV3.sol";
+
+import "../tokens/ERC20Token.sol";
+
+contract DistributorV3Mock {
+    using SafeERC20 for IERC20;
+
+    address public rewardPool;
+    address public rewardToken;
+    address public aavePoolMock;
+
+    mapping(address => IDistributorV3.DepositPool) public depositPools;
+    mapping(address => uint32) public mintedChainId;
+
+    uint256 public distributedRewardsAnswer;
+
+    constructor(address rewardPool_, address rewardToken_) {
+        rewardPool = rewardPool_;
+        rewardToken = rewardToken_;
+    }
+
+    function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
+        return interfaceId_ == type(IDistributorV3).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+    }
+
+    function setAavePoolMock(address aavePoolMock_) external {
+        aavePoolMock = aavePoolMock_;
+    }
+
+    function addDepositPool(
+        address depositPoolAddress_,
+        address depositToken_,
+        IDistributorV3.Strategy strategy_
+    ) external {
+        IDistributorV3.DepositPool memory depositPool_ = IDistributorV3.DepositPool(
+            depositToken_,
+            "",
+            0,
+            0,
+            0,
+            strategy_,
+            address(0),
+            true
+        );
+
+        if (strategy_ == IDistributorV3.Strategy.AAVE) {
+            IERC20(depositToken_).safeApprove(aavePoolMock, type(uint256).max);
+
+            (address aToken_, , ) = AavePoolDataProviderMock(AavePoolMock(aavePoolMock).aavePoolDataProviderMock())
+                .getReserveTokensAddresses(depositToken_);
+            IERC20(aToken_).approve(aavePoolMock, type(uint256).max);
+        }
+
+        depositPools[depositPoolAddress_] = depositPool_;
+    }
+
+    function distributeRewards(uint256 rewardPoolIndex_) external {}
+
+    function setDistributedRewardsAnswer(uint256 value_) external {
+        distributedRewardsAnswer = value_;
+    }
+
+    function getDistributedRewards(
+        uint256 rewardPoolIndex_,
+        address depositPoolAddress_
+    ) external view returns (uint256) {
+        uint256 preventWarnings_ = rewardPoolIndex_ + uint256(uint160(depositPoolAddress_));
+
+        return distributedRewardsAnswer + preventWarnings_ - preventWarnings_;
+    }
+
+    function sendMintMessage(
+        uint256 rewardPoolIndex_,
+        address user_,
+        uint256 amount_,
+        address refundTo_
+    ) external payable {
+        uint256 preventWarnings_ = uint256(uint160(refundTo_)) + rewardPoolIndex_;
+
+        ERC20Token(rewardToken).mint(user_, amount_ + preventWarnings_ - preventWarnings_);
+    }
+
+    function sendMintMessage(
+        uint256 rewardPoolIndex_,
+        address user_,
+        uint256 amount_,
+        address refundTo_,
+        uint32 chainId_
+    ) external payable {
+        uint256 preventWarnings_ = uint256(uint160(refundTo_)) + rewardPoolIndex_;
+
+        ERC20Token(rewardToken).mint(user_, amount_ + preventWarnings_ - preventWarnings_);
+        mintedChainId[user_] = chainId_;
+    }
+
+    function sendMintMessageToL1Sender(
+        address l1Sender_,
+        address user_,
+        uint256 amount_,
+        address refundTo_
+    ) external payable {
+        IL1SenderV3(l1Sender_).sendMintMessage{value: msg.value}(user_, amount_, refundTo_);
+    }
+
+    function supply(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
+        uint256 preventWarnings_ = rewardPoolIndex_;
+
+        uint256 balanceBefore_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+        IERC20(depositPools[msg.sender].token).safeTransferFrom(
+            user_,
+            address(this),
+            amount_ + preventWarnings_ - preventWarnings_
+        );
+        uint256 balanceAfter_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+
+        amount_ = balanceAfter_ - balanceBefore_;
+
+        if (depositPools[msg.sender].strategy == IDistributorV3.Strategy.AAVE) {
+            AavePoolMock(aavePoolMock).supply(depositPools[msg.sender].token, amount_, address(0), 0);
+        }
+
+        return amount_;
+    }
+
+    function withdraw(uint256 rewardPoolIndex_, address user_, uint256 amount_) external returns (uint256) {
+        uint256 preventWarnings_ = rewardPoolIndex_;
+
+        if (depositPools[msg.sender].strategy == IDistributorV3.Strategy.AAVE) {
+            AavePoolMock(aavePoolMock).withdraw(depositPools[msg.sender].token, amount_, address(this));
+        }
+
+        uint256 balanceBefore_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+        IERC20(depositPools[msg.sender].token).safeTransfer(user_, amount_ + preventWarnings_ - preventWarnings_);
+        uint256 balanceAfter_ = IERC20(depositPools[msg.sender].token).balanceOf(address(this));
+
+        amount_ = balanceBefore_ - balanceAfter_;
+
+        return amount_;
+    }
+}

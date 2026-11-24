@@ -6,27 +6,27 @@ import { getDefaultSwapParams } from '../helpers/distribution-helper';
 import { Reverter } from '../helpers/reverter';
 
 import {
-  IL2TokenReceiverV2,
-  L2TokenReceiverV2,
+  IL2TokenReceiverV3,
+  L2TokenReceiverV3,
   MOR,
   NonfungiblePositionManagerMock,
   StETHMock,
-  UniswapSwapRouterMock,
+  UniswapV3SwapRouter02Mock,
 } from '@/generated-types/ethers';
 import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 
-describe('L2TokenReceiverV2', () => {
+describe('L2TokenReceiverV3', () => {
   const reverter = new Reverter();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let OWNER: SignerWithAddress;
   let SECOND: SignerWithAddress;
 
-  let swapRouter: UniswapSwapRouterMock;
+  let swapRouter: UniswapV3SwapRouter02Mock;
   let nonfungiblePositionManager: NonfungiblePositionManagerMock;
 
-  let l2TokenReceiver: L2TokenReceiverV2;
+  let l2TokenReceiver: L2TokenReceiverV3;
   let inputToken: StETHMock;
   let outputToken: MOR;
   before(async () => {
@@ -35,14 +35,14 @@ describe('L2TokenReceiverV2', () => {
     const [ERC1967ProxyFactory, L2TokenReceiver, StETHMock, Mor, SwapRouterMock, NonfungiblePositionManagerMock] =
       await Promise.all([
         ethers.getContractFactory('ERC1967Proxy'),
-        ethers.getContractFactory('L2TokenReceiverV2'),
+        ethers.getContractFactory('L2TokenReceiverV3'),
         ethers.getContractFactory('StETHMock'),
         ethers.getContractFactory('MOR'),
-        ethers.getContractFactory('UniswapSwapRouterMock'),
+        ethers.getContractFactory('UniswapV3SwapRouter02Mock'),
         ethers.getContractFactory('NonfungiblePositionManagerMock'),
       ]);
 
-    let l2TokenReceiverImplementation: L2TokenReceiverV2;
+    let l2TokenReceiverImplementation: L2TokenReceiverV3;
 
     [inputToken, outputToken, swapRouter, nonfungiblePositionManager, l2TokenReceiverImplementation] =
       await Promise.all([
@@ -54,7 +54,7 @@ describe('L2TokenReceiverV2', () => {
       ]);
 
     const l2TokenReceiverProxy = await ERC1967ProxyFactory.deploy(l2TokenReceiverImplementation, '0x');
-    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiverV2;
+    l2TokenReceiver = L2TokenReceiver.attach(l2TokenReceiverProxy) as L2TokenReceiverV3;
     await l2TokenReceiver.L2TokenReceiver__init(swapRouter, nonfungiblePositionManager, {
       tokenIn: inputToken,
       tokenOut: outputToken,
@@ -119,24 +119,24 @@ describe('L2TokenReceiverV2', () => {
 
     describe('#_authorizeUpgrade', () => {
       it('should correctly upgrade', async () => {
-        const l2TokenReceiverV2Factory = await ethers.getContractFactory('L2TokenReceiverV2');
+        const l2TokenReceiverV2Factory = await ethers.getContractFactory('L2TokenReceiverV3');
         const l2TokenReceiverV2Implementation = await l2TokenReceiverV2Factory.deploy();
 
         await l2TokenReceiver.upgradeTo(l2TokenReceiverV2Implementation);
 
-        const l2TokenReceiverV2 = l2TokenReceiverV2Factory.attach(l2TokenReceiver) as L2TokenReceiverV2;
+        const l2TokenReceiverV3 = l2TokenReceiverV2Factory.attach(l2TokenReceiver) as L2TokenReceiverV3;
 
-        expect(await l2TokenReceiverV2.version()).to.eq(2);
-        expect(await l2TokenReceiverV2.router()).to.eq(await swapRouter.getAddress());
-        expect(await l2TokenReceiverV2.nonfungiblePositionManager()).to.eq(
+        expect(await l2TokenReceiverV3.version()).to.eq(3);
+        expect(await l2TokenReceiverV3.router()).to.eq(await swapRouter.getAddress());
+        expect(await l2TokenReceiverV3.nonfungiblePositionManager()).to.eq(
           await nonfungiblePositionManager.getAddress(),
         );
-        const secondSwapParams = await l2TokenReceiverV2.secondSwapParams();
+        const secondSwapParams = await l2TokenReceiverV3.secondSwapParams();
         expect(secondSwapParams.tokenIn).to.eq(await inputToken.getAddress());
         expect(secondSwapParams.tokenOut).to.eq(await outputToken.getAddress());
         expect(secondSwapParams.fee).to.eq(500);
         expect(secondSwapParams.sqrtPriceLimitX96).to.eq(0);
-        const firstSwapParams = await l2TokenReceiverV2.firstSwapParams();
+        const firstSwapParams = await l2TokenReceiverV3.firstSwapParams();
         expect(firstSwapParams.tokenIn).to.eq(ZERO_ADDR);
         expect(firstSwapParams.tokenOut).to.eq(ZERO_ADDR);
         expect(firstSwapParams.fee).to.eq(0);
@@ -164,7 +164,7 @@ describe('L2TokenReceiverV2', () => {
 
   describe('#editParams', () => {
     it('should edit params', async () => {
-      const newParams: IL2TokenReceiverV2.SwapParamsStruct = {
+      const newParams: IL2TokenReceiverV3.SwapParamsStruct = {
         tokenIn: await outputToken.getAddress(),
         tokenOut: await inputToken.getAddress(),
         fee: 1,
@@ -181,7 +181,7 @@ describe('L2TokenReceiverV2', () => {
       expect(params.sqrtPriceLimitX96).to.equal(newParams.sqrtPriceLimitX96);
     });
     it('should set new allowance', async () => {
-      const newParams: IL2TokenReceiverV2.SwapParamsStruct = {
+      const newParams: IL2TokenReceiverV3.SwapParamsStruct = {
         tokenIn: await outputToken.getAddress(),
         tokenOut: await inputToken.getAddress(),
         fee: 1,
@@ -213,6 +213,37 @@ describe('L2TokenReceiverV2', () => {
   });
 
   describe('#swap', () => {
+    it('should swap tokens via the router', async () => {
+      await inputToken.mint(l2TokenReceiver, wei(1));
+      await outputToken.mint(swapRouter, wei(1));
+
+      const deadline = (await ethers.provider.getBlock('latest'))!.timestamp + 1000;
+      const tx = await l2TokenReceiver.swap(wei(1), 0, deadline, false);
+
+      await expect(tx).to.changeTokenBalances(inputToken, [l2TokenReceiver, swapRouter], [-wei(1), wei(1)]);
+      await expect(tx).to.changeTokenBalances(outputToken, [swapRouter, l2TokenReceiver], [-wei(1), wei(1)]);
+    });
+    it('should emit TokensSwapped', async () => {
+      await inputToken.mint(l2TokenReceiver, wei(1));
+      await outputToken.mint(swapRouter, wei(1));
+
+      const deadline = (await ethers.provider.getBlock('latest'))!.timestamp + 1000;
+      const tx = await l2TokenReceiver.swap(wei(1), 0, deadline, false);
+
+      // `l2TokenReceiver` comes from `Factory.attach(proxyContract)` (not a plain address), which
+      // leaves `.target` as a non-string -- `.to.emit()` requires a string target, so re-attach by
+      // address just for this assertion.
+      const l2TokenReceiverAt = await ethers.getContractAt('L2TokenReceiverV3', await l2TokenReceiver.getAddress());
+
+      await expect(tx)
+        .to.emit(l2TokenReceiverAt, 'TokensSwapped')
+        .withArgs(await inputToken.getAddress(), await outputToken.getAddress(), wei(1), wei(1), 0);
+    });
+    it('should revert when deadline has passed', async () => {
+      const deadline = (await ethers.provider.getBlock('latest'))!.timestamp - 1;
+
+      await expect(l2TokenReceiver.swap(1, 1, deadline, false)).to.be.revertedWith('L2TR: expired');
+    });
     it('should return if caller is not the owner', async () => {
       await expect(l2TokenReceiver.connect(SECOND).swap(1, 1, 1, false)).to.be.revertedWith(
         'Ownable: caller is not the owner',
@@ -252,4 +283,4 @@ describe('L2TokenReceiverV2', () => {
   });
 });
 
-// npx hardhat test "test/L2TokenReceiverV2.test.ts"
+// npx hardhat test "test/L2TokenReceiverV3.test.ts"

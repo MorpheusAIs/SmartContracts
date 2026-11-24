@@ -14,13 +14,13 @@ import {IRewardsController} from "../interfaces/aave/IRewardsController.sol";
 
 import {DecimalsConverter} from "@solarity/solidity-lib/libs/decimals/DecimalsConverter.sol";
 
-import {IDistributor, IERC165} from "../interfaces/capital-protocol/IDistributor.sol";
-import {IL1SenderV2} from "../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IDistributorV3, IERC165} from "../interfaces/capital-protocol/IDistributorV3.sol";
+import {IL1SenderV3} from "../interfaces/capital-protocol/IL1SenderV3.sol";
 import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
-import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
+import {IDepositPoolV8} from "../interfaces/capital-protocol/IDepositPoolV8.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";
 
-contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
+contract DistributorV3 is IDistributorV3, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
     using DecimalsConverter for uint256;
     using Math for uint256;
@@ -86,7 +86,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function DistributorV2_init(
+    function DistributorV3_init(
         address chainLinkDataConsumer_,
         address aavePoolDataProvider_,
         address aavePoolAddressesProvider_,
@@ -104,7 +104,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function supportsInterface(bytes4 interfaceId_) external pure returns (bool) {
-        return interfaceId_ == type(IDistributor).interfaceId || interfaceId_ == type(IERC165).interfaceId;
+        return interfaceId_ == type(IDistributorV3).interfaceId || interfaceId_ == type(IERC165).interfaceId;
     }
 
     /**********************************************************************************************/
@@ -123,7 +123,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function setL1Sender(address value_) public onlyOwner {
-        require(IERC165(value_).supportsInterface(type(IL1SenderV2).interfaceId), "DR: invalid L1SenderV2 address");
+        require(IERC165(value_).supportsInterface(type(IL1SenderV3).interfaceId), "DR: invalid L1SenderV2 address");
 
         l1Sender = value_;
 
@@ -201,7 +201,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         rewardPool_.onlyExistedRewardPool(rewardPoolIndex_);
 
         require(
-            IERC165(depositPoolAddress_).supportsInterface(type(IDepositPool).interfaceId),
+            IERC165(depositPoolAddress_).supportsInterface(type(IDepositPoolV8).interfaceId),
             "DR: the deposit pool address is invalid"
         );
 
@@ -460,7 +460,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     function withdrawUndistributedRewards(address user_, address refundTo_) external payable onlyOwner {
         require(undistributedRewards > 0, "DR: nothing to withdraw");
 
-        IL1SenderV2(l1Sender).sendMintMessage{value: msg.value}(user_, undistributedRewards, refundTo_);
+        IL1SenderV3(l1Sender).sendMintMessage{value: msg.value}(user_, undistributedRewards, refundTo_);
 
         undistributedRewards = 0;
     }
@@ -491,7 +491,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
 
     /**
      * @dev Used as a universal proxy for all `DepositPool` so that the `msg.sender` of the message to the
-     * reward mint is one.
+     * reward mint is one. Sends to `L1SenderV2.defaultChainId()`.
      */
     function sendMintMessage(
         uint256 rewardPoolIndex_,
@@ -499,10 +499,34 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
         uint256 amount_,
         address refundTo_
     ) external payable {
+        _sendMintMessage(rewardPoolIndex_, user_, amount_, refundTo_, 0);
+    }
+
+    /**
+     * @dev Same as above, for the specified destination network. `chainId_ == 0` means
+     * `L1SenderV2.defaultChainId()`.
+     */
+    function sendMintMessage(
+        uint256 rewardPoolIndex_,
+        address user_,
+        uint256 amount_,
+        address refundTo_,
+        uint32 chainId_
+    ) external payable {
+        _sendMintMessage(rewardPoolIndex_, user_, amount_, refundTo_, chainId_);
+    }
+
+    function _sendMintMessage(
+        uint256 rewardPoolIndex_,
+        address user_,
+        uint256 amount_,
+        address refundTo_,
+        uint32 chainId_
+    ) private {
         address depositPoolAddress_ = _msgSender();
         _onlyExistedDepositPool(rewardPoolIndex_, depositPoolAddress_);
 
-        IL1SenderV2(l1Sender).sendMintMessage{value: msg.value}(user_, amount_, refundTo_);
+        IL1SenderV3(l1Sender).sendMintMessage{value: msg.value}(user_, amount_, refundTo_, chainId_);
     }
 
     /**
@@ -556,7 +580,7 @@ contract DistributorV2 is IDistributor, OwnableUpgradeable, UUPSUpgradeable {
     /**********************************************************************************************/
 
     function version() external pure returns (uint256) {
-        return 2;
+        return 3;
     }
 
     function _authorizeUpgrade(address) internal view override onlyOwner {}

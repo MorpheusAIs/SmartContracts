@@ -6,8 +6,8 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {AavePoolDataProviderMock} from "./aave/AavePoolDataProviderMock.sol";
 import {AavePoolMock} from "./aave/AavePoolMock.sol";
 
-import {IDistributor, IERC165} from "../../interfaces/capital-protocol/IDistributor.sol";
-import {IL1SenderV2} from "../../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IDistributor, IERC165} from "../../interfaces/capital-protocol/old/IDistributor.sol";
+import {IL1SenderV2} from "../../interfaces/capital-protocol/old/IL1SenderV2.sol";
 
 import "../tokens/ERC20Token.sol";
 

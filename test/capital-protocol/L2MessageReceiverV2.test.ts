@@ -2,7 +2,13 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { L2MessageReceiver, L2MessageReceiverV2, LayerZeroEndpointV2Mock, MOR, MOROFT } from '@/generated-types/ethers';
+import {
+  L2MessageReceiver,
+  L2MessageReceiverV2Mock,
+  LayerZeroEndpointV2Mock,
+  MOR,
+  MOROFT,
+} from '@/generated-types/ethers';
 import { ZERO_ADDR, ZERO_BYTES32 } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
@@ -78,14 +84,16 @@ describe('L2MessageReceiver', () => {
 
     describe('#_authorizeUpgrade', () => {
       it('should correctly upgrade', async () => {
-        const l2MessageReceiverV2Factory = await ethers.getContractFactory('L2MessageReceiverV2');
-        const l2MessageReceiverV2Implementation = await l2MessageReceiverV2Factory.deploy();
+        const l2MessageReceiverV2MockFactory = await ethers.getContractFactory('L2MessageReceiverV2Mock');
+        const l2MessageReceiverV2MockImplementation = await l2MessageReceiverV2MockFactory.deploy();
 
-        await l2MessageReceiver.upgradeTo(l2MessageReceiverV2Implementation);
+        await l2MessageReceiver.upgradeTo(l2MessageReceiverV2MockImplementation);
 
-        const l2MessageReceiverV2 = l2MessageReceiverV2Factory.attach(l2MessageReceiver) as L2MessageReceiverV2;
+        const l2MessageReceiverV2Mock = l2MessageReceiverV2MockFactory.attach(
+          l2MessageReceiver,
+        ) as L2MessageReceiverV2Mock;
 
-        expect(await l2MessageReceiverV2.version()).to.eq(2);
+        expect(await l2MessageReceiverV2Mock.version()).to.eq(2);
       });
       it('should revert if caller is not the owner', async () => {
         await expect(l2MessageReceiver.connect(SECOND).upgradeTo(ZERO_ADDR)).to.be.revertedWith(
