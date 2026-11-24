@@ -7,7 +7,9 @@ import {
   deployDistributorMock,
   deployERC20Token,
   deployInterfaceMock,
+  deployL1ERC20BridgeMock,
   deployL1SenderV2,
+  deployL1SenderV3,
   deployL2MessageReceiver,
   deployLZEndpointMock,
   deployRewardPoolMock,
@@ -17,9 +19,9 @@ import {
 } from '../helpers/deployers';
 
 import {
-  ArbitrumBridgeGatewayRouterMock,
   DistributorMock,
-  L1SenderV2,
+  L1ERC20BridgeMock,
+  L1SenderV3,
   StETHMock,
   UniswapSwapRouterMock,
   WStETHMock,
@@ -28,7 +30,7 @@ import { ZERO_ADDR } from '@/scripts/utils/constants';
 import { wei } from '@/scripts/utils/utils';
 import { Reverter } from '@/test/helpers/reverter';
 
-describe('L1SenderV2', () => {
+describe('L1SenderV3', () => {
   const reverter = new Reverter();
 
   let OWNER: SignerWithAddress;
@@ -36,9 +38,10 @@ describe('L1SenderV2', () => {
 
   let stETH: StETHMock;
   let wstETH: WStETHMock;
-  let l1Sender: L1SenderV2;
+  let l1Sender: L1SenderV3;
   let distributor: DistributorMock;
-  let arbitrumBridgeGatewayRouterMock: ArbitrumBridgeGatewayRouterMock;
+  // let arbitrumBridgeGatewayRouterMock: ArbitrumBridgeGatewayRouterMock;
+  let l1ERC20BridgeMock: L1ERC20BridgeMock;
   let uniswapSwapRouterMock: UniswapSwapRouterMock;
 
   before(async () => {
@@ -47,9 +50,10 @@ describe('L1SenderV2', () => {
     stETH = await deployStETHMock();
     wstETH = await deployWstETHMock(stETH);
     distributor = await deployDistributorMock(await deployRewardPoolMock(), await deployERC20Token());
-    arbitrumBridgeGatewayRouterMock = await deployArbitrumBridgeGatewayRouterMock();
+    // arbitrumBridgeGatewayRouterMock = await deployArbitrumBridgeGatewayRouterMock();
+    l1ERC20BridgeMock = await deployL1ERC20BridgeMock();
     uniswapSwapRouterMock = await deployUniswapSwapRouterMock();
-    l1Sender = await deployL1SenderV2();
+    l1Sender = await deployL1SenderV3();
 
     await reverter.snapshot();
   });
@@ -61,7 +65,7 @@ describe('L1SenderV2', () => {
       it('should disable initialize function', async () => {
         const reason = 'Initializable: contract is already initialized';
 
-        await expect(l1Sender.connect(OWNER).L1SenderV2__init()).to.be.revertedWith(reason);
+        await expect(l1Sender.connect(OWNER).L1SenderV3__init()).to.be.revertedWith(reason);
       });
     });
 
@@ -81,15 +85,15 @@ describe('L1SenderV2', () => {
 
     describe('#version()', () => {
       it('should return correct version', async () => {
-        expect(await l1Sender.version()).to.eq(2);
+        expect(await l1Sender.version()).to.eq(3);
       });
     });
   });
 
   describe('#supportsInterface', () => {
-    it('should support IL1SenderV2', async () => {
+    it('should support IL1SenderV3', async () => {
       const interfaceMock = await deployInterfaceMock();
-      expect(await l1Sender.supportsInterface(await interfaceMock.getIL1SenderV2InterfaceId())).to.be.true;
+      expect(await l1Sender.supportsInterface(await interfaceMock.getIL1SenderV3InterfaceId())).to.be.true;
     });
     it('should support IERC165', async () => {
       const interfaceMock = await deployInterfaceMock();
@@ -144,7 +148,7 @@ describe('L1SenderV2', () => {
     });
   });
 
-  describe('#setLayerZeroConfig', () => {
+  describe('#setMessageBridgeConfig', () => {
     const config = {
       gateway: '',
       receiver: '',
@@ -158,12 +162,18 @@ describe('L1SenderV2', () => {
     });
 
     it('should set new config', async () => {
-      await l1Sender.setLayerZeroConfig(config);
+      await l1Sender.setMessageBridgeConfig(config);
 
-      expect(await l1Sender.layerZeroConfig()).to.be.deep.equal([config.gateway, config.receiver, 0, ZERO_ADDR, '0x']);
+      expect(await l1Sender.messageBridgeConfig()).to.be.deep.equal([
+        config.gateway,
+        config.receiver,
+        0,
+        ZERO_ADDR,
+        '0x',
+      ]);
     });
     it('should revert if not called by the owner', async () => {
-      await expect(l1Sender.connect(BOB).setLayerZeroConfig(config)).to.be.revertedWith(
+      await expect(l1Sender.connect(BOB).setMessageBridgeConfig(config)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -175,77 +185,119 @@ describe('L1SenderV2', () => {
 
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
       };
 
-      await l1Sender.setArbitrumBridgeConfig(config);
+      await l1Sender.setTokenBridgeConfig(config);
 
-      expect(await l1Sender.arbitrumBridgeConfig()).to.be.deep.equal([
+      expect(await l1Sender.tokenBridgeConfig()).to.be.deep.equal([
         await wstETH.getAddress(),
-        await arbitrumBridgeGatewayRouterMock.getAddress(),
+        await l1ERC20BridgeMock.getAddress(),
         await BOB.getAddress(),
       ]);
 
       expect(await stETH.allowance(l1Sender, wstETH)).to.be.equal(ethers.MaxUint256);
-      expect(await wstETH.allowance(l1Sender, arbitrumBridgeGatewayRouterMock)).to.be.equal(ethers.MaxUint256);
+      expect(await wstETH.allowance(l1Sender, l1ERC20BridgeMock)).to.be.equal(ethers.MaxUint256);
     });
     it('should correctly reset new config', async () => {
       await l1Sender.setStETh(stETH);
 
       const config1 = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
       };
-      await l1Sender.setArbitrumBridgeConfig(config1);
+      await l1Sender.setTokenBridgeConfig(config1);
 
       const config2 = { ...config1 };
       config2.wstETH = await deployWstETHMock(await deployStETHMock());
-      config2.gateway = await deployArbitrumBridgeGatewayRouterMock();
+      config2.gateway = await deployL1ERC20BridgeMock();
       config2.receiver = OWNER;
-      await l1Sender.setArbitrumBridgeConfig(config2);
+      await l1Sender.setTokenBridgeConfig(config2);
 
-      expect(await l1Sender.arbitrumBridgeConfig()).to.be.deep.equal([
+      expect(await l1Sender.tokenBridgeConfig()).to.be.deep.equal([
         await config2.wstETH.getAddress(),
         await config2.gateway.getAddress(),
         await config2.receiver.getAddress(),
       ]);
 
       expect(await stETH.allowance(l1Sender, wstETH)).to.be.equal(0);
-      expect(await wstETH.allowance(l1Sender, arbitrumBridgeGatewayRouterMock)).to.be.equal(0);
+      expect(await wstETH.allowance(l1Sender, l1ERC20BridgeMock)).to.be.equal(0);
 
       expect(await stETH.allowance(l1Sender, config2.wstETH)).to.be.equal(ethers.MaxUint256);
       expect(await config2.wstETH.allowance(l1Sender, config2.gateway)).to.be.equal(ethers.MaxUint256);
     });
+    it('should correctly reset new config after the update from v2 to v3', async () => {
+      // Imitate L1SenderV2 `setArbitrumBridgeConfig`
+      const l1SenderV2Contract = await deployL1SenderV2();
+
+      const arbitrumBridgeGatewayRouterMock = await deployArbitrumBridgeGatewayRouterMock();
+      await l1SenderV2Contract.setStETh(stETH);
+      await l1SenderV2Contract.setArbitrumBridgeConfig({
+        wstETH: wstETH,
+        gateway: arbitrumBridgeGatewayRouterMock,
+        receiver: BOB,
+      });
+      expect(await l1SenderV2Contract.arbitrumBridgeConfig()).to.be.deep.equal([
+        await wstETH.getAddress(),
+        await arbitrumBridgeGatewayRouterMock.getAddress(),
+        await BOB.getAddress(),
+      ]);
+
+      // Upgrade to v3
+      const l1SenderV3Factory = await ethers.getContractFactory('L1SenderV3');
+      const l1SenderV3Impl = await l1SenderV3Factory.deploy();
+      await l1SenderV2Contract.upgradeTo(l1SenderV3Impl);
+      const l1SenderV3 = l1SenderV3Impl.attach(l1SenderV2Contract) as L1SenderV3;
+
+      const wstETHNew = await deployWstETHMock(await deployStETHMock());
+      await l1SenderV3.setTokenBridgeConfig({
+        wstETH: wstETHNew,
+        gateway: l1ERC20BridgeMock,
+        receiver: OWNER,
+      });
+
+      expect(await l1SenderV3.tokenBridgeConfig()).to.be.deep.equal([
+        await wstETHNew.getAddress(),
+        await l1ERC20BridgeMock.getAddress(),
+        await OWNER.getAddress(),
+      ]);
+
+      expect(await stETH.allowance(l1SenderV3, wstETH)).to.be.equal(0);
+      expect(await wstETH.allowance(l1SenderV3, arbitrumBridgeGatewayRouterMock)).to.be.equal(0);
+
+      expect(await stETH.allowance(l1SenderV3, wstETHNew)).to.be.equal(ethers.MaxUint256);
+      expect(await wstETHNew.allowance(l1SenderV3, l1ERC20BridgeMock)).to.be.equal(ethers.MaxUint256);
+    });
     it('should revert when stETH is not set', async () => {
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: ZERO_ADDR,
       };
 
-      await expect(l1Sender.setArbitrumBridgeConfig(config)).to.be.revertedWith('L1S: stETH is not set');
+      await expect(l1Sender.setTokenBridgeConfig(config)).to.be.revertedWith('L1S: stETH is not set');
     });
     it('should revert when invalid receiver', async () => {
       await l1Sender.setStETh(stETH);
 
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: ZERO_ADDR,
       };
 
-      await expect(l1Sender.setArbitrumBridgeConfig(config)).to.be.revertedWith('L1S: invalid receiver');
+      await expect(l1Sender.setTokenBridgeConfig(config)).to.be.revertedWith('L1S: invalid receiver');
     });
     it('should revert if not called by the owner', async () => {
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
       };
 
-      await expect(l1Sender.connect(BOB).setArbitrumBridgeConfig(config)).to.be.revertedWith(
+      await expect(l1Sender.connect(BOB).setTokenBridgeConfig(config)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -255,42 +307,39 @@ describe('L1SenderV2', () => {
     beforeEach(async () => {
       await l1Sender.setStETh(stETH);
     });
-
     it('should send stETH tokens to another address', async () => {
-      const config = {
+      await l1Sender.setTokenBridgeConfig({
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
-      };
-      await l1Sender.setArbitrumBridgeConfig(config);
+      });
 
       await stETH.mint(l1Sender, wei(100));
 
-      await l1Sender.sendWstETH(1, 1, 1);
+      await l1Sender.sendWstETH(1, '0x');
 
       expect(await stETH.balanceOf(l1Sender)).to.eq(0);
       expect(await wstETH.balanceOf(BOB)).to.eq(wei(100));
     });
     it('should send wstETH tokens to another address', async () => {
-      const config = {
+      await l1Sender.setTokenBridgeConfig({
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
-      };
-      await l1Sender.setArbitrumBridgeConfig(config);
+      });
 
       await wstETH.mint(l1Sender, wei(100));
 
-      await l1Sender.sendWstETH(1, 1, 1);
+      await l1Sender.sendWstETH(1, '0x');
 
       expect(await stETH.balanceOf(l1Sender)).to.eq(0);
       expect(await wstETH.balanceOf(BOB)).to.eq(wei(100));
     });
     it("should revert when wstETH isn't set", async () => {
-      await expect(l1Sender.sendWstETH(1, 1, 1)).to.be.revertedWith("L1S: wstETH isn't set");
+      await expect(l1Sender.sendWstETH(1, '0x')).to.be.revertedWith("L1S: wstETH isn't set");
     });
     it('should revert if not called by the owner', async () => {
-      await expect(l1Sender.connect(BOB).sendWstETH(1, 1, 1)).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(l1Sender.connect(BOB).sendWstETH(1, '0x')).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -309,7 +358,7 @@ describe('L1SenderV2', () => {
 
       await lzEndpointMockL1.setDestLzEndpoint(l2MessageReceiver, lzEndpointMockL2);
 
-      await l1Sender.setLayerZeroConfig({
+      await l1Sender.setMessageBridgeConfig({
         gateway: lzEndpointMockL1,
         receiver: l2MessageReceiver,
         receiverChainId: 110,
@@ -342,10 +391,10 @@ describe('L1SenderV2', () => {
       await l1Sender.setStETh(stETH);
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
       };
-      await l1Sender.setArbitrumBridgeConfig(config);
+      await l1Sender.setTokenBridgeConfig(config);
 
       await l1Sender.setUniswapSwapRouter(uniswapSwapRouterMock);
       await l1Sender.swapExactInputMultihop([tokenIn, wstETH], [100], wei(90), wei(40), 0);
@@ -357,10 +406,10 @@ describe('L1SenderV2', () => {
       await l1Sender.setStETh(stETH);
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
       };
-      await l1Sender.setArbitrumBridgeConfig(config);
+      await l1Sender.setTokenBridgeConfig(config);
 
       await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(0), wei(40), 0)).to.be.revertedWith(
         'L1S: invalid `amountIn_` value',
@@ -370,10 +419,10 @@ describe('L1SenderV2', () => {
       await l1Sender.setStETh(stETH);
       const config = {
         wstETH: wstETH,
-        gateway: arbitrumBridgeGatewayRouterMock,
+        gateway: l1ERC20BridgeMock,
         receiver: BOB,
       };
-      await l1Sender.setArbitrumBridgeConfig(config);
+      await l1Sender.setTokenBridgeConfig(config);
 
       await expect(l1Sender.swapExactInputMultihop([stETH, wstETH], [100], wei(10), wei(0), 0)).to.be.revertedWith(
         'L1S: invalid `amountOutMinimum_` value',
@@ -396,5 +445,5 @@ describe('L1SenderV2', () => {
   });
 });
 
-// npx hardhat test "test/capital-protocol/L1SenderV2.test.ts"
-// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/L1SenderV2.test.ts"
+// npx hardhat test "test/capital-protocol/L1SenderV3.test.ts"
+// npx hardhat coverage --solcoverjs ./.solcover.ts --testfiles "test/capital-protocol/L1SenderV3.test.ts"

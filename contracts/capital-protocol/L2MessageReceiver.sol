@@ -4,8 +4,8 @@ pragma solidity ^0.8.20;
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {IMOROFT} from "../../interfaces/IMOROFT.sol";
-import {IL2MessageReceiver} from "../../interfaces/capital-protocol/old/IL2MessageReceiver.sol";
+import {IMOROFT} from "../interfaces/IMOROFT.sol";
+import {IL2MessageReceiver} from "../interfaces/capital-protocol/IL2MessageReceiver.sol";
 
 contract L2MessageReceiver is IL2MessageReceiver, OwnableUpgradeable, UUPSUpgradeable {
     address public rewardToken;

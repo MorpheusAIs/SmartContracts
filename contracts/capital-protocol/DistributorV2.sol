@@ -15,7 +15,7 @@ import {IRewardsController} from "../interfaces/aave/IRewardsController.sol";
 import {DecimalsConverter} from "@solarity/solidity-lib/libs/decimals/DecimalsConverter.sol";
 
 import {IDistributor, IERC165} from "../interfaces/capital-protocol/IDistributor.sol";
-import {IL1SenderV2} from "../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IL1SenderV2} from "../interfaces/capital-protocol/old/IL1SenderV2.sol";
 import {IChainLinkDataConsumer} from "../interfaces/capital-protocol/IChainLinkDataConsumer.sol";
 import {IDepositPool} from "../interfaces/capital-protocol/IDepositPool.sol";
 import {IRewardPool} from "../interfaces/capital-protocol/IRewardPool.sol";

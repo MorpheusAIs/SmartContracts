@@ -7,7 +7,7 @@ import {AavePoolDataProviderMock} from "./aave/AavePoolDataProviderMock.sol";
 import {AavePoolMock} from "./aave/AavePoolMock.sol";
 
 import {IDistributor, IERC165} from "../../interfaces/capital-protocol/IDistributor.sol";
-import {IL1SenderV2} from "../../interfaces/capital-protocol/IL1SenderV2.sol";
+import {IL1SenderV2} from "../../interfaces/capital-protocol/old/IL1SenderV2.sol";
 
 import "../tokens/ERC20Token.sol";
 

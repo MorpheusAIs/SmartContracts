@@ -12,9 +12,9 @@ import {ILayerZeroEndpoint} from "@layerzerolabs/lz-evm-sdk-v1-0.7/contracts/int
 
 import {IGatewayRouter} from "@arbitrum/token-bridge-contracts/contracts/tokenbridge/libraries/gateway/IGatewayRouter.sol";
 
-import {IL1SenderV2, IERC165} from "../interfaces/capital-protocol/IL1SenderV2.sol";
-import {IDistributor} from "../interfaces/capital-protocol/IDistributor.sol";
-import {IWStETH} from "../interfaces/tokens/IWStETH.sol";
+import {IL1SenderV2, IERC165} from "../../interfaces/capital-protocol/old/IL1SenderV2.sol";
+import {IDistributor} from "../../interfaces/capital-protocol/IDistributor.sol";
+import {IWStETH} from "../../interfaces/tokens/IWStETH.sol";
 
 contract L1SenderV2 is IL1SenderV2, OwnableUpgradeable, UUPSUpgradeable {
     /** @dev stETH token address */
